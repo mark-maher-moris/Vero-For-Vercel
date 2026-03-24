@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vercel Project Details - vercel-mobile-app</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-low": "#1b1c1c",
+                        "primary": "#ffffff",
+                        "secondary-fixed-dim": "#c7c6c6",
+                        "surface-container-high": "#292a2a",
+                        "surface-tint": "#c6c6c7",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "surface-variant": "#343535",
+                        "surface-bright": "#383939",
+                        "on-secondary-fixed-variant": "#464747",
+                        "on-surface": "#e3e2e2",
+                        "on-background": "#e3e2e2",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "on-error-container": "#ffdad6",
+                        "inverse-on-surface": "#303031",
+                        "surface": "#121414",
+                        "secondary-container": "#464747",
+                        "tertiary": "#ffffff",
+                        "on-tertiary": "#2f3131",
+                        "surface-container-lowest": "#0d0e0f",
+                        "surface-container": "#1f2020",
+                        "surface-dim": "#121414",
+                        "primary-container": "#e2e2e2",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#e2e2e2",
+                        "on-secondary-container": "#b5b5b5",
+                        "on-primary-fixed": "#1a1c1c",
+                        "secondary": "#c7c6c6",
+                        "outline-variant": "#444748",
+                        "on-secondary": "#303031",
+                        "on-primary": "#2f3131",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-tertiary-container": "#636565",
+                        "surface-container-highest": "#343535",
+                        "tertiary-fixed": "#e2e2e2",
+                        "outline": "#8e9192",
+                        "inverse-surface": "#e3e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "inverse-primary": "#5d5f5f",
+                        "on-primary-container": "#636565",
+                        "on-primary-fixed-variant": "#454747",
+                        "secondary-fixed": "#e3e2e2",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "background": "#121414",
+                        "on-surface-variant": "#c4c7c8"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #121414; color: #e3e2e2; font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-nav { backdrop-filter: blur(20px); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-[#121414] text-[#FFFFFF] font-['Inter'] font-bold tracking-tight text-[1.125rem] docked full-width top-0 sticky z-50 no-border tonal-shift bg-[#1B1C1C] flat no shadows flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center">
+<img alt="Team Logo" class="w-full h-full rounded-full" data-alt="Vercel project logo avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAH9HXclINxXI5RWANnUApzwuwcpxAagNw4zKikbVuGLM4i54G0M9rd_Hz_5Tr9JYioRvCOaTnxCkqEEZTtXTMv8UKfPRoO9A4amWEzhYZX0LZLO2vIcLjjqhl91i2xcRBf3Gi8HEg6NLda5vrv6B7HqlcwWAAlxV1vTbUh8d21raywg7DZt4Wy-lV73x224MFoP78fWOROHQarvOo_EqZg9Q6nxbR9XsPyZa5d62YikkNGII6e2Ue-hYA7lkRP8GJwsbdnPaKOND62"/>
+</div>
+<span class="text-xl font-black text-[#FFFFFF] tracking-tighter">Vercel</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-[#343535] transition-colors duration-200 p-2 rounded-lg scale-95 duration-100">
+<span class="material-symbols-outlined" data-icon="swap_horiz">swap_horiz</span>
+</button>
+</div>
+</header>
+<main class="flex-1 pb-32">
+<!-- Hero Section -->
+<section class="px-6 pt-8 pb-10 bg-surface">
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2">
+<span class="label-sm font-medium tracking-widest uppercase text-on-surface-variant text-[0.6875rem]">Project</span>
+<div class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+<span class="label-sm font-bold tracking-widest uppercase text-primary text-[0.6875rem]">Production</span>
+</div>
+<h1 class="text-[2.75rem] font-black tracking-tighter leading-none text-primary">vercel-mobile-app</h1>
+<p class="text-on-surface-variant font-body text-sm mt-2">Main branch deployed 2h ago</p>
+</div>
+<!-- Primary Actions -->
+<div class="mt-10 flex flex-col gap-3">
+<button class="w-full bg-primary text-on-primary py-4 font-bold tracking-tight flex items-center justify-center gap-2 rounded-sm active:scale-95 transition-transform bg-gradient-to-tr from-white to-secondary-fixed-dim">
+<span class="material-symbols-outlined text-[20px]" data-icon="refresh">refresh</span>
+                    Redeploy
+                </button>
+<div class="grid grid-cols-3 gap-3">
+<button class="bg-surface-container-low hover:bg-surface-container-high text-primary py-3 flex flex-col items-center justify-center gap-1 rounded-sm border border-outline-variant/15 transition-colors">
+<span class="material-symbols-outlined" data-icon="open_in_new">open_in_new</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Visit</span>
+</button>
+<button class="bg-surface-container-low hover:bg-surface-container-high text-primary py-3 flex flex-col items-center justify-center gap-1 rounded-sm border border-outline-variant/15 transition-colors">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Logs</span>
+</button>
+<button class="bg-surface-container-low hover:bg-surface-container-high text-primary py-3 flex flex-col items-center justify-center gap-1 rounded-sm border border-outline-variant/15 transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Config</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Domain Section -->
+<section class="px-6 py-6 bg-surface-container-low">
+<h3 class="text-[0.6875rem] font-bold tracking-widest uppercase text-on-surface-variant mb-4">Production Domain</h3>
+<div class="bg-surface-container-lowest p-4 flex items-center justify-between rounded-sm border-b-2 border-primary">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="language">language</span>
+<span class="font-mono text-sm font-bold text-primary">vercel-mobile-app.vercel.app</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="content_copy">content_copy</span>
+</div>
+</section>
+<!-- Deployment History -->
+<section class="px-6 py-8">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-[0.6875rem] font-bold tracking-widest uppercase text-on-surface-variant">Deployment History</h3>
+<span class="text-[10px] font-bold text-primary uppercase tracking-tighter">View All</span>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Deployment Card 1 -->
+<div class="bg-surface-container-low p-5 rounded-sm flex flex-col gap-4 hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-bold text-primary">fix: update api endpoint</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xs" data-icon="account_tree">account_tree</span>
+<span class="text-[11px] font-mono text-on-surface-variant">main</span>
+<span class="text-[11px] text-on-surface-variant">•</span>
+<span class="text-[11px] text-on-surface-variant">2h ago by @user</span>
+</div>
+</div>
+<div class="px-2 py-0.5 bg-green-900/30 text-green-400 text-[9px] font-bold uppercase tracking-wider rounded-full border border-green-500/20">
+                            Ready
+                        </div>
+</div>
+</div>
+<!-- Deployment Card 2 -->
+<div class="bg-surface-container-low p-5 rounded-sm flex flex-col gap-4 hover:bg-surface-container-high transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-bold text-primary">feat: implement dark mode tokens</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xs" data-icon="account_tree">account_tree</span>
+<span class="text-[11px] font-mono text-on-surface-variant">main</span>
+<span class="text-[11px] text-on-surface-variant">•</span>
+<span class="text-[11px] text-on-surface-variant">5h ago by @user</span>
+</div>
+</div>
+<div class="px-2 py-0.5 bg-green-900/30 text-green-400 text-[9px] font-bold uppercase tracking-wider rounded-full border border-green-500/20">
+                            Ready
+                        </div>
+</div>
+</div>
+<!-- Deployment Card 3 (Error State) -->
+<div class="bg-surface-container-low p-5 rounded-sm flex flex-col gap-4 border-l-2 border-error">
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<span class="text-sm font-bold text-error">chore: experiment with layout</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xs text-on-surface-variant" data-icon="account_tree">account_tree</span>
+<span class="text-[11px] font-mono text-on-surface-variant">dev-branch</span>
+<span class="text-[11px] text-on-surface-variant">•</span>
+<span class="text-[11px] text-on-surface-variant">1d ago by @user</span>
+</div>
+</div>
+<div class="px-2 py-0.5 bg-error-container text-on-error-container text-[9px] font-bold uppercase tracking-wider rounded-full">
+                            Error
+                        </div>
+</div>
+</div>
+</div>
+</section>
+<!-- Technical Stats Bento -->
+<section class="px-6 py-4 grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-6 rounded-sm flex flex-col gap-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Framework</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="deployed_code">deployed_code</span>
+<span class="text-lg font-bold">Next.js</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-sm flex flex-col gap-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Region</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="public">public</span>
+<span class="text-lg font-bold">IAD1</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-[#1B1C1C]/80 backdrop-blur-xl dark:bg-[#1B1C1C]/80 fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 shadow-[0_-4px_40px_rgba(227,226,226,0.06)]">
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Logs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Settings</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-low": "#1b1c1c",
+                        "primary": "#ffffff",
+                        "secondary-fixed-dim": "#c7c6c6",
+                        "surface-container-high": "#292a2a",
+                        "surface-tint": "#c6c6c7",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "surface-variant": "#343535",
+                        "surface-bright": "#383939",
+                        "on-secondary-fixed-variant": "#464747",
+                        "on-surface": "#e3e2e2",
+                        "on-background": "#e3e2e2",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "on-error-container": "#ffdad6",
+                        "inverse-on-surface": "#303031",
+                        "surface": "#121414",
+                        "secondary-container": "#464747",
+                        "tertiary": "#ffffff",
+                        "on-tertiary": "#2f3131",
+                        "surface-container-lowest": "#0d0e0f",
+                        "surface-container": "#1f2020",
+                        "surface-dim": "#121414",
+                        "primary-container": "#e2e2e2",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#e2e2e2",
+                        "on-secondary-container": "#b5b5b5",
+                        "on-primary-fixed": "#1a1c1c",
+                        "secondary": "#c7c6c6",
+                        "outline-variant": "#444748",
+                        "on-secondary": "#303031",
+                        "on-primary": "#2f3131",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-tertiary-container": "#636565",
+                        "surface-container-highest": "#343535",
+                        "tertiary-fixed": "#e2e2e2",
+                        "outline": "#8e9192",
+                        "inverse-surface": "#e3e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "inverse-primary": "#5d5f5f",
+                        "on-primary-container": "#636565",
+                        "on-primary-fixed-variant": "#454747",
+                        "secondary-fixed": "#e3e2e2",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "background": "#121414",
+                        "on-surface-variant": "#c4c7c8"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .mono-text { font-family: 'JetBrains Mono', monospace; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-[#121414] text-[#FFFFFF] font-['Inter'] font-bold tracking-tight text-[1.125rem] docked full-width top-0 sticky z-50 no-border tonal-shift bg-[#1B1C1C] flat no shadows flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img alt="Team Logo" class="w-full h-full object-cover" data-alt="Vercel platform brand logo minimalist" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAorvx8FpHtR2VjHEifANlHu5unIiWs-22w7eJ5YbPS20161puyFUFQd1JiAo0jEpy5t-Evwclr7t3m1ZumfCysWBbw8YtQX9xYlWVVtqQ4PRMHyCwzeimvB-65bRLdzJqNZDJ4XHKB5Bgoeyzbx-4gs-7NCLPVn8gMOno_wFMFPlaPIvnknDVb0ub9vK8lQjCEB4K3GouoMkG49Vhf0tnZeYDk8IyGfxWEfryXGS3gFRZ45SM3RIINNv_bmKwYsTyvvpiTijHbUJTx"/>
+</div>
+<span class="text-xl font-black text-[#FFFFFF] tracking-tighter uppercase">Vercel</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-[#343535] transition-colors duration-200 p-2 rounded-lg scale-95 duration-100">
+<span class="material-symbols-outlined text-[#C4C7C8]">swap_horiz</span>
+</button>
+</div>
+</header>
+<main class="flex-1 max-w-5xl mx-auto w-full px-4 pt-6 pb-24">
+<!-- Deployment Identity Anchor -->
+<section class="mb-8">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 mb-2">
+<span class="w-2 h-2 rounded-full bg-[#0070f3] shadow-[0_0_8px_#0070f3]"></span>
+<span class="font-label text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant">Production Deployment</span>
+</div>
+<h1 class="text-3xl font-black tracking-tighter text-primary">nextjs-edge-v34.vercel.app</h1>
+<p class="font-mono text-sm text-on-surface-variant mt-1">ID: <span class="text-primary/80">dpl_9Y7v2Rk8mXp3qL5zW</span></p>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-surface-container-high hover:bg-surface-variant px-4 py-2 flex items-center gap-2 transition-colors duration-200">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+<span class="font-label text-[0.6875rem] font-bold tracking-widest uppercase">Copy Logs</span>
+</button>
+<button class="bg-primary text-on-primary px-4 py-2 flex items-center gap-2 transition-all duration-200 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+<span class="material-symbols-outlined text-sm">pause</span>
+<span class="font-label text-[0.6875rem] font-bold tracking-widest uppercase">Pause Stream</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Terminal Shell -->
+<section class="bg-surface-container-lowest overflow-hidden rounded-lg shadow-2xl">
+<!-- Terminal Header -->
+<div class="bg-surface-container-low px-4 py-3 flex justify-between items-center border-b border-white/[0.03]">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="font-mono text-[0.6875rem] text-on-surface-variant uppercase tracking-widest">Region</span>
+<span class="font-mono text-[0.6875rem] text-primary">iad1</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-mono text-[0.6875rem] text-on-surface-variant uppercase tracking-widest">Runtime</span>
+<span class="font-mono text-[0.6875rem] text-primary">Node.js 20.x</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container-high">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+<span class="font-mono text-[0.6rem] text-error font-bold tracking-tighter">LIVE</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-base">search</span>
+</div>
+</div>
+<!-- Terminal Body -->
+<div class="p-4 font-mono text-[0.8125rem] leading-relaxed overflow-y-auto max-h-[530px] no-scrollbar">
+<!-- Log Entry: INFO -->
+<div class="group flex gap-4 py-1 hover:bg-surface-container/30 transition-colors">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:01.04</span>
+<span class="text-[#3b82f6] w-12 shrink-0 font-bold">INFO</span>
+<span class="text-on-surface">Starting Vercel Deployment engine...</span>
+</div>
+<!-- Log Entry: INFO -->
+<div class="group flex gap-4 py-1 hover:bg-surface-container/30 transition-colors">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:01.42</span>
+<span class="text-[#3b82f6] w-12 shrink-0 font-bold">INFO</span>
+<span class="text-on-surface">Successfully connected to <span class="text-[#a78bfa]">mongodb-atlas-primary</span></span>
+</div>
+<!-- Log Entry: WARN -->
+<div class="group flex gap-4 py-1 bg-[#fbbf24]/5 hover:bg-[#fbbf24]/10 transition-colors">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:02.15</span>
+<span class="text-[#fbbf24] w-12 shrink-0 font-bold">WARN</span>
+<span class="text-on-surface italic">Middleware: "x-custom-header" is deprecated and will be removed in v4.0.0</span>
+</div>
+<!-- Log Entry: ERROR -->
+<div class="group flex gap-4 py-1 bg-error-container/20 hover:bg-error-container/30 transition-colors">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:03.88</span>
+<span class="text-error w-12 shrink-0 font-bold">ERROR</span>
+<div class="flex flex-col">
+<span class="text-error">Unhandled Rejection: FetchError: network timeout at: https://api.stripe.com/v1/charges</span>
+<span class="text-on-surface-variant text-[0.75rem] mt-1 opacity-60">
+                            at /var/task/node_modules/node-fetch/lib/index.js:1491:11<br/>
+                            at processTicksAndRejections (node:internal/process/task_queues:95:5)
+                        </span>
+</div>
+</div>
+<!-- Log Entry: INFO -->
+<div class="group flex gap-4 py-1 hover:bg-surface-container/30 transition-colors">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:04.12</span>
+<span class="text-[#3b82f6] w-12 shrink-0 font-bold">INFO</span>
+<span class="text-on-surface">Edge Runtime warming up (cold start: 124ms)</span>
+</div>
+<!-- Log Entry: SUCCESS -->
+<div class="group flex gap-4 py-1 hover:bg-surface-container/30 transition-colors">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:04.45</span>
+<span class="text-[#10b981] w-12 shrink-0 font-bold">READY</span>
+<span class="text-on-surface">GET /api/user-profile <span class="text-[#10b981]">200</span> in 42ms</span>
+</div>
+<!-- Log Entry: INFO -->
+<div class="group flex gap-4 py-1 hover:bg-surface-container/30 transition-colors">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:05.10</span>
+<span class="text-[#3b82f6] w-12 shrink-0 font-bold">INFO</span>
+<span class="text-on-surface">Incoming request: <span class="text-[#60a5fa] underline cursor-pointer">/dashboard/analytics</span> from 192.168.1.1</span>
+</div>
+<!-- Log Entry: ERROR -->
+<div class="group flex gap-4 py-1 bg-error-container/10 hover:bg-error-container/20 transition-colors">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:06.01</span>
+<span class="text-error w-12 shrink-0 font-bold">ERROR</span>
+<span class="text-error">PostgreSQL: Connection pool max limit reached (100 sessions)</span>
+</div>
+<!-- Interactive Cursor -->
+<div class="flex gap-4 py-2 mt-2 items-center">
+<span class="text-on-tertiary-fixed-variant shrink-0 w-24">14:22:06.05</span>
+<div class="flex items-center gap-2">
+<span class="text-primary animate-pulse font-black">_</span>
+<span class="text-on-surface-variant italic text-xs">Waiting for new events...</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats Grid -->
+<section class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="bg-surface-container-low p-5">
+<p class="font-label text-[0.6rem] tracking-[0.15em] text-on-surface-variant uppercase mb-1">Status</p>
+<p class="text-primary font-bold text-xl uppercase tracking-tighter">Healthy</p>
+</div>
+<div class="bg-surface-container-low p-5">
+<p class="font-label text-[0.6rem] tracking-[0.15em] text-on-surface-variant uppercase mb-1">Errors (10m)</p>
+<p class="text-error font-bold text-xl uppercase tracking-tighter">2</p>
+</div>
+<div class="bg-surface-container-low p-5">
+<p class="font-label text-[0.6rem] tracking-[0.15em] text-on-surface-variant uppercase mb-1">Latency</p>
+<p class="text-primary font-bold text-xl uppercase tracking-tighter">14ms</p>
+</div>
+<div class="bg-surface-container-low p-5">
+<p class="font-label text-[0.6rem] tracking-[0.15em] text-on-surface-variant uppercase mb-1">Requests</p>
+<p class="text-primary font-bold text-xl uppercase tracking-tighter">1.2k</p>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-[#1B1C1C]/80 backdrop-blur-xl fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 no-border tonal-shift-layering shadow-[0_-4px_40px_rgba(227,226,226,0.06)]">
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-100" href="#">
+<span class="material-symbols-outlined mb-1">home</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-100" href="#">
+<span class="material-symbols-outlined mb-1">grid_view</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 active:scale-90 duration-100" href="#">
+<span class="material-symbols-outlined mb-1">terminal</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase">Logs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 duration-100" href="#">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase">Settings</span>
+</a>
+</nav>
+</body></html>

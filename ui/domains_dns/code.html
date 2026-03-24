@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #121414;
+            color: #E3E2E2;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-nav {
+            background: rgba(27, 28, 28, 0.8);
+            backdrop-filter: blur(20px);
+        }
+        .metallic-gradient {
+            background: linear-gradient(45deg, #FFFFFF 0%, #C6C6C7 100%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "surface-container-lowest": "#0d0e0f",
+                "on-secondary-fixed-variant": "#464747",
+                "inverse-primary": "#5d5f5f",
+                "on-primary-fixed-variant": "#454747",
+                "surface-container": "#1f2020",
+                "primary-fixed-dim": "#c6c6c7",
+                "tertiary-fixed": "#e2e2e2",
+                "error-container": "#93000a",
+                "surface-tint": "#c6c6c7",
+                "surface": "#121414",
+                "on-secondary-fixed": "#1b1c1c",
+                "secondary-fixed": "#e3e2e2",
+                "secondary": "#c7c6c6",
+                "on-surface": "#e3e2e2",
+                "surface-dim": "#121414",
+                "inverse-surface": "#e3e2e2",
+                "primary": "#ffffff",
+                "on-tertiary-container": "#636565",
+                "on-primary": "#2f3131",
+                "secondary-container": "#464747",
+                "on-tertiary-fixed-variant": "#454747",
+                "inverse-on-surface": "#303031",
+                "tertiary-fixed-dim": "#c6c6c6",
+                "secondary-fixed-dim": "#c7c6c6",
+                "outline": "#8e9192",
+                "surface-variant": "#343535",
+                "background": "#121414",
+                "surface-container-highest": "#343535",
+                "on-error": "#690005",
+                "surface-bright": "#383939",
+                "on-surface-variant": "#c4c7c8",
+                "on-secondary-container": "#b5b5b5",
+                "on-primary-fixed": "#1a1c1c",
+                "primary-container": "#e2e2e2",
+                "error": "#ffb4ab",
+                "surface-container-low": "#1b1c1c",
+                "surface-container-high": "#292a2a",
+                "on-background": "#e3e2e2",
+                "tertiary": "#ffffff",
+                "on-tertiary-fixed": "#1a1c1c",
+                "on-tertiary": "#2f3131",
+                "outline-variant": "#444748",
+                "on-error-container": "#ffdad6",
+                "primary-fixed": "#e2e2e2",
+                "tertiary-container": "#e2e2e2",
+                "on-primary-container": "#636565",
+                "on-secondary": "#303031"
+              },
+              fontFamily: {
+                "headline": ["Inter"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-[#121414] text-[#FFFFFF] font-['Inter'] font-bold tracking-tight text-[1.125rem] docked full-width top-0 sticky z-50 no-border tonal-shift bg-[#1B1C1C] flat no shadows flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img alt="Team Logo" class="w-full h-full object-cover" data-alt="Minimalist abstract geometric team logo black and white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBI0-YiVEdpUlcE2dU2jwuqioDUj1WUDpVEVEEDMymQIb974T7gRFCcZv_sPVimDPSgzVGxCnaiJ-Z5yHkLAJjHOotGuttQpduMO7769R0GXPOtqCzMM4rAo0inZC9s2EupA0RjaIJ8U09oJz4qqhnV9CswhR9JVftAD33L9jiNfrV7bQOaGwMDS_Lgiqh3T9L66VA35b2Mwm3NAB7nBQIM7lhVfpbC9FhAv1-KAH_7T3lcuL8kYmrTGupE4UIK0uQ3iV4TviFchQzC"/>
+</div>
+<span class="text-xl font-black text-[#FFFFFF] tracking-tighter">Vercel</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-[#C4C7C8] hover:bg-[#343535] transition-colors duration-200 p-2 rounded scale-95 duration-100">
+<span class="material-symbols-outlined" data-icon="swap_horiz">swap_horiz</span>
+</button>
+</div>
+</header>
+<main class="max-w-4xl mx-auto px-6 pt-10 space-y-12">
+<!-- Hero/Header Section -->
+<section class="space-y-2">
+<h1 class="text-[2.75rem] font-bold tracking-tighter text-primary leading-none">Domains</h1>
+<p class="text-on-surface-variant body-md max-w-xl">Manage your custom domains and DNS configurations for this project.</p>
+</section>
+<!-- Add Domain Section -->
+<section class="bg-surface-container-low p-8 space-y-6">
+<div class="flex flex-col md:flex-row gap-4">
+<div class="flex-1 relative">
+<input class="w-full bg-surface-container-lowest border-none text-on-surface p-4 body-md focus:ring-0 peer" placeholder="example.com" type="text"/>
+<div class="absolute bottom-0 left-0 w-full h-[2px] bg-primary scale-x-0 peer-focus:scale-x-100 transition-transform duration-300"></div>
+</div>
+<button class="metallic-gradient text-on-primary px-8 py-4 font-bold tracking-tight hover:opacity-90 active:scale-95 transition-all text-sm uppercase">
+                    Add Domain
+                </button>
+</div>
+<p class="text-[0.6875rem] text-on-surface-variant font-medium tracking-widest uppercase">Add a new domain or subdomain to your project.</p>
+</section>
+<!-- Domains List -->
+<section class="space-y-6">
+<!-- Domain Card 1: Valid -->
+<div class="bg-surface-container-low overflow-hidden transition-all hover:bg-surface-container">
+<div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<h3 class="text-lg font-bold tracking-tight text-primary">app.example.com</h3>
+<span class="flex items-center gap-1.5 px-2 py-0.5 bg-surface-container-highest rounded-full text-[0.625rem] font-bold tracking-widest uppercase text-white">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                Valid
+                            </span>
+</div>
+<p class="text-xs text-on-surface-variant font-mono">Production • Last checked 2m ago</p>
+</div>
+<div class="flex gap-3">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="refresh">refresh</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+<!-- DNS Info (Subtle recessed area) -->
+<div class="bg-surface-container-lowest mx-6 mb-6 p-4 font-mono text-xs space-y-2">
+<div class="flex justify-between border-b border-outline-variant/10 pb-2">
+<span class="text-on-surface-variant">Type</span>
+<span class="text-on-surface-variant">Name</span>
+<span class="text-on-surface-variant">Value</span>
+</div>
+<div class="flex justify-between text-primary">
+<span class="w-12">CNAME</span>
+<span class="w-24">app</span>
+<span class="flex-1 text-right truncate pl-4">cname.vercel-dns.com</span>
+</div>
+</div>
+</div>
+<!-- Domain Card 2: Invalid -->
+<div class="bg-surface-container-low overflow-hidden transition-all hover:bg-surface-container">
+<div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<h3 class="text-lg font-bold tracking-tight text-primary">docs.example.com</h3>
+<span class="flex items-center gap-1.5 px-2 py-0.5 bg-error-container/20 rounded-full text-[0.625rem] font-bold tracking-widest uppercase text-error">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                Invalid
+                            </span>
+</div>
+<p class="text-xs text-on-surface-variant font-mono">Preview • DNS Configuration Error</p>
+</div>
+<div class="flex gap-3">
+<button class="metallic-gradient text-on-primary px-4 py-1.5 text-[0.6875rem] font-bold tracking-widest uppercase active:scale-95 transition-transform">
+                            Verify
+                        </button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+<div class="bg-error-container/5 border-l-2 border-error mx-6 mb-6 p-4">
+<div class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-error text-[18px]" data-icon="warning">warning</span>
+<div class="space-y-2">
+<p class="text-xs text-error font-medium">Domain configuration failed. Please update your DNS records.</p>
+<div class="bg-surface-container-lowest p-3 font-mono text-[10px] space-y-1">
+<p class="text-on-surface-variant">Expected: <span class="text-primary">CNAME docs cname.vercel-dns.com</span></p>
+<p class="text-on-surface-variant">Detected: <span class="text-error">NONE</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Domain Card 3: Verifying -->
+<div class="bg-surface-container-low overflow-hidden transition-all hover:bg-surface-container opacity-80">
+<div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<h3 class="text-lg font-bold tracking-tight text-primary">blog.example.com</h3>
+<span class="flex items-center gap-1.5 px-2 py-0.5 bg-surface-container-highest rounded-full text-[0.625rem] font-bold tracking-widest uppercase text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                                Verifying
+                            </span>
+</div>
+<p class="text-xs text-on-surface-variant font-mono">Production • Propagating records...</p>
+</div>
+<div class="flex gap-3">
+<button class="p-2 text-on-surface-variant cursor-not-allowed">
+<span class="material-symbols-outlined text-[20px] animate-spin" data-icon="sync">sync</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Help Section -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-outline-variant/10">
+<div class="space-y-3">
+<h4 class="text-sm font-bold tracking-tight text-primary uppercase">Documentation</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Learn how to configure your DNS providers like GoDaddy, Namecheap, and Cloudflare to work seamlessly with Vercel.</p>
+<a class="inline-flex items-center text-xs font-bold text-primary gap-1 group" href="#">
+                    Read Guide <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+<div class="space-y-3">
+<h4 class="text-sm font-bold tracking-tight text-primary uppercase">Apex Domains</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">We recommend using a CNAME record for subdomains. For root domains, use our A records for optimal performance.</p>
+<a class="inline-flex items-center text-xs font-bold text-primary gap-1 group" href="#">
+                    DNS Records <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-[#1B1C1C]/80 backdrop-blur-xl dark:bg-[#1B1C1C]/80 text-[#FFFFFF] font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase fixed bottom-0 w-full z-50 rounded-t-none no-border tonal-shift-layering shadow-[0_-4px_40px_rgba(227,226,226,0.06)] fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3">
+<div class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="mt-1">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="mt-1">Projects</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="mt-1">Deploy</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span class="mt-1">Usage</span>
+</div>
+<!-- ACTIVE TAB: Settings (Domain Management is usually under Settings) -->
+<div class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="mt-1">Settings</span>
+</div>
+</nav>
+</body></html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Team &amp; Access Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#0d0e0f",
+              "on-secondary-fixed-variant": "#464747",
+              "inverse-primary": "#5d5f5f",
+              "on-primary-fixed-variant": "#454747",
+              "surface-container": "#1f2020",
+              "primary-fixed-dim": "#c6c6c7",
+              "tertiary-fixed": "#e2e2e2",
+              "error-container": "#93000a",
+              "surface-tint": "#c6c6c7",
+              "surface": "#121414",
+              "on-secondary-fixed": "#1b1c1c",
+              "secondary-fixed": "#e3e2e2",
+              "secondary": "#c7c6c6",
+              "on-surface": "#e3e2e2",
+              "surface-dim": "#121414",
+              "inverse-surface": "#e3e2e2",
+              "primary": "#ffffff",
+              "on-tertiary-container": "#636565",
+              "on-primary": "#2f3131",
+              "secondary-container": "#464747",
+              "on-tertiary-fixed-variant": "#454747",
+              "inverse-on-surface": "#303031",
+              "tertiary-fixed-dim": "#c6c6c6",
+              "secondary-fixed-dim": "#c7c6c6",
+              "outline": "#8e9192",
+              "surface-variant": "#343535",
+              "background": "#121414",
+              "surface-container-highest": "#343535",
+              "on-error": "#690005",
+              "surface-bright": "#383939",
+              "on-surface-variant": "#c4c7c8",
+              "on-secondary-container": "#b5b5b5",
+              "on-primary-fixed": "#1a1c1c",
+              "primary-container": "#e2e2e2",
+              "error": "#ffb4ab",
+              "surface-container-low": "#1b1c1c",
+              "surface-container-high": "#292a2a",
+              "on-background": "#e3e2e2",
+              "tertiary": "#ffffff",
+              "on-tertiary-fixed": "#1a1c1c",
+              "on-tertiary": "#2f3131",
+              "outline-variant": "#444748",
+              "on-error-container": "#ffdad6",
+              "primary-fixed": "#e2e2e2",
+              "tertiary-container": "#e2e2e2",
+              "on-primary-container": "#636565",
+              "on-secondary": "#303031"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar -->
+<header class="bg-[#121414] dark:bg-[#121414] docked full-width top-0 sticky z-50 tonal-shift bg-[#1B1C1C] flat no shadows">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center overflow-hidden">
+<img alt="Team Logo" class="w-full h-full object-cover" data-alt="Vercel brand logo in black and white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQp5iqHT1zSsUY9kabMI61myWz1kdSpcYWW0wzEl5BVqc4xpTOYcNk5hRmgyu8GgdSZfU1QpdbfRogkH8bXBc2NntULpKUwEmMX2U4SEliT80bdUSkxPExXkGp81yga_sbyRiPG4KVJj1bJVgr7bV-o8Xv2Xyn2vF1Ex75QQJ2FMB-SPcICKNPaDkrsIr3UIqfekCy031mecIUpo93CcCSsOB5803LDvhvhzYx3wg8JdxNMHlSmHh2OJC63eprKai8MA1OWqwhKuPV"/>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-['Inter'] font-bold tracking-tight text-[1.125rem] text-[#FFFFFF]">Vercel</span>
+<span class="material-symbols-outlined text-[#C4C7C8] text-sm">unfold_more</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-[#C4C7C8] hover:bg-[#343535] transition-colors duration-200 p-2 rounded-lg">
+<span class="material-symbols-outlined">swap_horiz</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="User profile avatar icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYgAE0YuseGzVV_IET1k-aCFiopAZniW17yCRuKMs0gtG_nDRiAmQsXSwGadXgnO10ibFhB7xJWKgMnpP4QmY9Oua9zyzXIxKgDX9QPc2fPCl_Qb5pY_x7MIkU6pgzPPFTOh-d6GxcS2d1p8Ou8Q9ap52M8RCbEtvErFSvcVSDIJGkDcmxmUyenC-gPYSTDFbFiw_b_aCLYyGSBfDeG2sDu5IbAJCRe5SZXnMrIiq4_HL1RzVSn-5L0oLDXQFxDydP_aJl5O-QTU7I"/>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-5xl mx-auto px-6 pt-12 pb-32">
+<!-- Team Header & Switcher Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+<div class="space-y-2">
+<div class="flex items-center gap-3 text-on-surface-variant mb-4">
+<span class="label-sm font-medium tracking-widest uppercase text-[0.6875rem]">Account Settings</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="label-sm font-medium tracking-widest uppercase text-[0.6875rem] text-primary">Team Management</span>
+</div>
+<h1 class="text-4xl font-black tracking-tighter text-primary">Team Access</h1>
+<p class="text-on-surface-variant body-md max-w-md">Manage your team members, permissions, and security settings in one place.</p>
+</div>
+<div class="flex flex-col sm:flex-row gap-3">
+<div class="bg-surface-container-low p-1 rounded flex gap-1">
+<button class="px-4 py-2 text-sm font-bold bg-surface-container-high text-primary rounded-sm transition-all">Personal</button>
+<button class="px-4 py-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-all">Team-X</button>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2.5 font-bold text-sm tracking-tight flex items-center justify-center gap-2 hover:opacity-90 transition-opacity rounded-sm">
+<span class="material-symbols-outlined text-[1.125rem]">person_add</span>
+                    Invite Member
+                </button>
+</div>
+</div>
+<!-- Bento Grid Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+<div class="md:col-span-2 bg-surface-container-low p-8 relative overflow-hidden group">
+<div class="relative z-10">
+<span class="text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant block mb-6">Total Seats</span>
+<div class="flex items-baseline gap-2">
+<span class="text-6xl font-black tracking-tighter text-primary">12</span>
+<span class="text-xl font-bold text-on-surface-variant">/ 20</span>
+</div>
+</div>
+<div class="absolute right-[-10%] bottom-[-20%] opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[12rem]">group</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-8 flex flex-col justify-between">
+<div>
+<span class="text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant block mb-2">Pending Invites</span>
+<span class="text-4xl font-black tracking-tighter text-primary">3</span>
+</div>
+<div class="flex -space-x-2 mt-4">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest"></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-high"></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-variant"></div>
+</div>
+</div>
+</div>
+<!-- Members Management -->
+<div class="bg-surface-container-low overflow-hidden rounded-sm">
+<div class="px-8 py-6 flex items-center justify-between bg-surface-container-high/30">
+<h3 class="font-bold text-lg tracking-tight text-primary">Team Members</h3>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-lowest text-on-surface text-sm pl-10 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary border-none rounded-sm placeholder:text-outline-variant" placeholder="Search members..." type="text"/>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="text-on-surface-variant">
+<th class="px-8 py-4 text-[0.6875rem] font-medium tracking-widest uppercase">Member</th>
+<th class="px-8 py-4 text-[0.6875rem] font-medium tracking-widest uppercase">Role</th>
+<th class="px-8 py-4 text-[0.6875rem] font-medium tracking-widest uppercase">Status</th>
+<th class="px-8 py-4 text-[0.6875rem] font-medium tracking-widest uppercase text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-variant/30 transition-colors">
+<td class="px-8 py-6">
+<div class="flex items-center gap-4">
+<img alt="Guillermo Rauch" class="w-10 h-10 rounded-full" data-alt="Portrait photo of a team member" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOHLqm_Rkqs0PzO0GpDV8lx_qAfZIRJhlbe-8Q7bIKiOnDKkkP0CApU5AR4xvD7KyUF6cNFqlrhkNBkRjy6LNQ8WALAQsOZI7MwWKHbvvRamJfpqHxG1Pzts_6g2qrE4PHam3-aAWx2CTxMJzStVsuD27IklcazSf5PfK716W-xsJIr9-Z__boYn3NlUIriWoj6UkmgmeJfCp8un8oEyaimXuHxJD66W0TRPDvZSBzJN15O4BKz8GnIQjzpxl9vzxUn8J1ITGZCnCM"/>
+<div>
+<p class="font-bold text-primary">Guillermo Rauch</p>
+<p class="text-xs text-on-surface-variant">rauchg@vercel.com</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6">
+<span class="text-xs px-2 py-1 bg-primary/10 text-primary font-bold tracking-wider uppercase border border-primary/20">Owner</span>
+</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(255,255,255,0.4)]"></div>
+<span class="text-xs text-on-surface font-medium">Active</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-variant/30 transition-colors">
+<td class="px-8 py-6">
+<div class="flex items-center gap-4">
+<img alt="Lee Robinson" class="w-10 h-10 rounded-full" data-alt="Portrait photo of a team member" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeMB7pEsfIlz6GreXQ2FQg3BH4Hkcc-dvaUYvQ3o9EWtJiHFfG7EMl_P4XOJEzyiTo8ly7tHgDGmkvD87ZkG1ItVo-0Zmcfo-qP3z3P_FTjqX6XU0CLTZPuUBEU1h9peXiWtZTZ_ewlzoTGutkUphLciwItw9VMryr2Cl4UveuYCu1WnhxmOWPma-5DW7RHn4xS9bmrL3w420xdO_TVXXjLrj3YpbpPIRxFBpp3UbZTqX6ZtjXIjNffY1l-cF2uUIW1KhBxuSHVoTR"/>
+<div>
+<p class="font-bold text-primary">Lee Robinson</p>
+<p class="text-xs text-on-surface-variant">lee@vercel.com</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6">
+<span class="text-xs px-2 py-1 bg-surface-variant text-on-surface font-bold tracking-wider uppercase">Member</span>
+</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(255,255,255,0.4)]"></div>
+<span class="text-xs text-on-surface font-medium">Active</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 (Pending) -->
+<tr class="hover:bg-surface-variant/30 transition-colors">
+<td class="px-8 py-6">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-outline">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<p class="font-bold text-on-surface-variant">Sarah Jenkins</p>
+<p class="text-xs text-on-surface-variant/60">sarah.j@company.com</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-6">
+<span class="text-xs px-2 py-1 bg-surface-container-high text-on-surface-variant font-bold tracking-wider uppercase">Viewer</span>
+</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-2 opacity-60">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+<span class="text-xs text-on-surface-variant font-medium italic">Pending invite...</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<button class="text-xs font-bold text-primary hover:underline transition-all mr-4">Resend</button>
+<button class="text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined">cancel</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#1B1C1C]/80 backdrop-blur-xl dark:bg-[#1B1C1C]/80 shadow-[0_-4px_40px_rgba(227,226,226,0.06)]">
+<div class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Projects</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Deploy</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Usage</span>
+</div>
+<!-- Active Tab: Settings (Access Management is part of settings) -->
+<div class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Settings</span>
+</div>
+</nav>
+</body></html>

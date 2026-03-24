@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#0d0e0f",
+              "on-secondary-fixed-variant": "#464747",
+              "inverse-primary": "#5d5f5f",
+              "on-primary-fixed-variant": "#454747",
+              "surface-container": "#1f2020",
+              "primary-fixed-dim": "#c6c6c7",
+              "tertiary-fixed": "#e2e2e2",
+              "error-container": "#93000a",
+              "surface-tint": "#c6c6c7",
+              "surface": "#121414",
+              "on-secondary-fixed": "#1b1c1c",
+              "secondary-fixed": "#e3e2e2",
+              "secondary": "#c7c6c6",
+              "on-surface": "#e3e2e2",
+              "surface-dim": "#121414",
+              "inverse-surface": "#e3e2e2",
+              "primary": "#ffffff",
+              "on-tertiary-container": "#636565",
+              "on-primary": "#2f3131",
+              "secondary-container": "#464747",
+              "on-tertiary-fixed-variant": "#454747",
+              "inverse-on-surface": "#303031",
+              "tertiary-fixed-dim": "#c6c6c6",
+              "secondary-fixed-dim": "#c7c6c6",
+              "outline": "#8e9192",
+              "surface-variant": "#343535",
+              "background": "#121414",
+              "surface-container-highest": "#343535",
+              "on-error": "#690005",
+              "surface-bright": "#383939",
+              "on-surface-variant": "#c4c7c8",
+              "on-secondary-container": "#b5b5b5",
+              "on-primary-fixed": "#1a1c1c",
+              "primary-container": "#e2e2e2",
+              "error": "#ffb4ab",
+              "surface-container-low": "#1b1c1c",
+              "surface-container-high": "#292a2a",
+              "on-background": "#e3e2e2",
+              "tertiary": "#ffffff",
+              "on-tertiary-fixed": "#1a1c1c",
+              "on-tertiary": "#2f3131",
+              "outline-variant": "#444748",
+              "on-error-container": "#ffdad6",
+              "primary-fixed": "#e2e2e2",
+              "tertiary-container": "#e2e2e2",
+              "on-primary-container": "#636565",
+              "on-secondary": "#303031"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar -->
+<header class="bg-[#121414] dark:bg-[#121414] docked full-width top-0 sticky z-50 no-border tonal-shift bg-[#1B1C1C]">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Minimalist dark tech team logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoZXhsLnBuoo26KonGUS8e3wLcEw0ozObJtzupoocCzXUCdlh-IGZeolIC-ZTjD1ek4KI3ZiqgF2SrWDmN5mu7mRw6i-WaHuTzB5CunRPoq3Ci5YE_C1_PZXiFecICaqrWjt_Q7_ysmmGa-0Pu5x_BfjC1QCZpIa34BgZUKuxaV5-rAgXkmmpw_Sw6Ny7VNbefYbTTm-f1a8lHkrN5xjgIl7-Qf9sU5yaVSCPtE3VJ27sx4WfSxo2AQ86qp3L0st5ZMDwWqtFm_qYh"/>
+</div>
+<h1 class="font-['Inter'] font-bold tracking-tight text-[1.125rem] text-[#FFFFFF]">Vercel</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-[#C4C7C8] hover:bg-[#343535] transition-colors duration-200 scale-95 duration-100 rounded-lg">
+<span class="material-symbols-outlined">swap_horiz</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-5xl mx-auto px-6 pt-8 pb-32">
+<!-- Billing Header -->
+<section class="mb-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h2 class="text-on-surface-variant font-label text-[0.6875rem] font-medium tracking-widest uppercase mb-2">Usage Overview</h2>
+<h3 class="text-5xl font-extrabold tracking-tighter text-primary">Usage &amp; Billing</h3>
+</div>
+<div class="bg-surface-container-low p-5 rounded flex flex-col gap-1 min-w-[240px]">
+<span class="text-on-surface-variant font-label text-[0.6875rem] font-medium tracking-widest uppercase">Current Plan</span>
+<div class="flex items-center justify-between">
+<span class="text-xl font-bold text-primary">Pro Team</span>
+<span class="px-2 py-0.5 bg-primary text-on-primary text-[0.625rem] font-black uppercase tracking-tighter rounded-sm">Active</span>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant/10 flex justify-between items-center">
+<span class="text-on-surface-variant text-[0.75rem]">Next bill: Oct 24, 2023</span>
+<span class="text-primary font-bold text-[0.75rem]">$20.00</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Metric Grid (Bento) -->
+<div class="grid grid-cols-1 md:grid-cols-6 gap-6 mb-12">
+<!-- Bandwidth -->
+<div class="md:col-span-4 bg-surface-container-low p-8 rounded relative overflow-hidden group">
+<div class="flex justify-between items-start mb-8 relative z-10">
+<div>
+<h4 class="text-on-surface-variant font-label text-[0.6875rem] font-medium tracking-widest uppercase mb-1">Bandwidth</h4>
+<p class="text-4xl font-black text-primary tracking-tighter">842.12 <span class="text-xl font-normal text-on-surface-variant">GB</span></p>
+</div>
+<div class="text-right">
+<span class="text-[0.75rem] text-on-surface-variant">Limit: 1 TB</span>
+<div class="w-32 h-1 bg-surface-container-highest mt-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[84%]"></div>
+</div>
+</div>
+</div>
+<!-- Mini Chart Visual -->
+<div class="h-24 w-full flex items-end gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+<div class="flex-1 bg-surface-variant h-[20%]"></div>
+<div class="flex-1 bg-surface-variant h-[35%]"></div>
+<div class="flex-1 bg-surface-variant h-[25%]"></div>
+<div class="flex-1 bg-surface-variant h-[45%]"></div>
+<div class="flex-1 bg-surface-variant h-[60%]"></div>
+<div class="flex-1 bg-surface-variant h-[55%]"></div>
+<div class="flex-1 bg-surface-variant h-[80%]"></div>
+<div class="flex-1 bg-primary h-[90%]"></div>
+<div class="flex-1 bg-surface-variant h-[65%]"></div>
+<div class="flex-1 bg-surface-variant h-[40%]"></div>
+<div class="flex-1 bg-surface-variant h-[50%]"></div>
+<div class="flex-1 bg-surface-variant h-[30%]"></div>
+</div>
+</div>
+<!-- Requests -->
+<div class="md:col-span-2 bg-surface-container-high p-8 rounded flex flex-col justify-between">
+<div>
+<h4 class="text-on-surface-variant font-label text-[0.6875rem] font-medium tracking-widest uppercase mb-1">Total Requests</h4>
+<p class="text-3xl font-black text-primary tracking-tighter">14.8M</p>
+</div>
+<div class="mt-6">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-[1rem]">trending_up</span>
+<span class="text-sm font-bold">+12.3%</span>
+<span class="text-on-surface-variant text-[0.75rem] ml-auto">vs last month</span>
+</div>
+</div>
+</div>
+<!-- Edge Functions -->
+<div class="md:col-span-3 bg-surface-container-low p-8 rounded">
+<h4 class="text-on-surface-variant font-label text-[0.6875rem] font-medium tracking-widest uppercase mb-4">Edge Function Executions</h4>
+<div class="flex items-baseline gap-2 mb-6">
+<span class="text-3xl font-black text-primary tracking-tighter">2.4M</span>
+<span class="text-on-surface-variant text-sm">/ 5M base</span>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-[0.75rem]">
+<span class="text-on-surface-variant">Current Usage</span>
+<span class="text-primary font-mono">48%</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[48%]"></div>
+</div>
+</div>
+</div>
+<!-- Data Transfer -->
+<div class="md:col-span-3 bg-[#0d0e0f] p-8 rounded border border-outline-variant/10">
+<h4 class="text-on-surface-variant font-label text-[0.6875rem] font-medium tracking-widest uppercase mb-4">Source Data Transfer</h4>
+<div class="flex items-baseline gap-2 mb-6">
+<span class="text-3xl font-black text-primary tracking-tighter">128.4</span>
+<span class="text-on-surface-variant text-sm">GB outbound</span>
+</div>
+<div class="flex gap-2">
+<div class="h-10 flex-1 bg-surface-container-high rounded-sm"></div>
+<div class="h-10 flex-1 bg-surface-container-high rounded-sm opacity-50"></div>
+<div class="h-10 flex-1 bg-surface-container-high rounded-sm"></div>
+<div class="h-10 flex-1 bg-primary rounded-sm"></div>
+</div>
+</div>
+</div>
+<!-- Detailed Breakdown -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-xl font-bold tracking-tight text-primary">Cost Breakdown</h3>
+<button class="text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors">Download CSV</button>
+</div>
+<div class="bg-surface-container-low rounded overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high">
+<th class="px-6 py-4 font-label text-[0.6875rem] text-on-surface-variant uppercase tracking-widest">Resource</th>
+<th class="px-6 py-4 font-label text-[0.6875rem] text-on-surface-variant uppercase tracking-widest">Usage</th>
+<th class="px-6 py-4 font-label text-[0.6875rem] text-on-surface-variant uppercase tracking-widest text-right">Cost</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-variant transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">bolt</span>
+<span class="text-sm font-medium text-primary">Edge Middleware</span>
+</div>
+</td>
+<td class="px-6 py-5 text-sm text-on-surface-variant">1,204,500 units</td>
+<td class="px-6 py-5 text-sm font-mono text-primary text-right">$0.00</td>
+</tr>
+<tr class="hover:bg-surface-variant transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">storage</span>
+<span class="text-sm font-medium text-primary">Artifacts Storage</span>
+</div>
+</td>
+<td class="px-6 py-5 text-sm text-on-surface-variant">42.1 GB</td>
+<td class="px-6 py-5 text-sm font-mono text-primary text-right">$4.21</td>
+</tr>
+<tr class="hover:bg-surface-variant transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">group</span>
+<span class="text-sm font-medium text-primary">Team Seats</span>
+</div>
+</td>
+<td class="px-6 py-5 text-sm text-on-surface-variant">2 Seats</td>
+<td class="px-6 py-5 text-sm font-mono text-primary text-right">$40.00</td>
+</tr>
+<tr class="hover:bg-surface-variant transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">image</span>
+<span class="text-sm font-medium text-primary">Image Optimization</span>
+</div>
+</td>
+<td class="px-6 py-5 text-sm text-on-surface-variant">4,800 images</td>
+<td class="px-6 py-5 text-sm font-mono text-primary text-right">$0.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Insights -->
+<section class="mt-12">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="p-6 bg-surface-container-low rounded border-l-2 border-primary">
+<h5 class="text-primary font-bold text-sm mb-2">Efficiency Insight</h5>
+<p class="text-on-surface-variant text-sm leading-relaxed">Your Edge Functions are running 15% more efficiently than last month. Consider reducing timeout values to further optimize costs.</p>
+</div>
+<div class="p-6 bg-surface-container-low rounded">
+<h5 class="text-primary font-bold text-sm mb-2">Limit Warning</h5>
+<p class="text-on-surface-variant text-sm leading-relaxed">You are approaching 85% of your Bandwidth limit. Auto-scaling is enabled, additional GB will be billed at $0.15/GB.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#1B1C1C]/80 backdrop-blur-xl dark:bg-[#1B1C1C]/80 shadow-[0_-4px_40px_rgba(227,226,226,0.06)]">
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Deploy</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase">Usage</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Settings</span>
+</a>
+</nav>
+</body></html>

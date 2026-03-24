@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Deployment | Vercel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#0d0e0f",
+              "on-secondary-fixed-variant": "#464747",
+              "inverse-primary": "#5d5f5f",
+              "on-primary-fixed-variant": "#454747",
+              "surface-container": "#1f2020",
+              "primary-fixed-dim": "#c6c6c7",
+              "tertiary-fixed": "#e2e2e2",
+              "error-container": "#93000a",
+              "surface-tint": "#c6c6c7",
+              "surface": "#121414",
+              "on-secondary-fixed": "#1b1c1c",
+              "secondary-fixed": "#e3e2e2",
+              "secondary": "#c7c6c6",
+              "on-surface": "#e3e2e2",
+              "surface-dim": "#121414",
+              "inverse-surface": "#e3e2e2",
+              "primary": "#ffffff",
+              "on-tertiary-container": "#636565",
+              "on-primary": "#2f3131",
+              "secondary-container": "#464747",
+              "on-tertiary-fixed-variant": "#454747",
+              "inverse-on-surface": "#303031",
+              "tertiary-fixed-dim": "#c6c6c6",
+              "secondary-fixed-dim": "#c7c6c6",
+              "outline": "#8e9192",
+              "surface-variant": "#343535",
+              "background": "#121414",
+              "surface-container-highest": "#343535",
+              "on-error": "#690005",
+              "surface-bright": "#383939",
+              "on-surface-variant": "#c4c7c8",
+              "on-secondary-container": "#b5b5b5",
+              "on-primary-fixed": "#1a1c1c",
+              "primary-container": "#e2e2e2",
+              "error": "#ffb4ab",
+              "surface-container-low": "#1b1c1c",
+              "surface-container-high": "#292a2a",
+              "on-background": "#e3e2e2",
+              "tertiary": "#ffffff",
+              "on-tertiary-fixed": "#1a1c1c",
+              "on-tertiary": "#2f3131",
+              "outline-variant": "#444748",
+              "on-error-container": "#ffdad6",
+              "primary-fixed": "#e2e2e2",
+              "tertiary-container": "#e2e2e2",
+              "on-primary-container": "#636565",
+              "on-secondary": "#303031"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #121414;
+      }
+      .glass-effect {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-[#121414] dark:bg-[#121414] docked full-width top-0 sticky z-50 no-border tonal-shift bg-[#1B1C1C] flat no shadows">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Minimalist abstract geometric user profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDW8n1jhQkQ-hS1Z0iEI64S2BzJz5QYgNayYMsBZUYHTArlveCJQ8-kqsKdfrExleu2rAF9F8-YfV2bc81-RzrpoviAzDmIkEFrshoH0_WPMPxKNIMGgaTg6o5UwJrdC_xx8r-jXTSkFEXAH4Gkwm6wxX_2B90A2YQz4bpyOP8OV3rh_74knn99YC1BdoKjyAXx7e035s9qr0tPTdXVQ2-xYWNLz4uYPTWMHPkQj7lbbosgkNdJM-OJtGyWyMFq1iUiMJ2Fe14Wb8Gw"/>
+</div>
+<span class="text-xl font-black text-[#FFFFFF] tracking-tighter">Vercel</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#C4C7C8] hover:bg-[#343535] transition-colors duration-200 p-2 rounded-full scale-95 duration-100">swap_horiz</button>
+</div>
+</div>
+</header>
+<main class="max-w-xl mx-auto px-6 pt-12">
+<!-- Editorial Header -->
+<div class="mb-12">
+<h1 class="text-[2.75rem] font-extrabold tracking-tight leading-none text-primary mb-2">Deploy.</h1>
+<p class="text-on-surface-variant font-body body-md">Ship your latest updates to the edge instantly.</p>
+</div>
+<!-- Deployment Form -->
+<div class="space-y-10">
+<!-- Branch Selection -->
+<section class="space-y-4">
+<label class="font-label text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant">Select Branch</label>
+<div class="relative group">
+<select class="w-full bg-surface-container-lowest text-primary appearance-none px-4 py-4 rounded-sm border-none focus:ring-0 focus:border-none focus:outline-none cursor-pointer">
+<option value="main">main</option>
+<option value="dev">dev</option>
+<option value="feature/ui-update">feature/ui-update</option>
+</select>
+<div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+<div class="absolute bottom-0 left-0 h-[2px] w-0 bg-primary transition-all duration-300 group-focus-within:w-full"></div>
+</div>
+</section>
+<!-- File Upload Area -->
+<section class="space-y-4">
+<label class="font-label text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant">Source Code</label>
+<div class="bg-surface-container-low p-8 border-2 border-dashed border-outline-variant/15 flex flex-col items-center justify-center gap-4 hover:bg-surface-container-high transition-colors cursor-pointer rounded-sm">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant">cloud_upload</span>
+<div class="text-center">
+<p class="text-primary font-medium">Drop files or click to upload</p>
+<p class="text-on-surface-variant text-xs mt-1">Manual file upload override</p>
+</div>
+</div>
+</section>
+<!-- Build Settings Summary (Recessed Tonal Layer) -->
+<section class="bg-surface-container-lowest p-6 rounded-sm space-y-6">
+<div class="flex justify-between items-center">
+<h2 class="font-label text-[0.6875rem] font-medium tracking-widest uppercase text-on-surface-variant">Build Settings</h2>
+<button class="text-[0.6875rem] text-primary underline underline-offset-4 hover:opacity-70">EDIT</button>
+</div>
+<div class="grid grid-cols-2 gap-8">
+<div class="space-y-1">
+<p class="text-[0.6875rem] text-on-surface-variant uppercase tracking-wider">Root Directory</p>
+<p class="text-sm font-mono text-primary">./</p>
+</div>
+<div class="space-y-1">
+<p class="text-[0.6875rem] text-on-surface-variant uppercase tracking-wider">Install Command</p>
+<p class="text-sm font-mono text-primary">npm install</p>
+</div>
+<div class="space-y-1">
+<p class="text-[0.6875rem] text-on-surface-variant uppercase tracking-wider">Build Command</p>
+<p class="text-sm font-mono text-primary">npm run build</p>
+</div>
+<div class="space-y-1">
+<p class="text-[0.6875rem] text-on-surface-variant uppercase tracking-wider">Output Directory</p>
+<p class="text-sm font-mono text-primary">.next</p>
+</div>
+</div>
+</section>
+<!-- Deploy Button (Kinetic Tool) -->
+<button class="w-full py-5 bg-gradient-to-br from-primary to-secondary-fixed-dim text-on-primary font-bold tracking-tight text-lg rounded-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group">
+                Deploy Project
+                <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">bolt</span>
+</button>
+</div>
+</main>
+<!-- BottomNavBar (Filtered for Home context) -->
+<nav class="bg-[#1B1C1C]/80 backdrop-blur-xl dark:bg-[#1B1C1C]/80 fixed bottom-0 w-full z-50 rounded-t-none shadow-[0_-4px_40px_rgba(227,226,226,0.06)] px-4 pb-6 pt-3 flex justify-around items-center">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Home</span>
+</a>
+<!-- Projects -->
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Projects</span>
+</a>
+<!-- Deploy (ACTIVE) -->
+<a class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Deploy</span>
+</a>
+<!-- Usage -->
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Usage</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Settings</span>
+</a>
+</nav>
+</body></html>

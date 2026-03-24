@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Project Settings - Vercel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-low": "#1b1c1c",
+              "primary": "#ffffff",
+              "secondary-fixed-dim": "#c7c6c6",
+              "surface-container-high": "#292a2a",
+              "surface-tint": "#c6c6c7",
+              "error-container": "#93000a",
+              "on-tertiary-fixed-variant": "#454747",
+              "surface-variant": "#343535",
+              "surface-bright": "#383939",
+              "on-secondary-fixed-variant": "#464747",
+              "on-surface": "#e3e2e2",
+              "on-background": "#e3e2e2",
+              "on-tertiary-fixed": "#1a1c1c",
+              "primary-fixed-dim": "#c6c6c7",
+              "on-error-container": "#ffdad6",
+              "inverse-on-surface": "#303031",
+              "surface": "#121414",
+              "secondary-container": "#464747",
+              "tertiary": "#ffffff",
+              "on-tertiary": "#2f3131",
+              "surface-container-lowest": "#0d0e0f",
+              "surface-container": "#1f2020",
+              "surface-dim": "#121414",
+              "primary-container": "#e2e2e2",
+              "error": "#ffb4ab",
+              "tertiary-container": "#e2e2e2",
+              "on-secondary-container": "#b5b5b5",
+              "on-primary-fixed": "#1a1c1c",
+              "secondary": "#c7c6c6",
+              "outline-variant": "#444748",
+              "on-secondary": "#303031",
+              "on-primary": "#2f3131",
+              "tertiary-fixed-dim": "#c6c6c6",
+              "on-tertiary-container": "#636565",
+              "surface-container-highest": "#343535",
+              "tertiary-fixed": "#e2e2e2",
+              "outline": "#8e9192",
+              "inverse-surface": "#e3e2e2",
+              "primary-fixed": "#e2e2e2",
+              "inverse-primary": "#5d5f5f",
+              "on-primary-container": "#636565",
+              "on-primary-fixed-variant": "#454747",
+              "secondary-fixed": "#e3e2e2",
+              "on-error": "#690005",
+              "on-secondary-fixed": "#1b1c1c",
+              "background": "#121414",
+              "on-surface-variant": "#c4c7c8"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-[#121414] dark:bg-[#121414] docked full-width top-0 sticky z-50 no-border tonal-shift bg-[#1B1C1C] flat no shadows">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-sm" data-icon="change_history">change_history</span>
+</div>
+<h1 class="font-['Inter'] font-bold tracking-tight text-[1.125rem] text-[#FFFFFF]">Vercel</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-[#C4C7C8] hover:bg-[#343535] transition-colors duration-200 p-2 rounded-lg">
+<span class="material-symbols-outlined" data-icon="swap_horiz">swap_horiz</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-2xl mx-auto px-6 py-8">
+<!-- Section Header -->
+<div class="mb-10">
+<h2 class="text-display-md text-primary font-black tracking-tight mb-2">Settings</h2>
+<p class="text-on-surface-variant body-md">Manage your project environment variables and build configurations.</p>
+</div>
+<!-- Bento Grid Configuration -->
+<div class="space-y-8">
+<!-- Add Variable Action Section -->
+<section class="bg-surface-container-low p-6 rounded shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="font-bold text-primary title-sm">Environment Variables</h3>
+<p class="text-label-sm uppercase tracking-widest text-on-surface-variant mt-1">Project Configuration</p>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 text-label-sm font-bold rounded-sm hover:opacity-90 active:scale-95 transition-all">
+                        ADD VARIABLE
+                    </button>
+</div>
+<!-- Input Shell (Recessed Layer) -->
+<div class="bg-surface-container-lowest p-6 rounded-sm mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="block text-label-sm uppercase tracking-widest text-on-surface-variant">Variable Key</label>
+<input class="w-full bg-transparent border-b-2 border-surface-variant focus:border-primary text-primary py-2 transition-colors outline-none font-mono text-sm" placeholder="e.g. API_SECRET" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="block text-label-sm uppercase tracking-widest text-on-surface-variant">Value</label>
+<input class="w-full bg-transparent border-b-2 border-surface-variant focus:border-primary text-primary py-2 transition-colors outline-none font-mono text-sm" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<div class="mt-6 flex flex-wrap gap-4 items-center">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="rounded-sm bg-surface-container-high border-none text-primary focus:ring-0" type="checkbox"/>
+<span class="text-label-sm text-on-surface group-hover:text-primary transition-colors">PRODUCTION</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded-sm bg-surface-container-high border-none text-primary focus:ring-0" type="checkbox"/>
+<span class="text-label-sm text-on-surface group-hover:text-primary transition-colors">PREVIEW</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded-sm bg-surface-container-high border-none text-primary focus:ring-0" type="checkbox"/>
+<span class="text-label-sm text-on-surface group-hover:text-primary transition-colors">DEVELOPMENT</span>
+</label>
+</div>
+</div>
+<!-- Variables List -->
+<div class="space-y-1">
+<!-- Variable Item -->
+<div class="group flex items-center justify-between p-4 hover:bg-surface-variant transition-colors rounded-sm">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(255,255,255,0.4)]"></div>
+<div>
+<div class="font-mono text-sm text-primary font-bold">DATABASE_URL</div>
+<div class="text-label-sm text-on-surface-variant mt-0.5">••••••••••••••••••••••••</div>
+</div>
+</div>
+<div class="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-error">
+<span class="material-symbols-outlined text-lg" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Variable Item -->
+<div class="group flex items-center justify-between p-4 hover:bg-surface-variant transition-colors rounded-sm">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(255,255,255,0.4)]"></div>
+<div>
+<div class="font-mono text-sm text-primary font-bold">NEXT_PUBLIC_ANALYTICS_ID</div>
+<div class="text-label-sm text-on-surface-variant mt-0.5">UA-12345678-9</div>
+</div>
+</div>
+<div class="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-error">
+<span class="material-symbols-outlined text-lg" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Variable Item (Encrypted) -->
+<div class="group flex items-center justify-between p-4 hover:bg-surface-variant transition-colors rounded-sm">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-secondary-fixed-dim"></div>
+<div>
+<div class="font-mono text-sm text-primary font-bold">STRIPE_SECRET_KEY</div>
+<div class="text-label-sm text-on-surface-variant mt-0.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]" data-icon="lock">lock</span>
+                                    Encrypted at rest
+                                </div>
+</div>
+</div>
+<div class="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-error">
+<span class="material-symbols-outlined text-lg" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Metadata/Details Section (Asymmetric Bento) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-surface-container-low p-6 rounded-sm">
+<h4 class="text-label-sm uppercase tracking-widest text-on-surface-variant mb-4">Node.js Version</h4>
+<div class="flex items-center justify-between">
+<span class="text-primary font-bold">20.x (Current)</span>
+<div class="w-3 h-3 rounded-full bg-[#00FF00] shadow-[0_0_10px_rgba(0,255,0,0.3)]"></div>
+</div>
+<p class="text-label-sm text-on-surface-variant mt-4 leading-relaxed">Automatic updates enabled for minor versions.</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-sm">
+<h4 class="text-label-sm uppercase tracking-widest text-on-surface-variant mb-4">Root Directory</h4>
+<div class="flex items-center gap-3 text-primary">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="folder">folder</span>
+<span class="font-mono text-sm">./apps/web</span>
+</div>
+<p class="text-label-sm text-on-surface-variant mt-4 leading-relaxed">Monorepo structure detected.</p>
+</div>
+</div>
+<!-- Danger Zone -->
+<section class="border border-error/20 bg-error-container/5 p-6 rounded-sm">
+<h3 class="text-error font-bold title-sm mb-2">Danger Zone</h3>
+<p class="text-on-surface-variant body-md mb-6">Permanently remove this project and all of its deployments and domain aliases.</p>
+<button class="w-full md:w-auto border border-error/50 text-error hover:bg-error-container/20 px-6 py-2 text-label-sm font-bold rounded-sm transition-all">
+                    DELETE PROJECT
+                </button>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#1B1C1C]/80 backdrop-blur-xl dark:bg-[#1B1C1C]/80 shadow-[0_-4px_40px_rgba(227,226,226,0.06)]">
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Logs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase">Settings</span>
+</a>
+</nav>
+</body></html>

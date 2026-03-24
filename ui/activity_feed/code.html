@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global Activity Feed | Vercel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#0d0e0f",
+                        "on-secondary-fixed-variant": "#464747",
+                        "inverse-primary": "#5d5f5f",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-container": "#1f2020",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "tertiary-fixed": "#e2e2e2",
+                        "error-container": "#93000a",
+                        "surface-tint": "#c6c6c7",
+                        "surface": "#121414",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "secondary-fixed": "#e3e2e2",
+                        "secondary": "#c7c6c6",
+                        "on-surface": "#e3e2e2",
+                        "surface-dim": "#121414",
+                        "inverse-surface": "#e3e2e2",
+                        "primary": "#ffffff",
+                        "on-tertiary-container": "#636565",
+                        "on-primary": "#2f3131",
+                        "secondary-container": "#464747",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "inverse-on-surface": "#303031",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "secondary-fixed-dim": "#c7c6c6",
+                        "outline": "#8e9192",
+                        "surface-variant": "#343535",
+                        "background": "#121414",
+                        "surface-container-highest": "#343535",
+                        "on-error": "#690005",
+                        "surface-bright": "#383939",
+                        "on-surface-variant": "#c4c7c8",
+                        "on-secondary-container": "#b5b5b5",
+                        "on-primary-fixed": "#1a1c1c",
+                        "primary-container": "#e2e2e2",
+                        "error": "#ffb4ab",
+                        "surface-container-low": "#1b1c1c",
+                        "surface-container-high": "#292a2a",
+                        "on-background": "#e3e2e2",
+                        "tertiary": "#ffffff",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "on-tertiary": "#2f3131",
+                        "outline-variant": "#444748",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed": "#e2e2e2",
+                        "tertiary-container": "#e2e2e2",
+                        "on-primary-container": "#636565",
+                        "on-secondary": "#303031"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121414;
+        }
+        .activity-line::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 40px;
+            bottom: -20px;
+            width: 1px;
+            background-color: #343535;
+        }
+        .activity-line-last::before {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface antialiased min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-[#121414] text-[#FFFFFF] font-['Inter'] font-bold tracking-tight text-[1.125rem] docked full-width top-0 sticky z-50 no-border tonal-shift bg-[#1B1C1C] flat no shadows">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high flex items-center justify-center">
+<img alt="Team Logo" class="w-full h-full object-cover" data-alt="Minimalist geometric team brand icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOJkUVLXqAGfDm9q3hmapm41EAuwD6a1Gz9H0qgqSNgfzkdf60zRlBwY542wvVx-1U1_W78sIWA-QUFsXaVn-G_puMfCMSBrIwkZqt36CbqDuuNLE_8cPyDqzLf_cEgbHXnbpmxbvd4RP_DnoU-wgJClT66PJiwU1pAVrCqzO-vSLRJfpWsrNFH3wrMS_kb1mq5DSghXYV3g6ZNHbg3zINeJ6b-KkXRy9o0nNQXStVh6Vte010bf0qWsBIVsMZfht8igkDElIlnD6K"/>
+</div>
+<span class="text-xl font-black text-[#FFFFFF] tracking-tighter">Vercel</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-[#343535] transition-colors duration-200 p-2 rounded-lg text-[#C4C7C8]">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="hover:bg-[#343535] transition-colors duration-200 p-2 rounded-lg text-[#FFFFFF] scale-95 duration-100">
+<span class="material-symbols-outlined">swap_horiz</span>
+</button>
+</div>
+</div>
+</header>
+<main class="max-w-3xl mx-auto px-6 pt-8">
+<!-- Page Header -->
+<div class="mb-12">
+<h1 class="text-primary font-black text-4xl tracking-tighter mb-2">Activity</h1>
+<p class="text-on-surface-variant font-medium text-sm">Real-time developer events across your ecosystem.</p>
+</div>
+<!-- Activity Stream -->
+<div class="space-y-0">
+<!-- Event 1: Deployment -->
+<div class="relative activity-line pb-12">
+<div class="flex gap-4">
+<div class="relative z-10">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center border border-outline-variant/10">
+<img alt="User Avatar" class="w-8 h-8 rounded-full" data-alt="User profile avatar icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqQ6yV3sa_Vt-wWSxRx8DCHkUg2PRbNLBVHtYm8LwUDTAYeX90K_SPGuZWbr5HkxoDrR3Htbevd7nP5vktiEhrX_JWZWcCFdBNtZvZkwEsJL2oo7lQ5_RgKMkeq53qQ5sHTPuBWqoaPOS1B5Im6MmYl6Ul3_mJnHRyuqEkwhBevfH9ACRcS5MLIJ5T_U67nmAUPs1tVeGb6po7C25hDDnLpsELqbR0mlfB2hqDJOA8DNp-qWPBWIEvprYmf9ZSpDp60jHsGMOThjzI"/>
+</div>
+</div>
+<div class="flex-1 pt-1">
+<div class="flex items-center justify-between mb-1">
+<span class="text-on-surface font-bold text-sm">Felix Miller</span>
+<span class="text-on-surface-variant text-[0.6875rem] font-medium tracking-widest uppercase">2M AGO</span>
+</div>
+<p class="text-on-surface-variant text-sm mb-3">
+                            Deployed to <span class="text-primary font-semibold">production</span> in <span class="text-primary font-semibold">acme-corp-dashboard</span>
+</p>
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center justify-between group hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-green-500" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div>
+<div class="text-primary font-mono text-xs font-bold">acme-corp-db-7x2j1</div>
+<div class="text-on-surface-variant text-[0.625rem] uppercase tracking-wider mt-1">Production • Main</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">arrow_forward_ios</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Event 2: Branch Merge -->
+<div class="relative activity-line pb-12">
+<div class="flex gap-4">
+<div class="relative z-10">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center border border-outline-variant/10">
+<img alt="User Avatar" class="w-8 h-8 rounded-full" data-alt="Female user developer avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFVJ0RndaGzhk2gm2tnxr4BzCfpDksJHnHHgJPLzoEV0_8pMOe6BpEdOgAmhLrRDWHDbdauBoPuGaIf9UvRiUz_JI1Y6_A6bt2Wa_bh0focvVt82QBxaOTjjw7-T7uMU6eCGNXAu8bDA-Yjmjpjn7DJJjfMZzSu4yt8RTOSuZuA1NdJCugpq9oAyxN-e5Py-2g7MMYQk7cYA_OuG08uIImtA3SqSle4oHRE7GEx5Y0S68goGfjV3iQ1oYOjTqgTBc6o1I3BjZL1v3x"/>
+</div>
+</div>
+<div class="flex-1 pt-1">
+<div class="flex items-center justify-between mb-1">
+<span class="text-on-surface font-bold text-sm">Sarah Jenkins</span>
+<span class="text-on-surface-variant text-[0.6875rem] font-medium tracking-widest uppercase">14M AGO</span>
+</div>
+<p class="text-on-surface-variant text-sm mb-3">
+                            Merged branch <code class="bg-surface-container-highest px-1.5 py-0.5 rounded text-primary text-xs">feature/auth-redesign</code> into <span class="text-primary font-semibold">marketing-site</span>
+</p>
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-background bg-surface-container">
+<img alt="Sarah" class="w-full h-full rounded-full" data-alt="Small avatar of Sarah" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClRDGW9IYzrU3kc6Kt4EraMrSrUDO8qry5qNlSNyldmFpssoo5ONzQ0fOEEtWFIp4FxcVqAFqNF6M8mS9kdzombdu1FHxQfehAk2l6iEPakg2_lLT4wY84QGSrIkEVbOu7r3UMrW5mxHEO4QI-jQXIry9nHT5Hs8hYUvyDuVpAmeFtytiHWClD9od9F-Ejkdg_X0nELJN8p7nIr3fmyHVfqSK-G1Fzu0R0LIp0NsY-KnmN36V_HYMc0mcGAh2XJbXdFmfGDDL651GQ"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-background bg-surface-container">
+<img alt="Marcus" class="w-full h-full rounded-full" data-alt="Small avatar of Marcus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQIs2Tai4U68jBLJHKQkCXsc7mQH5ZK2eW1nRgBFbkBrxrkY0iKkP1EfpfHyMc469KVS8-GtVjeKW-LmBWQhM7FcpfC1XtkpIOwVp7doRnfuMGiwTDF5sFqFTlmd39AiNwc81bUcaeifkAeZD1LQp1TCXFT31Xzsd32NRWZ-42F2iI-ch_Qu1G3EXmU5MQ2pNphGxW_iXF3BtqHOukI4hnNL9P7P_zbEZd8PlsCZ8VRpJjTS18vBNdAnWDaL7CSf9BtjkeTUxx8FSv"/>
+</div>
+</div>
+<span class="text-[0.625rem] text-on-surface-variant font-medium uppercase tracking-widest">Reviewed by Marcus</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Event 3: Domain Verified -->
+<div class="relative activity-line pb-12">
+<div class="flex gap-4">
+<div class="relative z-10">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center border border-outline-variant/10">
+<span class="material-symbols-outlined text-primary text-xl">language</span>
+</div>
+</div>
+<div class="flex-1 pt-1">
+<div class="flex items-center justify-between mb-1">
+<span class="text-on-surface font-bold text-sm">System</span>
+<span class="text-on-surface-variant text-[0.6875rem] font-medium tracking-widest uppercase">1H AGO</span>
+</div>
+<p class="text-on-surface-variant text-sm mb-3">
+                            Domain <span class="text-primary underline decoration-outline-variant underline-offset-4">api.acme.com</span> verified successfully.
+                        </p>
+<div class="bg-surface-container-lowest border border-outline-variant/10 p-3 rounded-lg inline-flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-[0.6875rem] font-mono text-on-surface">SSL Certificate Issued</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Event 4: Member Added -->
+<div class="relative activity-line activity-line-last pb-12">
+<div class="flex gap-4">
+<div class="relative z-10">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center border border-outline-variant/10">
+<img alt="User Avatar" class="w-8 h-8 rounded-full" data-alt="New team member avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDh7ioPWKVHysquREVqgqATpgterf8BfmRfM7I3c51JI1JgAq2zEfXoYpGGOrqdSk-uIuvzjSEhu7W3j6EvTsE3aiCx0GhMJzxrxX17QAlqUWUHFbjYirpY3SeWbVjL215SMExQnaCuwxdmj2PNSKCxBuAiYAdGL-5rCuNFoersX_uUdExKwE_mLXi49QmRvwd7l2VwnyImz40Lu1hB4iKHO9BmRADcEEKHTRDqoPMAFDWanAsBltQAlTXph5UHfSPWLVUM9LBe1e-V"/>
+</div>
+</div>
+<div class="flex-1 pt-1">
+<div class="flex items-center justify-between mb-1">
+<span class="text-on-surface font-bold text-sm">Alex Rivera</span>
+<span class="text-on-surface-variant text-[0.6875rem] font-medium tracking-widest uppercase">3H AGO</span>
+</div>
+<p class="text-on-surface-variant text-sm">
+                            Joined the <span class="text-primary font-semibold">Engineering</span> team as <span class="text-primary font-semibold">Contributor</span>.
+                        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Load More Button -->
+<div class="mt-8 flex justify-center">
+<button class="bg-surface-container-low hover:bg-surface-container-high text-on-surface font-bold py-3 px-8 rounded transition-all text-sm tracking-tight scale-95 active:scale-90">
+                Load previous activity
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#1B1C1C]/80 backdrop-blur-xl dark:bg-[#1B1C1C]/80 shadow-[0_-4px_40px_rgba(227,226,226,0.06)] rounded-t-none">
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Deploy</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Usage</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Settings</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-low": "#1b1c1c",
+                        "primary": "#ffffff",
+                        "secondary-fixed-dim": "#c7c6c6",
+                        "surface-container-high": "#292a2a",
+                        "surface-tint": "#c6c6c7",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "surface-variant": "#343535",
+                        "surface-bright": "#383939",
+                        "on-secondary-fixed-variant": "#464747",
+                        "on-surface": "#e3e2e2",
+                        "on-background": "#e3e2e2",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "on-error-container": "#ffdad6",
+                        "inverse-on-surface": "#303031",
+                        "surface": "#121414",
+                        "secondary-container": "#464747",
+                        "tertiary": "#ffffff",
+                        "on-tertiary": "#2f3131",
+                        "surface-container-lowest": "#0d0e0f",
+                        "surface-container": "#1f2020",
+                        "surface-dim": "#121414",
+                        "primary-container": "#e2e2e2",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#e2e2e2",
+                        "on-secondary-container": "#b5b5b5",
+                        "on-primary-fixed": "#1a1c1c",
+                        "secondary": "#c7c6c6",
+                        "outline-variant": "#444748",
+                        "on-secondary": "#303031",
+                        "on-primary": "#2f3131",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "on-tertiary-container": "#636565",
+                        "surface-container-highest": "#343535",
+                        "tertiary-fixed": "#e2e2e2",
+                        "outline": "#8e9192",
+                        "inverse-surface": "#e3e2e2",
+                        "primary-fixed": "#e2e2e2",
+                        "inverse-primary": "#5d5f5f",
+                        "on-primary-container": "#636565",
+                        "on-primary-fixed-variant": "#454747",
+                        "secondary-fixed": "#e3e2e2",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "background": "#121414",
+                        "on-surface-variant": "#c4c7c8"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121414;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-[#121414] dark:bg-[#121414] docked full-width top-0 sticky z-50 tonal-shift bg-[#1B1C1C]">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img alt="User Profile or Team Logo" class="w-full h-full object-cover" data-alt="Vercel brand logo or team avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNHLd7EMtxiqz0EUxdxRSUItI6uY7NR80HlpZxgA6DhIhCPEPKYDUQqUz3zctzDZJK27SHH4jUflAN1dkeKkRs00ZsyS8kyoRgWpKrYzGBjhwD7_EwxCSshiHE1aQ1_ErEJrqruOD_W-pUnBy5vLyvdK0NXW4UXLaVRzk0etdEq_Cew6jY8H4igQoGHgbuGnNC5_pOmO-jax2fpjocwocq2wYj1uEbm5DKhk-xb9i_V3xiDjx0KU2RElHkP8NIIQqsMnN6rdZKmSIc"/>
+</div>
+<h1 class="font-['Inter'] font-bold tracking-tight text-[1.125rem] text-[#FFFFFF] text-xl font-black tracking-tighter">Vercel</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-[#C4C7C8] hover:bg-[#343535] transition-colors duration-200 p-2 rounded scale-95 duration-100">
+<span class="material-symbols-outlined" data-icon="swap_horiz">swap_horiz</span>
+</button>
+</div>
+</div>
+</header>
+<main class="px-6 py-8 space-y-10">
+<!-- Search Section -->
+<section class="space-y-4">
+<div class="relative group">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="search">search</span>
+</div>
+<input class="w-full bg-surface-container-lowest border-none py-4 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant focus:ring-0 rounded-DEFAULT" placeholder="Search projects..." type="text"/>
+<div class="absolute bottom-0 left-0 right-0 h-[2px] bg-primary scale-x-0 group-focus-within:scale-x-100 transition-transform duration-300"></div>
+</div>
+</section>
+<!-- Projects Grid (Bento Style) -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Project Card 1: Success -->
+<div class="bg-surface-container-low p-6 flex flex-col justify-between group cursor-pointer hover:bg-surface-container-high transition-colors duration-200 relative">
+<div class="flex justify-between items-start mb-8">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#00FF88]"></span>
+<h3 class="title-sm font-semibold text-primary">vercel-mobile-app</h3>
+</div>
+<p class="label-sm text-on-surface-variant uppercase tracking-widest text-[0.6875rem]">Production</p>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded-sm">
+<img alt="Next.js" class="w-5 h-5 invert" data-alt="Next.js framework logo small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIkUnT92d-ucPlg-uG7f6Fq26NXOO88wahag4qx5Gs14uArgNSxQNVJgRanAUtMcaYbC94XdBFoNMBUQRk8mwIQ32K8g4z5JKkTTmbJuOCtGsaXmZ4d3oGuslH87RhBqK38KrMtknqPd46mWJaecL7xxU62jgmZxPJyHQAmh8oFEkZrbrnol-VVhUmRohLSfhF1vXgvEOiRgWzHTsUNvm4XHcMENsGI9Hykp06swpl1O2e3O_cIimOlBzYTA9H1vHjk65NBxdaVSyE"/>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-3 bg-surface-container-lowest/50 p-3 rounded-sm">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant" data-icon="account_tree">account_tree</span>
+<span class="body-md text-on-surface">main</span>
+<span class="ml-auto text-on-surface-variant text-[0.75rem]">2h ago</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-[0.75rem] text-on-surface-variant">https://vercel-mobile-app.vercel.app</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" data-icon="open_in_new">open_in_new</span>
+</div>
+</div>
+</div>
+<!-- Project Card 2: Loading State -->
+<div class="bg-surface-container-low p-6 flex flex-col justify-between group cursor-pointer hover:bg-surface-container-high transition-colors duration-200">
+<div class="flex justify-between items-start mb-8">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-[#0070F3] animate-spin" data-icon="progress_activity">progress_activity</span>
+<h3 class="title-sm font-semibold text-primary">analytics-dashboard</h3>
+</div>
+<p class="label-sm text-on-surface-variant uppercase tracking-widest text-[0.6875rem]">Preview</p>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded-sm">
+<img alt="React" class="w-5 h-5" data-alt="React library logo small" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsguzkIC554DZx6DaRz4GGkdMba8nOTCN-V-OI3D9M6FtvY9wG_-DYHIZSkBcLgA1MAd3S49GZBxAWBS6g7tWR9rfoMmw7u5px66cljsGkFTfcbkwHlEu0ae1uBrTkgtXvKJp9faFiaLmzc1FcxBxfQ2YJiwIVmt8gl2DRw5bbL7o4tymdGwVrZev6S-tAksyXKueDPMMK5B3zDTGR40fWQQMLq_S-54cweh5Md_DVcF9qFJglubSKCm7ssBRL1DDZgrG3o0VoKbu5"/>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-3 bg-surface-container-lowest/50 p-3 rounded-sm relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-surface-bright/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant" data-icon="account_tree">account_tree</span>
+<span class="body-md text-on-surface">feature/ui-update</span>
+<span class="ml-auto text-on-surface-variant text-[0.75rem]">Building...</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-[0.75rem] text-on-surface-variant">https://analytics-dash-git-feature...</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" data-icon="open_in_new">open_in_new</span>
+</div>
+</div>
+</div>
+<!-- Project Card 3: Static -->
+<div class="bg-surface-container-low p-6 flex flex-col justify-between group cursor-pointer hover:bg-surface-container-high transition-colors duration-200">
+<div class="flex justify-between items-start mb-8">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#00FF88]"></span>
+<h3 class="title-sm font-semibold text-primary">personal-portfolio</h3>
+</div>
+<p class="label-sm text-on-surface-variant uppercase tracking-widest text-[0.6875rem]">Production</p>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded-sm">
+<span class="material-symbols-outlined text-[20px] text-primary" data-icon="html">html</span>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-3 bg-surface-container-lowest/50 p-3 rounded-sm">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant" data-icon="account_tree">account_tree</span>
+<span class="body-md text-on-surface">main</span>
+<span class="ml-auto text-on-surface-variant text-[0.75rem]">5d ago</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-[0.75rem] text-on-surface-variant">https://portfolio.me</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" data-icon="open_in_new">open_in_new</span>
+</div>
+</div>
+</div>
+<!-- Project Card 4: Error State -->
+<div class="bg-surface-container-low p-6 flex flex-col justify-between group cursor-pointer hover:bg-surface-container-high transition-colors duration-200">
+<div class="flex justify-between items-start mb-8">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-error" data-icon="error">error</span>
+<h3 class="title-sm font-semibold text-primary">e-commerce-backend</h3>
+</div>
+<p class="label-sm text-on-surface-variant uppercase tracking-widest text-[0.6875rem]">Preview</p>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded-sm">
+<span class="material-symbols-outlined text-[20px] text-primary" data-icon="javascript">javascript</span>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-3 bg-error-container/20 p-3 rounded-sm">
+<span class="material-symbols-outlined text-[18px] text-error" data-icon="account_tree">account_tree</span>
+<span class="body-md text-error">hotfix/checkout</span>
+<span class="ml-auto text-error text-[0.75rem]">Failed</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-[0.75rem] text-on-surface-variant">Build logs available...</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" data-icon="history">history</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Usage Overview (Bento Detail) -->
+<section class="bg-surface-container-lowest p-8 border border-outline-variant/10 rounded-DEFAULT">
+<h2 class="label-sm text-on-surface-variant uppercase tracking-[0.1em] mb-6">Usage Summary</h2>
+<div class="grid grid-cols-2 gap-8">
+<div>
+<p class="text-[2.75rem] font-black tracking-tight text-primary leading-none">1.2M</p>
+<p class="label-sm text-on-surface-variant uppercase mt-2">Requests / 30d</p>
+</div>
+<div>
+<p class="text-[2.75rem] font-black tracking-tight text-primary leading-none">84.2%</p>
+<p class="label-sm text-on-surface-variant uppercase mt-2">Bandwidth</p>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#1B1C1C]/80 backdrop-blur-xl dark:bg-[#1B1C1C]/80 shadow-[0_-4px_40px_rgba(227,226,226,0.06)]">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="home">home</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Home</span>
+</a>
+<!-- Projects (Active) -->
+<a class="flex flex-col items-center justify-center text-[#FFFFFF] relative after:content-[''] after:block after:w-1 after:h-1 after:bg-[#FFFFFF] after:rounded-full after:mt-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="grid_view">grid_view</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Projects</span>
+</a>
+<!-- Logs -->
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="terminal">terminal</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Logs</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-[#C4C7C8] opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="settings">settings</span>
+<span class="font-['Inter'] text-[0.6875rem] font-medium tracking-widest uppercase mt-1">Settings</span>
+</a>
+</nav>
+<style>
+        @keyframes shimmer {
+            100% {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</body></html>
