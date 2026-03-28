@@ -16,35 +16,11 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _error;
   final _tokenController = TextEditingController();
-  bool _showTokenInput = false;
 
   @override
   void dispose() {
     _tokenController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleOAuthLogin() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      await context.read<AppState>().loginWithOAuth();
-    } catch (e) {
-      if (mounted) {
-        if (e.toString().contains('CANCELED')) {
-          setState(() => _isLoading = false);
-          return;
-        }
-        setState(() {
-          _error = 'Authentication failed: $e';
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   Future<void> _handleTokenLogin() async {
@@ -113,14 +89,64 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 32),
               ],
+              TextField(
+                controller: _tokenController,
+                decoration: InputDecoration(
+                  labelText: 'Personal Access Token',
+                  hintText: 'Paste token from vercel.com/account/settings/tokens',
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () => _tokenController.clear(),
+                  ),
+                ),
+                obscureText: true,
+                maxLines: 1,
+                enabled: !_isLoading,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  InkWell(
+                    onTap: () async {
+                      final uri = Uri.parse('https://vercel.com/account/settings/tokens');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: Text(
+                      'Get your token from vercel.com/account/settings/tokens',
+                      style: TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.share, size: 16),
+                    color: AppTheme.primary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      Share.share('Get your Vercel token at: https://vercel.com/account/settings/tokens');
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isLoading ? null : _handleOAuthLogin,
+                onPressed: _isLoading ? null : _handleTokenLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
                   foregroundColor: AppTheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero, // Brutalist sharp edges
+                    borderRadius: BorderRadius.zero,
                   ),
                 ),
                 child: _isLoading
@@ -138,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Icon(Icons.login, size: 20),
                           const SizedBox(width: 12),
                           Text(
-                            'CONNECT VERCEL ACCOUNT',
+                            'CONNECT WITH TOKEN',
                             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                   color: AppTheme.onPrimary,
                                   fontWeight: FontWeight.bold,
@@ -150,101 +176,12 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Securely connect your Vercel account to manage deployments, domains, and more.',
+                'Enter your Vercel Personal Access Token to manage deployments, domains, and more.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.onSurfaceVariant,
                     ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
-              const Divider(),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: _isLoading
-                    ? null
-                    : () => setState(() => _showTokenInput = !_showTokenInput),
-                child: Text(
-                  _showTokenInput ? 'Use OAuth Instead' : 'Enter Token Manually',
-                  style: const TextStyle(decoration: TextDecoration.underline),
-                ),
-              ),
-              if (_showTokenInput) ...[
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _tokenController,
-                  decoration: InputDecoration(
-                    labelText: 'Personal Access Token',
-                    hintText: 'Paste token from vercel.com/account/tokens',
-                    border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.zero,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () => _tokenController.clear(),
-                    ),
-                  ),
-                  obscureText: true,
-                  maxLines: 1,
-                  enabled: !_isLoading,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    InkWell(
-                      onTap: () async {
-                        final uri = Uri.parse('https://vercel.com/account/settings/tokens');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Text(
-                        'Get your token from vercel.com/account/settings/tokens',
-                        style: TextStyle(
-                          color: AppTheme.primary,
-                          fontSize: 12,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.share, size: 16),
-                      color: AppTheme.primary,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        Share.share('Get your Vercel token at: https://vercel.com/account/settings/tokens');
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _handleTokenLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.secondary,
-                    foregroundColor: AppTheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.zero,
-                    ),
-                  ),
-                  child: _isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppTheme.onPrimary,
-                          ),
-                        )
-                      : const Text(
-                          'CONNECT WITH TOKEN',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                ),
-              ],
             ],
           ),
         ),

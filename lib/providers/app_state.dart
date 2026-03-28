@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/revenue_cat_service.dart';
 import '../models/project.dart';
 
 class AppState extends ChangeNotifier {
   final AuthService _authService = AuthService();
+  final RevenueCatService _revenueCatService = RevenueCatService();
   VercelApi _apiService = VercelApi();
 
   bool _isAuthenticated = false;
@@ -74,29 +76,21 @@ class AppState extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
+      // Validate token before saving
+      final isValid = await _authService.validateToken(token);
+      if (!isValid) {
+        throw Exception('Invalid token. Please check your token and try again.');
+      }
       await _authService.saveToken(token);
       _isAuthenticated = true;
       await fetchInitialData();
+      
+      // Sync login with RevenueCat using user ID
+      if (_user != null && _user!['id'] != null) {
+        await _revenueCatService.login(_user!['id'].toString());
+      }
     } catch (e) {
       _errorMessage = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loginWithOAuth() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      await _authService.loginWithVercel();
-      _isAuthenticated = true;
-      await fetchInitialData();
-    } catch (e) {
-      _errorMessage = e.toString();
-      if (kDebugMode) print('OAuth login error: $e');
-      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -104,6 +98,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Sync logout with RevenueCat
+    try {
+      await _revenueCatService.logout();
+    } catch (e) {
+      if (kDebugMode) print('RevenueCat logout error: $e');
+    }
+    
     await _authService.deleteToken();
     _isAuthenticated = false;
     _projects = [];

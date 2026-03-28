@@ -41,9 +41,9 @@ dependencies:
   url_launcher: ^6.3.2
   share_plus: ^12.0.1
   timeago: ^3.7.1
-  flutter_web_auth_2: ^5.0.1
-  crypto: ^3.0.7
   flutter_dotenv: ^5.2.1
+  purchases_flutter: ^9.15.1
+  purchases_ui_flutter: ^9.15.1
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +70,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/logo.png
+    - .env
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

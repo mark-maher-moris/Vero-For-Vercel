@@ -1,7 +1,0 @@
-{
-  "version": 2,
-  "name": "vero-auth-bridge",
-  "rewrites": [
-    { "source": "/callback", "destination": "/api/callback" }
-  ]
-}

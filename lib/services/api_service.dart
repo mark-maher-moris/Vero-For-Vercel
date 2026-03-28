@@ -37,11 +37,7 @@ class VercelApi {
       params['teamId'] = teamId!;
     }
     
-    final queryString = params.isNotEmpty 
-        ? '?' + params.entries.map((e) => '${e.key}=${e.value}').join('&')
-        : '';
-        
-    return Uri.parse('$baseUrl$path$queryString');
+    return Uri.parse('$baseUrl$path').replace(queryParameters: params.isNotEmpty ? params : null);
   }
 
   Future<dynamic> _handleResponse(http.Response response) async {
