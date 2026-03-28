@@ -1,37 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../providers/app_state.dart';
+import '../widgets/project_selector_appbar.dart';
 
 class UsageBillingScreen extends StatelessWidget {
   const UsageBillingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final user = appState.user?['user'];
+    final billing = user?['billing'];
+    final plan = billing?['plan']?.toUpperCase() ?? 'FREE';
+    final projects = appState.projects;
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceContainerLow,
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const ProjectSelectorAppBar(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
         children: [
@@ -61,7 +47,7 @@ class UsageBillingScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Pro Team', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                    Text('$plan Plan', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: AppTheme.primary, borderRadius: BorderRadius.circular(2)),
@@ -72,11 +58,11 @@ class UsageBillingScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 const Divider(color: AppTheme.surfaceContainerHigh),
                 const SizedBox(height: 16),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Next bill: Oct 24, 2023', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
-                    Text('\$20.00', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                    Text('User: ${user?['username'] ?? 'Unknown'}', style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
+                    Text('${projects.length} PROJECTS', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary)),
                   ],
                 ),
               ],
@@ -84,51 +70,31 @@ class UsageBillingScreen extends StatelessWidget {
           ),
 
           const SizedBox(height: 24),
-          // Bandwidth
+          // Projects count
           _buildMetricCard(
-            title: 'BANDWIDTH',
-            primaryValue: '842.12',
-            unit: 'GB',
-            limitText: 'Limit: 1 TB',
-            progress: 0.84,
+            title: 'ACTIVE PROJECTS',
+            primaryValue: '${projects.length}',
+            unit: '',
+            limitText: 'Varies by plan',
+            progress: projects.length / 50.0 > 1.0 ? 1.0 : projects.length / 50.0,
           ),
 
           const SizedBox(height: 16),
-          // Total Requests
+          // Simple placeholder for other real metrics if available
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(4),
             ),
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('TOTAL REQUESTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-                const SizedBox(height: 4),
-                const Text('14.8M', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1)),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    const Icon(Icons.trending_up, color: AppTheme.primary, size: 16),
-                    const SizedBox(width: 8),
-                    const Text('+12.3%', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                    const Spacer(),
-                    const Text('vs last month', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
-                  ],
-                ),
+                Text('BILLING EMAIL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
+                SizedBox(height: 4),
+                Text('Verifying...', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1)),
               ],
             ),
-          ),
-
-          const SizedBox(height: 16),
-          // Edge Functions
-          _buildMetricCard(
-            title: 'EDGE FUNCTION EXECUTIONS',
-            primaryValue: '2.4M',
-            unit: '',
-            limitText: '/ 5M base',
-            progress: 0.48,
           ),
 
           const SizedBox(height: 48),

@@ -1,38 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../providers/app_state.dart';
+import '../widgets/project_selector_appbar.dart';
 
 class TeamAccessScreen extends StatelessWidget {
   const TeamAccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final user = appState.user?['user'];
+    final username = user?['username'] ?? 'User';
+    final email = user?['email'] ?? '';
+    final name = user?['name'] ?? username;
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceContainerLow,
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primary,
-              ),
-              child: const Icon(Icons.change_history, size: 20, color: AppTheme.onPrimary),
-            ),
-            const SizedBox(width: 12),
-            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const ProjectSelectorAppBar(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
         children: [
@@ -104,9 +89,9 @@ class TeamAccessScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.baseline,
                         textBaseline: TextBaseline.alphabetic,
                         children: [
-                          Text('12', style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -2)),
+                          Text('1', style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -2)),
                           SizedBox(width: 8),
-                          Text('/ 20', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant)),
+                          Text('/ 1', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant)),
                         ],
                       ),
                     ],
@@ -123,13 +108,11 @@ class TeamAccessScreen extends StatelessWidget {
                     children: [
                       const Text('PENDING INVITES', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
                       const SizedBox(height: 8),
-                      const Text('3', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: AppTheme.primary)),
+                      const Text('0', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: AppTheme.primary)),
                       const SizedBox(height: 24),
                       Row(
                         children: [
-                          Container(width: 32, height: 32, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.surfaceContainerHigh)),
-                          Transform.translate(offset: const Offset(-8, 0), child: Container(width: 32, height: 32, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.surfaceContainerHigh))),
-                          Transform.translate(offset: const Offset(-16, 0), child: Container(width: 32, height: 32, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.surfaceVariant))),
+                          Container(width: 32, height: 32, decoration: const BoxDecoration(shape: BoxShape.circle, color: AppTheme.surfaceContainerHigh), child: const Icon(Icons.person, size: 16, color: AppTheme.onSurfaceVariant)),
                         ],
                       ),
                     ],
@@ -178,9 +161,13 @@ class TeamAccessScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                _buildMemberRow('Guillermo Rauch', 'rauchg@vercel.com', 'OWNER', true),
-                _buildMemberRow('Lee Robinson', 'lee@vercel.com', 'MEMBER', true),
-                _buildMemberRow('Sarah Jenkins', 'sarah.j@company.com', 'VIEWER', false),
+                _buildMemberRow(name, email, 'OWNER', true),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text('Only you have access to this personal account.', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant, fontStyle: FontStyle.italic)),
+                  ),
+                ),
               ],
             ),
           ),

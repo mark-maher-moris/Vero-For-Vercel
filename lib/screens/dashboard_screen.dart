@@ -30,7 +30,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 shape: BoxShape.circle,
                 color: AppTheme.surfaceContainerHigh,
               ),
-              child: const Icon(Icons.person, size: 20, color: AppTheme.onSurface),
+              child: Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+              ),
             ),
             const SizedBox(width: 12),
             const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),

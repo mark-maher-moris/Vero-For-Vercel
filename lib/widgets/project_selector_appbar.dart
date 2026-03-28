@@ -30,7 +30,10 @@ class ProjectSelectorAppBar extends StatelessWidget implements PreferredSizeWidg
                   shape: BoxShape.circle,
                   color: AppTheme.primary,
                 ),
-                child: const Icon(Icons.change_history, size: 20, color: AppTheme.onPrimary),
+                child: Padding(
+                  padding: const EdgeInsets.all(6.0),
+                  child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(

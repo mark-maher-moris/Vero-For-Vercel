@@ -48,10 +48,10 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.change_history, // Vercel Triangle placeholder
-                size: 80,
-                color: AppTheme.primary,
+              Image.asset(
+                'assets/logo.png',
+                height: 80,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 16),
               Text(

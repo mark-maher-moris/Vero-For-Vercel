@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/project.dart';
 import '../services/api_service.dart';
+import '../providers/app_state.dart';
+import '../widgets/project_selector_appbar.dart';
 
 class SettingsEnvVarsScreen extends StatefulWidget {
   final Project? project;
@@ -14,62 +17,47 @@ class SettingsEnvVarsScreen extends StatefulWidget {
 
 class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
   final VercelApi _api = VercelApi();
-  List<dynamic>? _envVars;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchEnvVars();
-  }
-
-  Future<void> _fetchEnvVars() async {
-    if (widget.project == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
-    try {
-      final vars = await _api.getProjectEnvVars(widget.project!.id);
-      if (mounted) {
-        setState(() {
-          _envVars = vars;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+  Project? _currentProject;
+  Future<List<dynamic>>? _envVarsFuture;
 
   @override
   Widget build(BuildContext context) {
+    final project = widget.project ?? context.watch<AppState>().selectedProject;
+
+    if (project != _currentProject) {
+      _currentProject = project;
+      _envVarsFuture = project != null ? _api.getProjectEnvVars(project.id) : null;
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceContainerLow,
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primary,
-              ),
-              child: const Icon(Icons.change_history, size: 20, color: AppTheme.onPrimary),
+      appBar: widget.project == null 
+        ? const ProjectSelectorAppBar()
+        : AppBar(
+            backgroundColor: AppTheme.surfaceContainerLow,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppTheme.onSurface),
+              onPressed: () => Navigator.pop(context),
             ),
-            const SizedBox(width: 12),
-            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () {},
+            title: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.surfaceContainerHigh,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6.0),
+                    child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(widget.project!.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+              ],
+            ),
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
         children: [
@@ -167,25 +155,37 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                 ),
                 const SizedBox(height: 16),
                 
-                if (widget.project == null)
+                if (project == null)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(child: Text('Select a project to view environment variables.', style: TextStyle(color: AppTheme.onSurfaceVariant))),
                   )
-                else if (_isLoading)
-                  const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-                else if (_envVars == null || _envVars!.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: Text('No environment variables found.', style: TextStyle(color: AppTheme.onSurfaceVariant))),
-                  )
                 else
-                  ..._envVars!.map((env) => _buildEnvVar(
-                    env['key'] ?? 'UNKNOWN_KEY',
-                    env['value'] ?? '••••••••',
-                    env['target']?.contains('production') ?? false,
-                    isEncrypted: (env['type'] == 'secret' || env['type'] == 'encrypted'),
-                  )),
+                  FutureBuilder<List<dynamic>>(
+                    future: _envVarsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: AppTheme.primary)));
+                      } else if (snapshot.hasError) {
+                        return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('Error loading env vars: ${snapshot.error}', style: const TextStyle(color: AppTheme.error))));
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: Text('No environment variables found.', style: TextStyle(color: AppTheme.onSurfaceVariant))),
+                        );
+                      }
+                      
+                      final envs = snapshot.data!;
+                      return Column(
+                        children: envs.map((env) => _buildEnvVar(
+                          env['key'] ?? 'UNKNOWN_KEY',
+                          env['value'] ?? '••••••••',
+                          env['target']?.contains('production') ?? false,
+                          isEncrypted: (env['type'] == 'secret' || env['type'] == 'encrypted'),
+                        )).toList(),
+                      );
+                    },
+                  ),
               ],
             ),
           ),
@@ -197,20 +197,20 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(2)),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('NODE.JS VERSION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-                      SizedBox(height: 16),
+                      const Text('FRAMEWORK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
+                      const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('20.x (Current)', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                          Icon(Icons.circle, color: Colors.green, size: 12),
+                          Text(project?.framework?.toUpperCase() ?? 'OTHER', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                          const Icon(Icons.circle, color: Colors.green, size: 12),
                         ],
                       ),
-                      SizedBox(height: 16),
-                      Text('Automatic updates enabled for minor versions.', style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant)),
+                      const SizedBox(height: 16),
+                      const Text('Detected based on build configuration.', style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
@@ -220,26 +220,26 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(2)),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('ROOT DIRECTORY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-                      SizedBox(height: 16),
+                      const Text('PROJECT ID', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
-                          const Icon(Icons.folder_outlined, color: AppTheme.onSurfaceVariant, size: 20),
+                          const Icon(Icons.tag, color: AppTheme.onSurfaceVariant, size: 20),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              './apps/web',
+                              project?.id ?? '-',
                               style: const TextStyle(fontFamily: 'monospace', color: AppTheme.primary),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 16),
-                      Text('Monorepo structure detected.', style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant)),
+                      const SizedBox(height: 16),
+                      const Text('Unique identifier for this specific project.', style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
@@ -269,7 +269,11 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Project deletion is disabled for safety in this demo.', style: TextStyle(color: AppTheme.onPrimary))),
+                    );
+                  },
                   child: const Text('DELETE PROJECT', style: TextStyle(color: AppTheme.error, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                 ),
               ],

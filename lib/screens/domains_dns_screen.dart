@@ -1,38 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../services/api_service.dart';
+import '../providers/app_state.dart';
+import '../models/project.dart';
+import '../widgets/project_selector_appbar.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
-class DomainsDnsScreen extends StatelessWidget {
+class DomainsDnsScreen extends StatefulWidget {
   const DomainsDnsScreen({super.key});
 
   @override
+  State<DomainsDnsScreen> createState() => _DomainsDnsScreenState();
+}
+
+class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
+  final VercelApi _api = VercelApi();
+  Project? _currentProject;
+  Future<List<dynamic>>? _domainsFuture;
+
+  @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final project = appState.selectedProject;
+
+    if (project != _currentProject) {
+      _currentProject = project;
+      _domainsFuture = project != null ? _api.getProjectDomains(project.id) : null;
+    }
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceContainerLow,
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primary,
-              ),
-              child: const Icon(Icons.change_history, size: 20, color: AppTheme.onPrimary),
-            ),
-            const SizedBox(width: 12),
-            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const ProjectSelectorAppBar(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
         children: [
@@ -94,25 +92,50 @@ class DomainsDnsScreen extends StatelessWidget {
 
           const SizedBox(height: 32),
 
-          // Domain 1
-          _buildDomainCard(
-            domain: 'acme.com',
-            isValid: true,
-            projectAssigned: 'acme-corp-dashboard',
-            age: '2y 4m',
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Domain 2
-          _buildDomainCard(
-            domain: 'api.acme.net',
-            isValid: false,
-            projectAssigned: 'acme-user-api',
-            age: '4d',
-            errorMessage: 'Invalid Configuration',
-            errorDetails: 'Nameservers must be configured to point to Vercel.',
-          ),
+          if (project == null)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Text('Select a project to view domains.', style: TextStyle(color: AppTheme.onSurfaceVariant)),
+              ),
+            )
+          else
+            FutureBuilder<List<dynamic>>(
+              future: _domainsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppTheme.error)));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No domains found for this project.', style: TextStyle(color: AppTheme.onSurfaceVariant)));
+                }
+
+                final domains = snapshot.data!;
+                return Column(
+                  children: domains.map((domain) {
+                    final name = domain['name'] as String? ?? 'Unknown';
+                    final verified = domain['verified'] as bool? ?? false;
+                    final createdAt = domain['createdAt'] as int?;
+                    final ageStr = createdAt != null 
+                        ? timeago.format(DateTime.fromMillisecondsSinceEpoch(createdAt)) 
+                        : 'Unknown';
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildDomainCard(
+                        domain: name,
+                        isValid: verified,
+                        projectAssigned: project.name,
+                        age: ageStr,
+                        errorMessage: verified ? null : 'Invalid Configuration',
+                        errorDetails: verified ? null : 'Pending verification or DNS updates.',
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
         ],
       ),
     );

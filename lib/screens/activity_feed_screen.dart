@@ -1,42 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../models/deployment.dart';
+import '../models/project.dart';
+import '../services/api_service.dart';
+import '../providers/app_state.dart';
+import '../widgets/project_selector_appbar.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
-class ActivityFeedScreen extends StatelessWidget {
+class ActivityFeedScreen extends StatefulWidget {
   const ActivityFeedScreen({super.key});
 
   @override
+  State<ActivityFeedScreen> createState() => _ActivityFeedScreenState();
+}
+
+class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
+  final VercelApi _api = VercelApi();
+  Project? _currentProject;
+  Future<List<Deployment>>? _deploymentsFuture;
+
+  @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final project = appState.selectedProject;
+
+    if (project != _currentProject) {
+      _currentProject = project;
+      _deploymentsFuture = _api.getDeployments(projectId: project?.id);
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceContainerLow,
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.surfaceContainerHigh,
-              ),
-              child: const Icon(Icons.change_history, size: 20, color: AppTheme.onSurface),
-            ),
-            const SizedBox(width: 12),
-            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: AppTheme.onSurfaceVariant),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const ProjectSelectorAppBar(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
         children: [
@@ -60,133 +56,137 @@ class ActivityFeedScreen extends StatelessWidget {
           ),
           const SizedBox(height: 48),
           
-          _buildActivityItem(
-            isLast: false,
-            icon: Icons.person,
-            title: 'Felix Miller',
-            timeAgo: '2M AGO',
-            description: const TextSpan(
-              children: [
-                TextSpan(text: 'Deployed to '),
-                TextSpan(text: 'production', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                TextSpan(text: ' in '),
-                TextSpan(text: 'acme-corp-dashboard', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-              ],
-            ),
-            child: Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          FutureBuilder<List<Deployment>>(
+            future: _deploymentsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+              } else if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppTheme.error)));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('No recent activity found.', style: TextStyle(color: AppTheme.onSurfaceVariant)));
+              }
+
+              final deployments = snapshot.data!;
+              return Column(
+                children: List.generate(deployments.length, (index) {
+                  final deployment = deployments[index];
+                  final isLast = index == deployments.length - 1;
+                  final createdDate = DateTime.fromMillisecondsSinceEpoch(deployment.created);
+                  
+                  return _buildActivityItem(
+                    isLast: isLast,
+                    icon: _getIconForState(deployment.state),
+                    title: deployment.name,
+                    timeAgo: timeago.format(createdDate).toUpperCase(),
+                    description: TextSpan(
                       children: [
-                        Text('acme-corp-db-7x2j1', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                        SizedBox(height: 4),
-                        Text('PRODUCTION • MAIN', style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1, fontWeight: FontWeight.bold)),
+                        const TextSpan(text: 'Deployment to '),
+                        TextSpan(
+                          text: deployment.url,
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
+                        ),
+                        TextSpan(text: ' is ${deployment.state.toLowerCase()}.'),
                       ],
                     ),
-                  ),
-                  const Icon(Icons.arrow_forward_ios, color: AppTheme.onSurfaceVariant, size: 14),
-                ],
-              ),
-            ),
-          ),
-
-          _buildActivityItem(
-            isLast: false,
-            icon: Icons.merge_type,
-            title: 'Sarah Jenkins',
-            timeAgo: '14M AGO',
-            description: const TextSpan(
-              children: [
-                TextSpan(text: 'Merged branch '),
-                TextSpan(text: 'feature/auth-redesign', style: TextStyle(backgroundColor: AppTheme.surfaceContainerHigh, color: AppTheme.primary, fontFamily: 'monospace')),
-                TextSpan(text: ' into '),
-                TextSpan(text: 'marketing-site', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Row(
-                children: [
-                  const Icon(Icons.person, size: 16, color: AppTheme.onSurfaceVariant),
-                  const SizedBox(width: 8),
-                  const Text('REVIEWED BY MARCUS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1, color: AppTheme.onSurfaceVariant)),
-                ],
-              ),
-            ),
-          ),
-
-          _buildActivityItem(
-            isLast: false,
-            icon: Icons.language,
-            title: 'System',
-            timeAgo: '1H AGO',
-            description: const TextSpan(
-              children: [
-                TextSpan(text: 'Domain '),
-                TextSpan(text: 'api.acme.com', style: TextStyle(decoration: TextDecoration.underline, color: AppTheme.primary)),
-                TextSpan(text: ' verified successfully.'),
-              ],
-            ),
-            child: Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLowest,
-                border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppTheme.success, shape: BoxShape.circle)),
-                  const SizedBox(width: 8),
-                  const Text('SSL Certificate Issued', style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: AppTheme.onSurface)),
-                ],
-              ),
-            ),
-          ),
-
-          _buildActivityItem(
-            isLast: true,
-            icon: Icons.group_add,
-            title: 'Alex Rivera',
-            timeAgo: '3H AGO',
-            description: const TextSpan(
-              children: [
-                TextSpan(text: 'Joined the '),
-                TextSpan(text: 'Engineering', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                TextSpan(text: ' team as '),
-                TextSpan(text: 'Contributor', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                TextSpan(text: '.'),
-              ],
-            ),
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _getStatusIcon(deployment.state),
+                            color: _getStatusColor(deployment.state),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  deployment.uid,
+                                  style: const TextStyle(
+                                    color: AppTheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'monospace',
+                                    fontSize: 12,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  deployment.state.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: AppTheme.onSurfaceVariant,
+                                    fontSize: 10,
+                                    letterSpacing: 1,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios, color: AppTheme.onSurfaceVariant, size: 14),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              );
+            },
           ),
 
           const SizedBox(height: 32),
           Center(
             child: TextButton(
-              onPressed: () {},
+              onPressed: () {
+                setState(() {
+                  _deploymentsFuture = _api.getDeployments(projectId: project?.id);
+                });
+              },
               style: TextButton.styleFrom(
                 backgroundColor: AppTheme.surfaceContainerLow,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               ),
-              child: const Text('Load previous activity', style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold)),
+              child: const Text('Refresh activity', style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
       ),
     );
+  }
+
+  IconData _getIconForState(String state) {
+    switch (state) {
+      case 'READY': return Icons.rocket_launch;
+      case 'ERROR': return Icons.error_outline;
+      case 'BUILDING': return Icons.loop;
+      default: return Icons.history;
+    }
+  }
+
+  IconData _getStatusIcon(String state) {
+    switch (state) {
+      case 'READY': return Icons.check_circle;
+      case 'ERROR': return Icons.cancel;
+      case 'BUILDING': return Icons.pending;
+      default: return Icons.help_outline;
+    }
+  }
+
+  Color _getStatusColor(String state) {
+    switch (state) {
+      case 'READY': return AppTheme.success;
+      case 'ERROR': return AppTheme.error;
+      case 'BUILDING': return Colors.orange;
+      default: return AppTheme.onSurfaceVariant;
+    }
   }
 
   Widget _buildActivityItem({

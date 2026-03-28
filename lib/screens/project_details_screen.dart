@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import 'deployment_logs_screen.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
@@ -67,7 +68,24 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           icon: const Icon(Icons.arrow_back, color: AppTheme.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(widget.project.name, style: Theme.of(context).textTheme.titleSmall),
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.surfaceContainerHigh,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(widget.project.name, style: Theme.of(context).textTheme.titleSmall)),
+          ],
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 100),
@@ -101,7 +119,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           const SizedBox(height: 8),
           Text(widget.project.name, style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1.5)),
           const SizedBox(height: 8),
-          Text('Updated \${timeago.format(widget.project.updatedAt)}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
+          Text('Updated ${timeago.format(widget.project.updatedAt)}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
         ],
       ),
     );
@@ -147,7 +165,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     if (_deployments != null && _deployments!.isNotEmpty) {
                       _launchUrl(_deployments!.first.url);
                     } else if (widget.project.name.isNotEmpty) {
-                      _launchUrl('\${widget.project.name}.vercel.app');
+                      _launchUrl('${widget.project.name}.vercel.app');
                     }
                   },
                 ),

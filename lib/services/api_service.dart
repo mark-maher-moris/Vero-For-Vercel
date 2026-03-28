@@ -19,7 +19,7 @@ class VercelApi {
 
   Future<Map<String, dynamic>> getUser() async {
     final response = await http.get(
-      Uri.parse('\$baseUrl/v2/user'),
+      Uri.parse('$baseUrl/v2/user'),
       headers: await _getHeaders(),
     );
     if (response.statusCode == 200) {
@@ -31,7 +31,7 @@ class VercelApi {
 
   Future<List<Project>> getProjects() async {
     final response = await http.get(
-      Uri.parse('\$baseUrl/v9/projects'),
+      Uri.parse('$baseUrl/v9/projects'),
       headers: await _getHeaders(),
     );
     if (response.statusCode == 200) {
@@ -44,16 +44,15 @@ class VercelApi {
   }
 
   Future<List<Deployment>> getDeployments({String? projectId}) async {
-    final uriStr = '\$baseUrl/v6/deployments\${projectId != null ? "?projectId=\$projectId" : ""}';
-    final uri = Uri.parse(uriStr);
+    final queryParams = projectId != null ? '?projectId=$projectId' : '';
     final response = await http.get(
-      uri,
+      Uri.parse('$baseUrl/v6/deployments$queryParams'),
       headers: await _getHeaders(),
     );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      final List deploymentsJson = data['deployments'] as List;
-      return deploymentsJson.map((json) => Deployment.fromJson(json)).toList();
+      final list = data['deployments'] as List<dynamic>? ?? [];
+      return list.map((json) => Deployment.fromJson(json)).toList();
     } else {
       throw Exception('Failed to load deployments');
     }
@@ -61,7 +60,7 @@ class VercelApi {
 
   Future<List<dynamic>> getProjectEnvVars(String projectId) async {
     final response = await http.get(
-      Uri.parse('\$baseUrl/v9/projects/\$projectId/env'),
+      Uri.parse('$baseUrl/v9/projects/$projectId/env'),
       headers: await _getHeaders(),
     );
     if (response.statusCode == 200) {
@@ -74,7 +73,7 @@ class VercelApi {
 
   Future<List<dynamic>> getProjectDomains(String projectId) async {
     final response = await http.get(
-      Uri.parse('\$baseUrl/v9/projects/\$projectId/domains'),
+      Uri.parse('$baseUrl/v9/projects/$projectId/domains'),
       headers: await _getHeaders(),
     );
     if (response.statusCode == 200) {
@@ -87,7 +86,7 @@ class VercelApi {
 
   Future<List<dynamic>> getDeploymentEvents(String deploymentId) async {
     final response = await http.get(
-      Uri.parse('\$baseUrl/v2/deployments/\$deploymentId/events'),
+      Uri.parse('$baseUrl/v2/deployments/$deploymentId/events'),
       headers: await _getHeaders(),
     );
     

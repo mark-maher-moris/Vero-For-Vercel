@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
 import '../services/api_service.dart';
+import '../widgets/project_selector_appbar.dart';
 
 class DeploymentLogsScreen extends StatefulWidget {
   final Deployment deployment;
@@ -39,57 +40,9 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final readyState = widget.deployment.state;
-    final isError = readyState == 'ERROR';
-    final isReady = readyState == 'READY';
-
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceContainerLow,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.onSurface),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.deployment.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Text(widget.deployment.uid, style: const TextStyle(fontSize: 10, color: AppTheme.onSurfaceVariant, fontFamily: 'monospace')),
-          ],
-        ),
-        actions: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: isReady ? AppTheme.success : (isError ? AppTheme.error : AppTheme.secondary),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  readyState.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
+      appBar: const ProjectSelectorAppBar(),
       body: Column(
         children: [
           // Subheader Info
@@ -156,11 +109,13 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
                         final log = _logs![index];
                         final payload = log['payload'] ?? {};
                         final text = payload['text'] ?? payload['message'] ?? log.toString();
-                        final isErrorLog = text.toString().toLowerCase().contains('error');
-                        final isWarnLog = text.toString().toLowerCase().contains('warn');
-                        final level = isErrorLog ? 'ERROR' : (isWarnLog ? 'WARN' : 'INFO');
-                        // mock time as api might not provide consistent format easily parseable here in demo
-                        return _buildLogLine('', level, text.toString());
+                        final date = payload['date'] as int?;
+                        final timeStr = date != null ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first : '';
+                        final type = log['type'] as String? ?? 'info';
+                        final isErrorLog = type == 'stderr' || text.toString().toLowerCase().contains('error');
+                        final level = isErrorLog ? 'ERROR' : 'INFO';
+                        
+                        return _buildLogLine(timeStr, level, text.toString());
                       },
                     ),
             ),
