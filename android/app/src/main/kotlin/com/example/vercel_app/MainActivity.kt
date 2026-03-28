@@ -1,4 +1,4 @@
-package com.example.vercel_app
+package com.buildagon.vero
 
 import io.flutter.embedding.android.FlutterActivity
 

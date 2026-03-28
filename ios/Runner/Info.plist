@@ -54,7 +54,7 @@
 			<string>vercel_auth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>vercelapp</string>
+				<string>com.buildagon.vero</string>
 			</array>
 		</dict>
 	</array>

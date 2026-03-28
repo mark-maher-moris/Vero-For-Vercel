@@ -10,9 +10,10 @@ class AuthService {
   static const String _refreshTokenKey = 'vercel_refresh_token';
 
   // Integration markers for user to fill in
-  static const String clientId = 'YOUR_CLIENT_ID';
-  static const String clientSecret = 'YOUR_CLIENT_SECRET';
-  static const String redirectUri = 'vercelapp://auth';
+  static const String clientId = 'cl_0MTgwuq7H4XfsAztxxn8dn2ef27WnPJ4';
+  static const String clientSecret =
+      'e3722eb43304b728e9f49d4566820da3be053bd51830417e21f37102fc55c519';
+  static const String redirectUri = 'https://YOUR-BRIDGE-DOMAIN.vercel.app/callback';
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -56,7 +57,7 @@ class AuthService {
     try {
       final result = await FlutterWebAuth2.authenticate(
         url: url.toString(),
-        callbackUrlScheme: 'vercelapp',
+        callbackUrlScheme: 'com.buildagon.vero',
       );
 
       final callbackUri = Uri.parse(result);
@@ -98,25 +99,35 @@ class AuthService {
       );
     } else {
       final error = json.decode(response.body);
-      throw Exception('Failed to exchange code: ${error['error_description'] ?? error['error']}');
+      throw Exception(
+        'Failed to exchange code: ${error['error_description'] ?? error['error']}',
+      );
     }
   }
 
   String _generateCodeVerifier() {
     final random = Random.secure();
     final values = List<int>.generate(32, (i) => random.nextInt(256));
-    return base64UrlEncode(values).replaceAll('=', '').replaceAll('+', '-').replaceAll('/', '_');
+    return base64UrlEncode(
+      values,
+    ).replaceAll('=', '').replaceAll('+', '-').replaceAll('/', '_');
   }
 
   String _generateCodeChallenge(String verifier) {
     final bytes = utf8.encode(verifier);
     final digest = sha256.convert(bytes);
-    return base64UrlEncode(digest.bytes).replaceAll('=', '').replaceAll('+', '-').replaceAll('/', '_');
+    return base64UrlEncode(
+      digest.bytes,
+    ).replaceAll('=', '').replaceAll('+', '-').replaceAll('/', '_');
   }
 
   String _generateRandomString(int length) {
-    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charset =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     final random = Random.secure();
-    return List.generate(length, (i) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(
+      length,
+      (i) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 }
