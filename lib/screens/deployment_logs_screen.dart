@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
 import '../widgets/project_selector_appbar.dart';
@@ -101,9 +102,13 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
                 const SizedBox(width: 8),
                 _buildFilterChip('Errors', _filter == 'errors', () => setState(() => _filter = 'errors')),
                 const Spacer(),
-                const Icon(Icons.download, size: 16, color: AppTheme.onSurfaceVariant),
-                const SizedBox(width: 16),
-                const Icon(Icons.view_sidebar, size: 16, color: AppTheme.onSurfaceVariant),
+                IconButton(
+                  icon: const Icon(Icons.download, size: 16, color: AppTheme.onSurfaceVariant),
+                  onPressed: _logs != null && _logs!.isNotEmpty ? () => _downloadLogs(context) : null,
+                  tooltip: 'Copy logs to clipboard',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
               ],
             ),
           ),
@@ -239,5 +244,37 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _downloadLogs(BuildContext context) async {
+    if (_logs == null || _logs!.isEmpty) return;
+    
+    try {
+      final buffer = StringBuffer();
+      for (final log in _logs!) {
+        final payload = log['payload'] ?? {};
+        final text = payload['text'] ?? payload['message'] ?? log.toString();
+        final date = payload['date'] as int?;
+        final timeStr = date != null 
+          ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first 
+          : '';
+        final type = log['type'] as String? ?? 'info';
+        final isError = type == 'stderr' || text.toString().toLowerCase().contains('error');
+        buffer.writeln('[$timeStr] ${isError ? 'ERROR' : 'INFO'}: $text');
+      }
+      
+      await Clipboard.setData(ClipboardData(text: buffer.toString()));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logs copied to clipboard')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to copy logs: $e')),
+        );
+      }
+    }
   }
 }

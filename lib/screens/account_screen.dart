@@ -170,6 +170,14 @@ class AccountScreen extends StatelessWidget {
                 ),
                 _buildActionCard(
                   context,
+                  icon: Icons.link_off,
+                  title: 'Disconnect',
+                  subtitle: 'Unlink Vercel',
+                  onTap: () => _showDisconnectDialog(context, appState),
+                  isDestructive: true,
+                ),
+                _buildActionCard(
+                  context,
                   icon: Icons.logout,
                   title: 'Logout',
                   subtitle: 'Sign out',
@@ -313,6 +321,34 @@ class AccountScreen extends StatelessWidget {
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDisconnectDialog(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        title: const Text('Disconnect from Vercel', style: TextStyle(color: AppTheme.primary)),
+        content: const Text(
+          'Are you sure you want to unlink this app from Vercel? This will remove the connection and you will need to reconnect to manage deployments.',
+          style: TextStyle(color: AppTheme.onSurfaceVariant),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              appState.disconnectFromVercel();
+            },
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('Disconnect'),
           ),
         ],
       ),

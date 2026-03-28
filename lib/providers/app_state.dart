@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/revenue_cat_service.dart';
@@ -11,6 +12,7 @@ class AppState extends ChangeNotifier {
 
   bool _isAuthenticated = false;
   bool _isLoading = true;
+  bool _hasCompletedOnboarding = false;
   String? _errorMessage;
   
   List<Project> _projects = [];
@@ -21,6 +23,7 @@ class AppState extends ChangeNotifier {
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
+  bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   String? get errorMessage => _errorMessage;
   List<Project> get projects => _projects;
   Project? get selectedProject => _selectedProject;
@@ -36,6 +39,27 @@ class AppState extends ChangeNotifier {
 
   AppState() {
     _checkAuth();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+    notifyListeners();
+  }
+
+  Future<void> markOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_completed_onboarding', true);
+    _hasCompletedOnboarding = true;
+    notifyListeners();
+  }
+
+  Future<void> resetOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_completed_onboarding', false);
+    _hasCompletedOnboarding = false;
+    notifyListeners();
   }
 
   Future<void> _checkAuth() async {
@@ -146,6 +170,16 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       if (kDebugMode) print('Error fetching teams: $e');
     }
+  }
+
+  Future<void> disconnectFromVercel() async {
+    await _authService.deleteToken();
+    _projects = [];
+    _selectedProject = null;
+    _teams = [];
+    _currentTeamId = null;
+    _apiService = VercelApi();
+    notifyListeners();
   }
 
   Future<void> fetchProjects() async {

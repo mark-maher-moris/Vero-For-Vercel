@@ -217,19 +217,9 @@ class _UsageBillingScreenState extends State<UsageBillingScreen> {
             ),
 
             const SizedBox(height: 48),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Cost Breakdown',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                const Text('DOWNLOAD CSV', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-              ],
+            const Text(
+              'Cost Breakdown',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary),
             ),
             const SizedBox(height: 24),
             if (_isLoadingBilling)

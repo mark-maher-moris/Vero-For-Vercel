@@ -287,19 +287,23 @@ class _TeamAccessScreenState extends State<TeamAccessScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         flex: 2,
-                        child: Container(
-                          height: 36,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(color: AppTheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(2)),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.search, size: 16, color: AppTheme.onSurfaceVariant),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text('Search members...', style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13)),
-                              ),
-                            ],
+                        child: TextField(
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: AppTheme.surfaceContainerLowest,
+                            hintText: 'Search members...',
+                            hintStyle: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13),
+                            prefixIcon: const Icon(Icons.search, size: 16, color: AppTheme.onSurfaceVariant),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(2),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           ),
+                          style: const TextStyle(color: AppTheme.onSurface),
+                          onChanged: (value) {
+                            // TODO: Implement member search filtering
+                          },
                         ),
                       ),
                     ],
@@ -406,8 +410,119 @@ class _TeamAccessScreenState extends State<TeamAccessScreen> {
           SizedBox(
             width: 48,
             child: isActive
-              ? const Icon(Icons.more_vert, color: AppTheme.onSurfaceVariant, size: 20)
-              : const Row(mainAxisAlignment: MainAxisAlignment.end, children: [Icon(Icons.cancel, color: AppTheme.onSurfaceVariant, size: 20)]),
+              ? IconButton(
+                  icon: const Icon(Icons.more_vert, color: AppTheme.onSurfaceVariant, size: 20),
+                  onPressed: () => _showMemberOptions(context, name),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.cancel, color: AppTheme.onSurfaceVariant, size: 20),
+                  onPressed: () => _cancelInvite(context, email),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMemberOptions(BuildContext context, String name) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceContainerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                name,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.person, color: AppTheme.primary),
+              title: const Text('View Profile'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('View profile for $name')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit, color: AppTheme.primary),
+              title: const Text('Change Role'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Change role coming soon')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: AppTheme.error),
+              title: const Text('Remove Member', style: TextStyle(color: AppTheme.error)),
+              onTap: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: AppTheme.surfaceContainerLow,
+                    title: const Text('Remove Member?'),
+                    content: Text('Are you sure you want to remove $name?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('$name removed')),
+                          );
+                        },
+                        child: const Text('Remove', style: TextStyle(color: AppTheme.error)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _cancelInvite(BuildContext context, String email) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        title: const Text('Cancel Invitation?'),
+        content: Text('Are you sure you want to cancel the invitation to $email?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Invitation to $email cancelled')),
+              );
+            },
+            child: const Text('Cancel Invite', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),

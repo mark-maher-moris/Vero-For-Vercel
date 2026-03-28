@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'providers/app_state.dart';
 import 'providers/subscription_provider.dart';
 import 'services/revenue_cat_service.dart';
 import 'theme/app_theme.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 
@@ -47,10 +49,21 @@ class VeroApp extends StatelessWidget {
             );
           }
           if (appState.isAuthenticated) {
+            // Show paywall for new authenticated users
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              try {
+                await RevenueCatUI.presentPaywallIfNeeded('pro');
+              } catch (e) {
+                debugPrint('Paywall presentation error: $e');
+              }
+            });
             return const MainScreen();
-          } else {
-            return const LoginScreen();
           }
+          // Show onboarding first, then login
+          if (!appState.hasCompletedOnboarding) {
+            return const OnboardingScreen();
+          }
+          return const LoginScreen();
         },
       ),
     );

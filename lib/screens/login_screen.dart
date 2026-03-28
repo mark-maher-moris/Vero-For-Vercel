@@ -175,6 +175,35 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
               ),
               const SizedBox(height: 24),
+              GestureDetector(
+                onTap: () async {
+                  final uri = Uri.parse('https://github.com/mark-maher-moris/Vero-For-Vercel');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.code,
+                      color: AppTheme.onSurfaceVariant,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Review the app code',
+                      style: TextStyle(
+                        color: AppTheme.onSurfaceVariant,
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppTheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
               Text(
                 'Enter your Vercel Personal Access Token to manage deployments, domains, and more.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(

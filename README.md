@@ -37,7 +37,7 @@ A secure, open-source Flutter application for managing your Vercel projects, dep
 - **Domains & DNS** - Manage custom domains, configure DNS settings, and verify domain ownership
 - **Usage & Billing** - Monitor bandwidth, builds, and team usage analytics
 - **Activity Feed** - Stay updated with real-time project activity and notifications
-- **Secure OAuth** - Authenticate securely with Vercel using OAuth 2.0 PKCE flow
+- **Token Authentication** - Authenticate securely with Vercel using your Personal Access Token
 
 ## Security & Privacy
 
@@ -52,7 +52,7 @@ A secure, open-source Flutter application for managing your Vercel projects, dep
 - **Flutter** - Cross-platform mobile framework
 - **Dart** - Programming language
 - **Vercel REST API** - Official Vercel API integration
-- **OAuth 2.0 + PKCE** - Secure authentication flow
+- **Personal Access Token** - Secure token-based authentication
 - **Provider** - State management
 - **Shared Preferences** - Local secure storage
 
@@ -78,12 +78,9 @@ cd vero
 flutter pub get
 ```
 
-3. Configure your Vercel OAuth app credentials in `lib/services/auth_service.dart`:
-```dart
-static const String clientId = 'YOUR_CLIENT_ID';
-static const String clientSecret = 'YOUR_CLIENT_SECRET';
-static const String redirectUri = 'YOUR_REDIRECT_URI';
-```
+3. Get your Vercel Personal Access Token:
+   - Go to [vercel.com/account/settings/tokens](https://vercel.com/account/settings/tokens)
+   - Create a new token with appropriate scopes
 
 4. Run the app:
 ```bash

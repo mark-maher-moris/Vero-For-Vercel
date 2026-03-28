@@ -131,11 +131,6 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
           _buildDropdown(),
 
           const SizedBox(height: 40),
-          _buildSectionLabel('SOURCE CODE'),
-          const SizedBox(height: 16),
-          _buildDropzone(),
-
-          const SizedBox(height: 40),
           _buildBuildSettings(),
 
           const SizedBox(height: 40),
@@ -212,29 +207,6 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
     );
   }
 
-  Widget _buildDropzone() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
-        border: Border.all(
-          color: AppTheme.outlineVariant.withValues(alpha: 0.15),
-          width: 2,
-        ),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.cloud_upload_outlined, size: 40, color: AppTheme.onSurfaceVariant),
-          SizedBox(height: 16),
-          Text('Drop files or click to upload', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
-          SizedBox(height: 4),
-          Text('Manual file upload override', style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBuildSettings() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -248,7 +220,6 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildSectionLabel('BUILD SETTINGS'),
-              const Text('EDIT', style: TextStyle(fontSize: 11, color: AppTheme.primary, decoration: TextDecoration.underline, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 24),
