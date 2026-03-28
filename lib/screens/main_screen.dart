@@ -5,7 +5,7 @@ import 'dashboard_screen.dart';
 import 'activity_feed_screen.dart';
 import 'deploy_new_project_screen.dart';
 import 'usage_billing_screen.dart';
-import 'settings_env_vars_screen.dart';
+import 'account_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -15,14 +15,14 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 1;
+  int _currentIndex = 0;
 
   final List<Widget> _screens = [
-    const ActivityFeedScreen(),
     const DashboardScreen(),
+    const ActivityFeedScreen(),
     const DeployNewProjectScreen(),
     const UsageBillingScreen(),
-    const SettingsEnvVarsScreen(),
+    const AccountScreen(),
   ];
 
   @override
@@ -55,19 +55,19 @@ class _MainScreenState extends State<MainScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _NavItem(
-                        icon: Icons.home_outlined,
-                        label: 'Home',
+                        icon: Icons.grid_view,
+                        label: 'Projects',
                         isActive: _currentIndex == 0,
                         onTap: () => setState(() => _currentIndex = 0),
                       ),
                       _NavItem(
-                        icon: Icons.grid_view,
-                        label: 'Projects',
+                        icon: Icons.notifications_outlined,
+                        label: 'Activity',
                         isActive: _currentIndex == 1,
                         onTap: () => setState(() => _currentIndex = 1),
                       ),
                       _NavItem(
-                        icon: Icons.add_circle_outline,
+                        icon: Icons.rocket_launch,
                         label: 'Deploy',
                         isActive: _currentIndex == 2,
                         onTap: () => setState(() => _currentIndex = 2),
@@ -79,8 +79,8 @@ class _MainScreenState extends State<MainScreen> {
                         onTap: () => setState(() => _currentIndex = 3),
                       ),
                       _NavItem(
-                        icon: Icons.settings_outlined,
-                        label: 'Settings',
+                        icon: Icons.account_circle_outlined,
+                        label: 'Account',
                         isActive: _currentIndex == 4,
                         onTap: () => setState(() => _currentIndex = 4),
                       ),

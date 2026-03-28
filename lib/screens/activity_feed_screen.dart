@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
 import '../models/project.dart';
-import '../services/api_service.dart';
 import '../providers/app_state.dart';
 import '../widgets/project_selector_appbar.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -16,148 +15,169 @@ class ActivityFeedScreen extends StatefulWidget {
 }
 
 class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
-  final VercelApi _api = VercelApi();
   Project? _currentProject;
+  String? _currentTeamId;
   Future<List<Deployment>>? _deploymentsFuture;
 
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final project = appState.selectedProject;
+    final teamId = appState.currentTeamId;
 
-    if (project != _currentProject) {
+    if (project != _currentProject || teamId != _currentTeamId) {
       _currentProject = project;
-      _deploymentsFuture = _api.getDeployments(projectId: project?.id);
+      _currentTeamId = teamId;
+      _deploymentsFuture = appState.apiService.getDeployments(projectId: project?.id);
     }
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: const ProjectSelectorAppBar(),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
-        children: [
-          const Text(
-            'Activity',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              color: AppTheme.primary,
-              letterSpacing: -1,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            _deploymentsFuture = appState.apiService.getDeployments(projectId: project?.id);
+          });
+          await _deploymentsFuture;
+        },
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
+          children: [
+            const Text(
+              'Activity',
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.primary,
+                letterSpacing: -1,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Real-time developer events across your ecosystem.',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.onSurfaceVariant,
+            const SizedBox(height: 8),
+            const Text(
+              'Real-time developer events across your ecosystem.',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.onSurfaceVariant,
+              ),
             ),
-          ),
-          const SizedBox(height: 48),
-          
-          FutureBuilder<List<Deployment>>(
-            future: _deploymentsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
-              } else if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppTheme.error)));
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('No recent activity found.', style: TextStyle(color: AppTheme.onSurfaceVariant)));
-              }
-
-              final deployments = snapshot.data!;
-              return Column(
-                children: List.generate(deployments.length, (index) {
-                  final deployment = deployments[index];
-                  final isLast = index == deployments.length - 1;
-                  final createdDate = DateTime.fromMillisecondsSinceEpoch(deployment.created);
-                  
-                  return _buildActivityItem(
-                    isLast: isLast,
-                    icon: _getIconForState(deployment.state),
-                    title: deployment.name,
-                    timeAgo: timeago.format(createdDate).toUpperCase(),
-                    description: TextSpan(
+            const SizedBox(height: 48),
+            
+            FutureBuilder<List<Deployment>>(
+              future: _deploymentsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
                       children: [
-                        const TextSpan(text: 'Deployment to '),
-                        TextSpan(
-                          text: deployment.url,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
+                        const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
+                        const SizedBox(height: 16),
+                        Text('Error: ${snapshot.error}', 
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppTheme.error)
                         ),
-                        TextSpan(text: ' is ${deployment.state.toLowerCase()}.'),
                       ],
-                    ),
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
+                    )
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No recent activity found.', style: TextStyle(color: AppTheme.onSurfaceVariant)));
+                }
+
+                final deployments = snapshot.data!;
+                return Column(
+                  children: List.generate(deployments.length, (index) {
+                    final deployment = deployments[index];
+                    final isLast = index == deployments.length - 1;
+                    final createdDate = DateTime.fromMillisecondsSinceEpoch(deployment.created);
+                    
+                    return _buildActivityItem(
+                      isLast: isLast,
+                      icon: _getIconForState(deployment.state),
+                      title: deployment.name,
+                      timeAgo: timeago.format(createdDate).toUpperCase(),
+                      description: TextSpan(
                         children: [
-                          Icon(
-                            _getStatusIcon(deployment.state),
-                            color: _getStatusColor(deployment.state),
-                            size: 20,
+                          const TextSpan(text: 'Deployment to '),
+                          TextSpan(
+                            text: deployment.url,
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  deployment.uid,
-                                  style: const TextStyle(
-                                    color: AppTheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  deployment.state.toUpperCase(),
-                                  style: const TextStyle(
-                                    color: AppTheme.onSurfaceVariant,
-                                    fontSize: 10,
-                                    letterSpacing: 1,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios, color: AppTheme.onSurfaceVariant, size: 14),
+                          TextSpan(text: ' is ${deployment.state.toLowerCase()}.'),
                         ],
                       ),
-                    ),
-                  );
-                }),
-              );
-            },
-          ),
-
-          const SizedBox(height: 32),
-          Center(
-            child: TextButton(
-              onPressed: () {
-                setState(() {
-                  _deploymentsFuture = _api.getDeployments(projectId: project?.id);
-                });
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _getStatusIcon(deployment.state),
+                              color: _getStatusColor(deployment.state),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    deployment.uid,
+                                    style: const TextStyle(
+                                      color: AppTheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'monospace',
+                                      fontSize: 12,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    deployment.state.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: AppTheme.onSurfaceVariant,
+                                      fontSize: 10,
+                                      letterSpacing: 1,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios, color: AppTheme.onSurfaceVariant, size: 14),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                );
               },
-              style: TextButton.styleFrom(
-                backgroundColor: AppTheme.surfaceContainerLow,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-              ),
-              child: const Text('Refresh activity', style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold)),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 32),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    _deploymentsFuture = appState.apiService.getDeployments(projectId: project?.id);
+                  });
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: AppTheme.surfaceContainerLow,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                ),
+                child: const Text('Refresh activity', style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

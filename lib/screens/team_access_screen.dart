@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
-import '../widgets/project_selector_appbar.dart';
 
 class TeamAccessScreen extends StatelessWidget {
   const TeamAccessScreen({super.key});
@@ -15,28 +14,49 @@ class TeamAccessScreen extends StatelessWidget {
     final email = user?['email'] ?? '';
     final name = user?['name'] ?? username;
 
+    // Build tabs from actual teams
+    final teams = appState.teams;
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: const ProjectSelectorAppBar(),
+      appBar: AppBar(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.surfaceContainerHigh,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Team Access',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
         children: [
-          Row(
-            children: [
-              const Text('ACCOUNT SETTINGS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, size: 14, color: AppTheme.onSurfaceVariant),
-              const SizedBox(width: 8),
-              const Text('TEAM MANAGEMENT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primary, letterSpacing: 1.5)),
-            ],
-          ),
-          const SizedBox(height: 16),
           const Text(
-            'Team Access',
-            style: TextStyle(fontSize: 44, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1.5),
+            'Manage your team members, permissions, and security settings in one place.',
+            style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant, height: 1.5),
           ),
-          const SizedBox(height: 8),
-          const Text('Manage your team members, permissions, and security settings in one place.', style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant, height: 1.5)),
           
           const SizedBox(height: 32),
           Row(
@@ -47,15 +67,45 @@ class TeamAccessScreen extends StatelessWidget {
                 decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(color: AppTheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(2)),
-                      child: const Text('Personal', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                    // Personal account tab
+                    GestureDetector(
+                      onTap: () => appState.switchTeam(null),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: appState.currentTeamId == null ? AppTheme.surfaceContainerHigh : Colors.transparent,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Text(
+                          'Personal',
+                          style: TextStyle(
+                            color: appState.currentTeamId == null ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: const Text('Team-X', style: TextStyle(color: AppTheme.onSurfaceVariant, fontWeight: FontWeight.bold)),
-                    ),
+                    // Dynamic team tabs
+                    ...teams.map((team) {
+                      final isSelected = appState.currentTeamId == team['id'];
+                      return GestureDetector(
+                        onTap: () => appState.switchTeam(team['id']),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.surfaceContainerHigh : Colors.transparent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Text(
+                            team['name'] ?? 'Team',
+                            style: TextStyle(
+                              color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -161,13 +211,24 @@ class TeamAccessScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                _buildMemberRow(name, email, 'OWNER', true),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text('Only you have access to this personal account.', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant, fontStyle: FontStyle.italic)),
+                // Show user info for Personal account, or team-specific message
+                if (appState.currentTeamId == null) ...[
+                  _buildMemberRow(name, email, 'OWNER', true),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text('Only you have access to this personal account.', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant, fontStyle: FontStyle.italic)),
+                    ),
                   ),
-                ),
+                ] else ...[
+                  _buildMemberRow(name, email, 'MEMBER', true),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text('Team members would be listed here when team API data is available.', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant, fontStyle: FontStyle.italic)),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

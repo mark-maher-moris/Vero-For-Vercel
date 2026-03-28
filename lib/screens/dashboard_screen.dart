@@ -42,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () {},
+            onPressed: () => _showTeamPicker(context, appState),
           ),
           IconButton(
             icon: const Icon(Icons.exit_to_app, color: AppTheme.onSurfaceVariant),
@@ -53,17 +53,129 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: RefreshIndicator(
         onRefresh: appState.fetchInitialData,
         color: AppTheme.primary,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 100),
+        child: appState.errorMessage != null 
+          ? _buildErrorView(appState)
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 100),
+              children: [
+                _buildSearchField(),
+                const SizedBox(height: 24),
+                _buildTeamInfo(appState),
+                const SizedBox(height: 40),
+                _buildProjectsGrid(appState.projects),
+                const SizedBox(height: 40),
+                _buildUsageOverview(),
+              ],
+            ),
+      ),
+    );
+  }
+
+  Widget _buildErrorView(AppState appState) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildSearchField(),
-            const SizedBox(height: 40),
-            _buildProjectsGrid(appState.projects),
-            const SizedBox(height: 40),
-            _buildUsageOverview(),
+            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load data',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              appState.errorMessage ?? 'Unknown error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppTheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: appState.fetchInitialData,
+              child: const Text('Retry'),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTeamInfo(AppState appState) {
+    String teamName = 'Personal Account';
+    if (appState.currentTeamId != null) {
+      final team = appState.teams.firstWhere(
+        (t) => t['id'] == appState.currentTeamId,
+        orElse: () => {'name': 'Team'},
+      );
+      teamName = team['name'] ?? 'Team';
+    }
+
+    return Row(
+      children: [
+        const Icon(Icons.account_tree_outlined, size: 16, color: AppTheme.onSurfaceVariant),
+        const SizedBox(width: 8),
+        Text(
+          teamName.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: AppTheme.onSurfaceVariant,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showTeamPicker(BuildContext context, AppState appState) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceContainerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Switch Account',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: AppTheme.surfaceContainerHigh,
+                  child: Icon(Icons.person, color: AppTheme.onSurfaceVariant),
+                ),
+                title: const Text('Personal Account'),
+                trailing: appState.currentTeamId == null ? const Icon(Icons.check, color: AppTheme.primary) : null,
+                onTap: () {
+                  appState.switchTeam(null);
+                  Navigator.pop(context);
+                },
+              ),
+              ...appState.teams.map((team) {
+                return ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: AppTheme.surfaceContainerHigh,
+                    child: Icon(Icons.group, color: AppTheme.onSurfaceVariant),
+                  ),
+                  title: Text(team['name'] ?? 'Team'),
+                  trailing: appState.currentTeamId == team['id'] ? const Icon(Icons.check, color: AppTheme.primary) : null,
+                  onTap: () {
+                    appState.switchTeam(team['id']);
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 

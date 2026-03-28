@@ -5,19 +5,27 @@ import '../models/project.dart';
 
 class AppState extends ChangeNotifier {
   final AuthService _authService = AuthService();
-  final VercelApi _apiService = VercelApi();
+  VercelApi _apiService = VercelApi();
 
   bool _isAuthenticated = false;
   bool _isLoading = true;
+  String? _errorMessage;
+  
   List<Project> _projects = [];
   Project? _selectedProject;
   Map<String, dynamic>? _user;
+  List<dynamic> _teams = [];
+  String? _currentTeamId;
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
   List<Project> get projects => _projects;
   Project? get selectedProject => _selectedProject;
   Map<String, dynamic>? get user => _user;
+  List<dynamic> get teams => _teams;
+  String? get currentTeamId => _currentTeamId;
+  VercelApi get apiService => _apiService;
 
   void setSelectedProject(Project? project) {
     _selectedProject = project;
@@ -31,32 +39,62 @@ class AppState extends ChangeNotifier {
   Future<void> _checkAuth() async {
     _isLoading = true;
     notifyListeners();
-    _isAuthenticated = await _authService.isAuthenticated();
-    if (_isAuthenticated) {
-      await fetchInitialData();
+    try {
+      _isAuthenticated = await _authService.isAuthenticated();
+      if (_isAuthenticated) {
+        await fetchInitialData();
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    _isLoading = false;
+  }
+
+  Future<void> switchTeam(String? teamId) async {
+    _currentTeamId = teamId;
+    _apiService = VercelApi(teamId: teamId);
+    _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
+    
+    try {
+      await fetchProjects();
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> login(String token) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
-    await _authService.saveToken(token);
-    _isAuthenticated = true;
-    await fetchInitialData();
-    _isLoading = false;
-    notifyListeners();
+    try {
+      await _authService.saveToken(token);
+      _isAuthenticated = true;
+      await fetchInitialData();
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loginWithOAuth() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
     try {
       await _authService.loginWithVercel();
       _isAuthenticated = true;
       await fetchInitialData();
     } catch (e) {
+      _errorMessage = e.toString();
       if (kDebugMode) print('OAuth login error: $e');
       rethrow;
     } finally {
@@ -71,20 +109,55 @@ class AppState extends ChangeNotifier {
     _projects = [];
     _selectedProject = null;
     _user = null;
+    _teams = [];
+    _currentTeamId = null;
+    _apiService = VercelApi();
     notifyListeners();
   }
 
   Future<void> fetchInitialData() async {
+    _errorMessage = null;
     try {
+      // Fetch user and teams first
       _user = await _apiService.getUser();
-      _projects = await _apiService.getProjects();
-      if (_projects.isNotEmpty && _selectedProject == null) {
-        _selectedProject = _projects.first;
+      await fetchTeams();
+      await fetchProjects();
+    } on VercelApiException catch (e) {
+      // If user not found (404), token is likely invalid/expired
+      if (e.statusCode == 404) {
+        await logout();
+        _errorMessage = 'Session expired. Please log in again.';
+      } else {
+        _errorMessage = e.toString();
       }
+      if (kDebugMode) print('Error fetching initial data: $e');
     } catch (e) {
-      if (kDebugMode) print('Error fetching data: \$e');
-      // If unauthorized, we could logout here
+      _errorMessage = e.toString();
+      if (kDebugMode) print('Error fetching initial data: $e');
     }
     notifyListeners();
+  }
+
+  Future<void> fetchTeams() async {
+    try {
+      final response = await _apiService.getTeams();
+      _teams = response['teams'] as List<dynamic>? ?? [];
+    } catch (e) {
+      if (kDebugMode) print('Error fetching teams: $e');
+    }
+  }
+
+  Future<void> fetchProjects() async {
+    try {
+      _projects = await _apiService.getProjects();
+      if (_projects.isNotEmpty) {
+        _selectedProject = _projects.first;
+      } else {
+        _selectedProject = null;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    }
   }
 }

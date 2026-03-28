@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
-import '../services/api_service.dart';
 import '../widgets/project_selector_appbar.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
 
 class DeploymentLogsScreen extends StatefulWidget {
   final Deployment deployment;
@@ -14,19 +15,27 @@ class DeploymentLogsScreen extends StatefulWidget {
 }
 
 class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
-  final VercelApi _api = VercelApi();
   List<dynamic>? _logs;
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _fetchLogs();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchLogs();
+    });
   }
 
   Future<void> _fetchLogs() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    
     try {
-      final logs = await _api.getDeploymentEvents(widget.deployment.uid);
+      final logs = await appState.apiService.getDeploymentEvents(widget.deployment.uid);
       if (mounted) {
         setState(() {
           _logs = logs;
@@ -34,7 +43,12 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -59,15 +73,15 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
                   children: [
                     const Icon(Icons.commit, size: 16, color: AppTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
-                    Text(
+                    const Text(
                       'main_branch', // placeholder
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                      style: TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary),
                     ),
                   ],
                 ),
-                Text(
+                const Text(
                   'Deploy triggered from push', // placeholder
-                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
+                  style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -101,23 +115,38 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
               padding: const EdgeInsets.all(24),
               child: _isLoading 
                 ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-                : (_logs == null || _logs!.isEmpty)
-                  ? const Center(child: Text('No logs available.', style: TextStyle(color: AppTheme.onSurfaceVariant)))
-                  : ListView.builder(
-                      itemCount: _logs!.length,
-                      itemBuilder: (context, index) {
-                        final log = _logs![index];
-                        final payload = log['payload'] ?? {};
-                        final text = payload['text'] ?? payload['message'] ?? log.toString();
-                        final date = payload['date'] as int?;
-                        final timeStr = date != null ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first : '';
-                        final type = log['type'] as String? ?? 'info';
-                        final isErrorLog = type == 'stderr' || text.toString().toLowerCase().contains('error');
-                        final level = isErrorLog ? 'ERROR' : 'INFO';
-                        
-                        return _buildLogLine(timeStr, level, text.toString());
-                      },
-                    ),
+                : _errorMessage != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
+                          const SizedBox(height: 16),
+                          const Text('Failed to load logs', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+                          const SizedBox(height: 24),
+                          ElevatedButton(onPressed: _fetchLogs, child: const Text('Retry')),
+                        ],
+                      ),
+                    )
+                  : (_logs == null || _logs!.isEmpty)
+                    ? const Center(child: Text('No logs available.', style: TextStyle(color: AppTheme.onSurfaceVariant)))
+                    : ListView.builder(
+                        itemCount: _logs!.length,
+                        itemBuilder: (context, index) {
+                          final log = _logs![index];
+                          final payload = log['payload'] ?? {};
+                          final text = payload['text'] ?? payload['message'] ?? log.toString();
+                          final date = payload['date'] as int?;
+                          final timeStr = date != null ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first : '';
+                          final type = log['type'] as String? ?? 'info';
+                          final isErrorLog = type == 'stderr' || text.toString().toLowerCase().contains('error');
+                          final level = isErrorLog ? 'ERROR' : 'INFO';
+                          
+                          return _buildLogLine(timeStr, level, text.toString());
+                        },
+                      ),
             ),
           ),
         ],

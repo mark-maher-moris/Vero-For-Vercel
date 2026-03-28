@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../services/api_service.dart';
 import '../providers/app_state.dart';
 import '../models/project.dart';
-import '../widgets/project_selector_appbar.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class DomainsDnsScreen extends StatefulWidget {
@@ -15,41 +13,61 @@ class DomainsDnsScreen extends StatefulWidget {
 }
 
 class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
-  final VercelApi _api = VercelApi();
   Project? _currentProject;
+  String? _currentTeamId;
   Future<List<dynamic>>? _domainsFuture;
 
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final project = appState.selectedProject;
+    final teamId = appState.currentTeamId;
 
-    if (project != _currentProject) {
+    if (project != _currentProject || teamId != _currentTeamId) {
       _currentProject = project;
-      _domainsFuture = project != null ? _api.getProjectDomains(project.id) : null;
+      _currentTeamId = teamId;
+      _domainsFuture = project != null ? appState.apiService.getProjectDomains(project.id) : null;
     }
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: const ProjectSelectorAppBar(),
+      appBar: AppBar(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.primary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.surfaceContainerHigh,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Domains',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
         children: [
-          Row(
-            children: [
-              const Text('ACCOUNT SETTINGS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, size: 14, color: AppTheme.onSurfaceVariant),
-              const SizedBox(width: 8),
-              const Text('DOMAINS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primary, letterSpacing: 1.5)),
-            ],
-          ),
-          const SizedBox(height: 16),
           const Text(
-            'Domains',
-            style: TextStyle(fontSize: 44, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1.5),
+            'Manage and configure your custom domains and DNS records.',
+            style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant, height: 1.5),
           ),
-          const SizedBox(height: 8),
-          const Text('Manage and configure your custom domains and DNS records.', style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant, height: 1.5)),
           
           const SizedBox(height: 48),
           

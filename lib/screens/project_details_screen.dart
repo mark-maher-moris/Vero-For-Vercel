@@ -4,11 +4,13 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'deployment_logs_screen.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
-import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/deployment_card.dart';
 import '../widgets/action_card.dart';
 import 'settings_env_vars_screen.dart';
+
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   final Project project;
@@ -20,21 +22,29 @@ class ProjectDetailsScreen extends StatefulWidget {
 }
 
 class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
-  final VercelApi _api = VercelApi();
   List<Deployment>? _deployments;
   List<dynamic>? _domains;
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchData();
+    });
   }
 
   Future<void> _fetchData() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    
     try {
-      final deps = await _api.getDeployments(projectId: widget.project.id);
-      final doms = await _api.getProjectDomains(widget.project.id);
+      final deps = await appState.apiService.getDeployments(projectId: widget.project.id);
+      final doms = await appState.apiService.getProjectDomains(widget.project.id);
       if (mounted) {
         setState(() {
           _deployments = deps;
@@ -45,6 +55,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
+          _errorMessage = e.toString();
           _isLoading = false;
         });
       }
@@ -87,16 +98,36 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           ],
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 100),
-        children: [
-          _buildHeroSection(),
-          _buildPrimaryActions(),
-          _buildDomainSection(),
-          _buildDeploymentHistory(),
-          _buildTechnicalStats(),
-        ],
-      ),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+        : _errorMessage != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+                    const SizedBox(height: 16),
+                    const Text('Failed to load project details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 8),
+                    Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.onSurfaceVariant)),
+                    const SizedBox(height: 24),
+                    ElevatedButton(onPressed: _fetchData, child: const Text('Retry')),
+                  ],
+                ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 100),
+              children: [
+                _buildHeroSection(),
+                _buildPrimaryActions(),
+                _buildDomainSection(),
+                _buildDeploymentHistory(),
+                _buildTechnicalStats(),
+              ],
+            ),
     );
   }
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/project.dart';
-import '../services/api_service.dart';
 import '../providers/app_state.dart';
 import '../widgets/project_selector_appbar.dart';
 
@@ -16,17 +15,20 @@ class SettingsEnvVarsScreen extends StatefulWidget {
 }
 
 class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
-  final VercelApi _api = VercelApi();
   Project? _currentProject;
+  String? _currentTeamId;
   Future<List<dynamic>>? _envVarsFuture;
 
   @override
   Widget build(BuildContext context) {
-    final project = widget.project ?? context.watch<AppState>().selectedProject;
+    final appState = context.watch<AppState>();
+    final project = widget.project ?? appState.selectedProject;
+    final teamId = appState.currentTeamId;
 
-    if (project != _currentProject) {
+    if (project != _currentProject || teamId != _currentTeamId) {
       _currentProject = project;
-      _envVarsFuture = project != null ? _api.getProjectEnvVars(project.id) : null;
+      _currentTeamId = teamId;
+      _envVarsFuture = project != null ? appState.apiService.getProjectEnvVars(project.id) : null;
     }
 
     return Scaffold(

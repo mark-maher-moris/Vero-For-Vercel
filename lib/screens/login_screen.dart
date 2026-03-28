@@ -13,6 +13,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _error;
+  final _tokenController = TextEditingController();
+  bool _showTokenInput = false;
+
+  @override
+  void dispose() {
+    _tokenController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleOAuthLogin() async {
     setState(() {
@@ -24,13 +32,37 @@ class _LoginScreenState extends State<LoginScreen> {
       await context.read<AppState>().loginWithOAuth();
     } catch (e) {
       if (mounted) {
-        // Don't show error if user just canceled
         if (e.toString().contains('CANCELED')) {
           setState(() => _isLoading = false);
           return;
         }
         setState(() {
           _error = 'Authentication failed: $e';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleTokenLogin() async {
+    final token = _tokenController.text.trim();
+    if (token.isEmpty) {
+      setState(() => _error = 'Please enter a token');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      await context.read<AppState>().login(token);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Invalid token: $e';
         });
       }
     } finally {
@@ -121,6 +153,63 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 32),
+              const Divider(),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _isLoading
+                    ? null
+                    : () => setState(() => _showTokenInput = !_showTokenInput),
+                child: Text(
+                  _showTokenInput ? 'Use OAuth Instead' : 'Enter Token Manually',
+                  style: const TextStyle(decoration: TextDecoration.underline),
+                ),
+              ),
+              if (_showTokenInput) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _tokenController,
+                  decoration: InputDecoration(
+                    labelText: 'Personal Access Token',
+                    hintText: 'Paste token from vercel.com/account/tokens',
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => _tokenController.clear(),
+                    ),
+                  ),
+                  obscureText: true,
+                  maxLines: 1,
+                  enabled: !_isLoading,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _handleTokenLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.secondary,
+                    foregroundColor: AppTheme.onSecondary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.onSecondary,
+                          ),
+                        )
+                      : const Text(
+                          'CONNECT WITH TOKEN',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ],
             ],
           ),
         ),

@@ -1,11 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../providers/app_state.dart';
 
 class DeployNewProjectScreen extends StatelessWidget {
   const DeployNewProjectScreen({super.key});
 
+  void _showTeamPicker(BuildContext context, AppState appState) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceContainerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Switch Account for Deployment',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: AppTheme.surfaceContainerHigh,
+                  child: Icon(Icons.person, color: AppTheme.onSurfaceVariant),
+                ),
+                title: const Text('Personal Account'),
+                trailing: appState.currentTeamId == null ? const Icon(Icons.check, color: AppTheme.primary) : null,
+                onTap: () {
+                  appState.switchTeam(null);
+                  Navigator.pop(context);
+                },
+              ),
+              ...appState.teams.map((team) {
+                return ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: AppTheme.surfaceContainerHigh,
+                    child: Icon(Icons.group, color: AppTheme.onSurfaceVariant),
+                  ),
+                  title: Text(team['name'] ?? 'Team'),
+                  trailing: appState.currentTeamId == team['id'] ? const Icon(Icons.check, color: AppTheme.primary) : null,
+                  onTap: () {
+                    appState.switchTeam(team['id']);
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
@@ -31,7 +88,7 @@ class DeployNewProjectScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () {},
+            onPressed: () => _showTeamPicker(context, appState),
           ),
           const SizedBox(width: 8),
         ],
@@ -39,6 +96,8 @@ class DeployNewProjectScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 48, 24, 120),
         children: [
+          _buildTeamBadge(context, appState),
+          const SizedBox(height: 16),
           const Text(
             'Deploy.',
             style: TextStyle(
@@ -75,6 +134,31 @@ class DeployNewProjectScreen extends StatelessWidget {
           _buildDeployButton(),
         ],
       ),
+    );
+  }
+
+  Widget _buildTeamBadge(BuildContext context, AppState appState) {
+    String teamName = 'Personal Account';
+    if (appState.currentTeamId != null) {
+      final team = appState.teams.firstWhere(
+        (t) => t['id'] == appState.currentTeamId,
+        orElse: () => {'name': 'Team'},
+      );
+      teamName = team['name'] ?? 'Team';
+    }
+
+    return Row(
+      children: [
+        const Icon(Icons.account_tree_outlined, size: 14, color: AppTheme.onSurfaceVariant),
+        const SizedBox(width: 8),
+        Text(
+          teamName.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: AppTheme.onSurfaceVariant,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ],
     );
   }
 
