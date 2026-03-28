@@ -13,6 +13,47 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  Map<String, dynamic>? _usageData;
+  bool _isLoadingUsage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUsageData();
+  }
+
+  Future<void> _fetchUsageData() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    if (!appState.isAuthenticated) return;
+    
+    setState(() => _isLoadingUsage = true);
+    try {
+      final usage = await appState.apiService.getUsage();
+      if (mounted) {
+        setState(() {
+          _usageData = usage;
+          _isLoadingUsage = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingUsage = false);
+    }
+  }
+
+  String _formatRequests(num? count) {
+    if (count == null) return '-';
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
+  }
+
+  String _formatBandwidth(num? bytes) {
+    if (bytes == null) return '-';
+    final gb = bytes / (1024 * 1024 * 1024);
+    if (gb >= 1000) return '${(gb / 1024).toStringAsFixed(1)} TB';
+    if (gb >= 1) return '${gb.toStringAsFixed(1)} GB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
@@ -222,6 +263,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildUsageOverview() {
+    final requests = _usageData?['total']?['requests'] as num?;
+    final bandwidth = _usageData?['total']?['bandwidth'] as num?;
+    
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -243,10 +287,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '1.2M',
-                      style: TextStyle(fontSize: 44, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1.5),
-                    ),
+                    if (_isLoadingUsage)
+                      const SizedBox(
+                        height: 44,
+                        width: 44,
+                        child: CircularProgressIndicator(
+                          color: AppTheme.primary,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    else
+                      Text(
+                        _formatRequests(requests),
+                        style: const TextStyle(
+                          fontSize: 44,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primary,
+                          letterSpacing: -1.5,
+                        ),
+                      ),
                     const SizedBox(height: 8),
                     Text(
                       'REQUESTS / 30D',
@@ -259,10 +318,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '84.2%',
-                      style: TextStyle(fontSize: 44, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1.5),
-                    ),
+                    if (_isLoadingUsage)
+                      const SizedBox(
+                        height: 44,
+                        width: 44,
+                        child: CircularProgressIndicator(
+                          color: AppTheme.primary,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    else
+                      Text(
+                        _formatBandwidth(bandwidth),
+                        style: const TextStyle(
+                          fontSize: 44,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primary,
+                          letterSpacing: -1.5,
+                        ),
+                      ),
                     const SizedBox(height: 8),
                     Text(
                       'BANDWIDTH',

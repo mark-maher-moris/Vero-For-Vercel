@@ -3,8 +3,96 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 
-class TeamAccessScreen extends StatelessWidget {
+class TeamAccessScreen extends StatefulWidget {
   const TeamAccessScreen({super.key});
+
+  @override
+  State<TeamAccessScreen> createState() => _TeamAccessScreenState();
+}
+
+class _TeamAccessScreenState extends State<TeamAccessScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showInviteDialog(BuildContext context, AppState appState) async {
+    if (appState.currentTeamId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a team first')),
+      );
+      return;
+    }
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        title: const Text('Invite Team Member'),
+        content: TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: 'Email Address',
+            hintText: 'colleague@example.com',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _emailController.clear();
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: _isLoading ? null : () => _inviteMember(context, appState),
+            child: _isLoading
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Invite'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _inviteMember(BuildContext context, AppState appState) async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email address')),
+      );
+      return;
+    }
+
+    final teamId = appState.currentTeamId;
+    if (teamId == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await appState.apiService.inviteTeamMember(teamId, email);
+      _emailController.clear();
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Invitation sent to $email')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send invitation: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,53 +150,59 @@ class TeamAccessScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
-                child: Row(
-                  children: [
-                    // Personal account tab
-                    GestureDetector(
-                      onTap: () => appState.switchTeam(null),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: appState.currentTeamId == null ? AppTheme.surfaceContainerHigh : Colors.transparent,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: Text(
-                          'Personal',
-                          style: TextStyle(
-                            color: appState.currentTeamId == null ? AppTheme.primary : AppTheme.onSurfaceVariant,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Dynamic team tabs
-                    ...teams.map((team) {
-                      final isSelected = appState.currentTeamId == team['id'];
-                      return GestureDetector(
-                        onTap: () => appState.switchTeam(team['id']),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.surfaceContainerHigh : Colors.transparent,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: Text(
-                            team['name'] ?? 'Team',
-                            style: TextStyle(
-                              color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
-                              fontWeight: FontWeight.bold,
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        // Personal account tab
+                        GestureDetector(
+                          onTap: () => appState.switchTeam(null),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: appState.currentTeamId == null ? AppTheme.surfaceContainerHigh : Colors.transparent,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: Text(
+                              'Personal',
+                              style: TextStyle(
+                                color: appState.currentTeamId == null ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      );
-                    }),
-                  ],
+                        // Dynamic team tabs
+                        ...teams.map((team) {
+                          final isSelected = appState.currentTeamId == team['id'];
+                          return GestureDetector(
+                            onTap: () => appState.switchTeam(team['id']),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppTheme.surfaceContainerHigh : Colors.transparent,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: Text(
+                                team['name'] ?? 'Team',
+                                style: TextStyle(
+                                  color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(width: 16),
               TextButton.icon(
                 style: TextButton.styleFrom(
                   backgroundColor: AppTheme.primary,
@@ -117,7 +211,7 @@ class TeamAccessScreen extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.person_add, color: AppTheme.onPrimary, size: 18),
                 label: const Text('Invite Member', style: TextStyle(color: AppTheme.onPrimary, fontWeight: FontWeight.bold)),
-                onPressed: () {},
+                onPressed: () => _showInviteDialog(context, appState),
               ),
             ],
           ),
@@ -130,18 +224,23 @@ class TeamAccessScreen extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('TOTAL SEATS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-                      SizedBox(height: 24),
+                      const Text('TOTAL SEATS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
+                      const SizedBox(height: 24),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.baseline,
                         textBaseline: TextBaseline.alphabetic,
                         children: [
-                          Text('1', style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -2)),
-                          SizedBox(width: 8),
-                          Text('/ 1', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant)),
+                          Text(
+                            appState.currentTeamId == null ? '1' : '${appState.teams.length + 1}',
+                            style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -2)
+                          ),
+                          const SizedBox(width: 8),
+                          Text('/ ${appState.currentTeamId == null ? 1 : (appState.teams.firstWhere((t) => t['id'] == appState.currentTeamId, orElse: () => {'seats': 1})['seats'] ?? 1)}',
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant)
+                          ),
                         ],
                       ),
                     ],
@@ -158,7 +257,7 @@ class TeamAccessScreen extends StatelessWidget {
                     children: [
                       const Text('PENDING INVITES', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
                       const SizedBox(height: 8),
-                      const Text('0', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: AppTheme.primary)),
+                      const Text('-', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: AppTheme.primary)),
                       const SizedBox(height: 24),
                       Row(
                         children: [
@@ -182,18 +281,25 @@ class TeamAccessScreen extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Team Members', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                      Container(
-                        width: 200,
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(color: AppTheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(2)),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.search, size: 16, color: AppTheme.onSurfaceVariant),
-                            SizedBox(width: 8),
-                            Text('Search members...', style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13)),
-                          ],
+                      const Expanded(
+                        child: Text('Team Members', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(color: AppTheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(2)),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.search, size: 16, color: AppTheme.onSurfaceVariant),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text('Search members...', style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13)),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -254,12 +360,14 @@ class TeamAccessScreen extends StatelessWidget {
                   child: const Icon(Icons.person, color: AppTheme.onSurfaceVariant),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                    Text(email, style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary), overflow: TextOverflow.ellipsis, maxLines: 1),
+                      Text(email, style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant), overflow: TextOverflow.ellipsis, maxLines: 1),
+                    ],
+                  ),
                 ),
               ],
             ),

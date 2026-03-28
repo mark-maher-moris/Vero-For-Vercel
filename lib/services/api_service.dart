@@ -143,4 +143,79 @@ class VercelApi {
       return await _handleResponse(response);
     }
   }
+
+  Future<Map<String, dynamic>> addDomain(String projectId, String domainName) async {
+    final response = await http.post(
+      _buildUri('/v9/projects/$projectId/domains'),
+      headers: await _getHeaders(),
+      body: json.encode({'name': domainName}),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> removeDomain(String projectId, String domain) async {
+    final response = await http.delete(
+      _buildUri('/v9/projects/$projectId/domains/$domain'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> verifyDomain(String projectId, String domain) async {
+    final response = await http.post(
+      _buildUri('/v9/projects/$projectId/domains/$domain/verify'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<List<dynamic>> createEnvVars(String projectId, List<Map<String, dynamic>> envVars) async {
+    final response = await http.post(
+      _buildUri('/v9/projects/$projectId/env'),
+      headers: await _getHeaders(),
+      body: json.encode(envVars),
+    );
+    final data = await _handleResponse(response);
+    return data['envs'] as List<dynamic>? ?? [];
+  }
+
+  Future<void> deleteEnvVar(String projectId, String envVarId, {String? target}) async {
+    final params = <String, String>{};
+    if (target != null) params['target'] = target;
+    final response = await http.delete(
+      _buildUri('/v9/projects/$projectId/env/$envVarId', params),
+      headers: await _getHeaders(),
+    );
+    await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> inviteTeamMember(String teamId, String email, {String role = 'MEMBER'}) async {
+    final response = await http.post(
+      _buildUri('/v2/teams/$teamId/members'),
+      headers: await _getHeaders(),
+      body: json.encode({'email': email, 'role': role}),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getUsage({String? from, String? until, String? projectId}) async {
+    final params = <String, String>{};
+    if (from != null) params['from'] = from;
+    if (until != null) params['until'] = until;
+    if (projectId != null) params['projectId'] = projectId;
+    
+    final response = await http.get(
+      _buildUri('/v1/usage', params),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getBilling() async {
+    final response = await http.get(
+      _buildUri('/v1/billing'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
 }

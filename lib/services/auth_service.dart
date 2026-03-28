@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,11 +10,10 @@ class AuthService {
   static const String _tokenKey = 'vercel_access_token';
   static const String _refreshTokenKey = 'vercel_refresh_token';
 
-  // Integration markers for user to fill in
-  static const String clientId = 'cl_0MTgwuq7H4XfsAztxxn8dn2ef27WnPJ4';
-  static const String clientSecret =
-      'e3722eb43304b728e9f49d4566820da3be053bd51830417e21f37102fc55c519';
-  static const String redirectUri = 'https://vero-server.vercel.app/callback';
+  // Load credentials from environment variables
+  String get clientId => dotenv.env['VERCEL_CLIENT_ID'] ?? '';
+  String get clientSecret => dotenv.env['VERCEL_CLIENT_SECRET'] ?? '';
+  String get redirectUri => dotenv.env['VERCEL_REDIRECT_URI'] ?? '';
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();

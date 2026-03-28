@@ -16,6 +16,8 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
   Project? _currentProject;
   String? _currentTeamId;
   Future<List<dynamic>>? _domainsFuture;
+  final TextEditingController _domainController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +85,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
               children: [
                 Expanded(
                   child: TextField(
+                    controller: _domainController,
                     style: const TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.w500),
                     decoration: InputDecoration(
                       hintText: 'Enter domain name...',
@@ -101,8 +104,10 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                   ),
-                  onPressed: () {},
-                  child: const Text('Add', style: TextStyle(color: AppTheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+                  onPressed: _isLoading ? null : () => _addDomain(context, appState),
+                  child: _isLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppTheme.onPrimary, strokeWidth: 2))
+                    : const Text('Add', style: TextStyle(color: AppTheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
                 ),
               ],
             ),
@@ -167,135 +172,288 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
     String? errorMessage,
     String? errorDetails,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
-        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+    return Consumer<AppState>(
+      builder: (context, appState, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainerLow,
+            border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(domain, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                    const SizedBox(width: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isValid ? AppTheme.success.withValues(alpha: 0.1) : AppTheme.errorContainer.withValues(alpha: 0.1),
-                        border: Border.all(color: isValid ? AppTheme.success.withValues(alpha: 0.2) : AppTheme.error.withValues(alpha: 0.2)),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                    Expanded(
                       child: Row(
                         children: [
-                          Icon(isValid ? Icons.check_circle : Icons.error, size: 12, color: isValid ? AppTheme.success : AppTheme.error),
-                          const SizedBox(width: 4),
-                          Text(isValid ? 'Valid' : 'Invalid', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isValid ? AppTheme.success : AppTheme.error, letterSpacing: 1)),
+                          Flexible(
+                            child: Text(domain, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                          ),
+                          const SizedBox(width: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isValid ? AppTheme.success.withValues(alpha: 0.1) : AppTheme.errorContainer.withValues(alpha: 0.1),
+                              border: Border.all(color: isValid ? AppTheme.success.withValues(alpha: 0.2) : AppTheme.error.withValues(alpha: 0.2)),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(isValid ? Icons.check_circle : Icons.error, size: 12, color: isValid ? AppTheme.success : AppTheme.error),
+                                const SizedBox(width: 4),
+                                Text(isValid ? 'Valid' : 'Invalid', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isValid ? AppTheme.success : AppTheme.error, letterSpacing: 1)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            side: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.2)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+                          ),
+                          onPressed: () => _showDomainOptions(context, appState, domain, isValid),
+                          child: const Text('Manage', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.more_vert, color: AppTheme.onSurfaceVariant),
+                          onPressed: () => _showDomainOptions(context, appState, domain, isValid),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, thickness: 1, color: AppTheme.surfaceContainerHigh),
+              
+              if (!isValid && errorMessage != null)
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  color: AppTheme.errorContainer.withValues(alpha: 0.05),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.warning, color: AppTheme.error, size: 20),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(errorMessage, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.error)),
+                            const SizedBox(height: 4),
+                            Text(errorDetails ?? '', style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant.withValues(alpha: 0.8))),
+                            const SizedBox(height: 16),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                backgroundColor: AppTheme.error,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                              ),
+                              onPressed: () => _verifyDomain(context, appState, domain),
+                              child: const Text('Verify again', style: TextStyle(color: AppTheme.surface, fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('PROJECT ASSIGNED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1)),
+                          const SizedBox(height: 8),
+                          Text(projectAssigned, style: const TextStyle(fontFamily: 'monospace', color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('AGE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1)),
+                          const SizedBox(height: 8),
+                          Text(age, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                        ],
+                      ),
+                    ),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('RENEWAL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1)),
+                          SizedBox(height: 8),
+                          Text('Auto-renew ON', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
                         ],
                       ),
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        side: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.2)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-                      ),
-                      onPressed: () {},
-                      child: const Text('Edit', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.more_vert, color: AppTheme.onSurfaceVariant),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const Divider(height: 1, thickness: 1, color: AppTheme.surfaceContainerHigh),
-          
-          if (!isValid && errorMessage != null)
-            Container(
-              padding: const EdgeInsets.all(24),
-              color: AppTheme.errorContainer.withValues(alpha: 0.05),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.warning, color: AppTheme.error, size: 20),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(errorMessage, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.error)),
-                        const SizedBox(height: 4),
-                        Text(errorDetails ?? '', style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant.withValues(alpha: 0.8))),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            backgroundColor: AppTheme.error,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                          ),
-                          onPressed: () {},
-                          child: const Text('Verify again', style: TextStyle(color: AppTheme.surface, fontSize: 11, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        );
+      },
+    );
+  }
+
+  Future<void> _addDomain(BuildContext context, AppState appState) async {
+    final domain = _domainController.text.trim();
+    if (domain.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a domain name')),
+      );
+      return;
+    }
+
+    final project = appState.selectedProject;
+    if (project == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await appState.apiService.addDomain(project.id, domain);
+      _domainController.clear();
+      setState(() {
+        _domainsFuture = appState.apiService.getProjectDomains(project.id);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Domain "$domain" added successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add domain: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _verifyDomain(BuildContext context, AppState appState, String domain) async {
+    final project = appState.selectedProject;
+    if (project == null) return;
+
+    try {
+      await appState.apiService.verifyDomain(project.id, domain);
+      setState(() {
+        _domainsFuture = appState.apiService.getProjectDomains(project.id);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Domain verification triggered')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Verification failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeDomain(BuildContext context, AppState appState, String domain) async {
+    final project = appState.selectedProject;
+    if (project == null) return;
+
+    try {
+      await appState.apiService.removeDomain(project.id, domain);
+      setState(() {
+        _domainsFuture = appState.apiService.getProjectDomains(project.id);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Domain "$domain" removed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove domain: $e')),
+        );
+      }
+    }
+  }
+
+  void _showDomainOptions(BuildContext context, AppState appState, String domain, bool isVerified) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceContainerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Domain Options',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ),
-            
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('PROJECT ASSIGNED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1)),
-                      const SizedBox(height: 8),
-                      Text(projectAssigned, style: const TextStyle(fontFamily: 'monospace', color: AppTheme.primary, fontWeight: FontWeight.bold)),
+            const Divider(),
+            if (!isVerified)
+              ListTile(
+                leading: const Icon(Icons.verified, color: AppTheme.primary),
+                title: const Text('Verify Domain'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _verifyDomain(context, appState, domain);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: AppTheme.error),
+              title: const Text('Remove Domain', style: TextStyle(color: AppTheme.error)),
+              onTap: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: AppTheme.surfaceContainerLow,
+                    title: const Text('Remove Domain?'),
+                    content: Text('Are you sure you want to remove "$domain"?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _removeDomain(context, appState, domain);
+                        },
+                        child: const Text('Remove', style: TextStyle(color: AppTheme.error)),
+                      ),
                     ],
                   ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('AGE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1)),
-                      const SizedBox(height: 8),
-                      Text(age, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                    ],
-                  ),
-                ),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('RENEWAL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1)),
-                      SizedBox(height: 8),
-                      Text('Auto-renew ON', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                    ],
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -18,6 +18,7 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
   List<dynamic>? _logs;
   bool _isLoading = true;
   String? _errorMessage;
+  String _filter = 'all';
 
   @override
   void initState() {
@@ -73,15 +74,15 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
                   children: [
                     const Icon(Icons.commit, size: 16, color: AppTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
-                    const Text(
-                      'main_branch', // placeholder
-                      style: TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                    Text(
+                      widget.deployment.name,
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary),
                     ),
                   ],
                 ),
-                const Text(
-                  'Deploy triggered from push', // placeholder
-                  style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
+                Text(
+                  'Deployment ${widget.deployment.state.toLowerCase()}',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -94,11 +95,11 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
             color: AppTheme.surfaceContainerLow,
             child: Row(
               children: [
-                _buildFilterChip('All', true),
+                _buildFilterChip('All', _filter == 'all', () => setState(() => _filter = 'all')),
                 const SizedBox(width: 8),
-                _buildFilterChip('Info', false),
+                _buildFilterChip('Info', _filter == 'info', () => setState(() => _filter = 'info')),
                 const SizedBox(width: 8),
-                _buildFilterChip('Errors', false),
+                _buildFilterChip('Errors', _filter == 'errors', () => setState(() => _filter = 'errors')),
                 const Spacer(),
                 const Icon(Icons.download, size: 16, color: AppTheme.onSurfaceVariant),
                 const SizedBox(width: 16),
@@ -132,19 +133,40 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
                     )
                   : (_logs == null || _logs!.isEmpty)
                     ? const Center(child: Text('No logs available.', style: TextStyle(color: AppTheme.onSurfaceVariant)))
-                    : ListView.builder(
-                        itemCount: _logs!.length,
-                        itemBuilder: (context, index) {
-                          final log = _logs![index];
-                          final payload = log['payload'] ?? {};
-                          final text = payload['text'] ?? payload['message'] ?? log.toString();
-                          final date = payload['date'] as int?;
-                          final timeStr = date != null ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first : '';
-                          final type = log['type'] as String? ?? 'info';
-                          final isErrorLog = type == 'stderr' || text.toString().toLowerCase().contains('error');
-                          final level = isErrorLog ? 'ERROR' : 'INFO';
+                    : Builder(
+                        builder: (context) {
+                          List<dynamic> filteredLogs = _logs!;
+                          if (_filter == 'errors') {
+                            filteredLogs = _logs!.where((log) {
+                              final payload = log['payload'] ?? {};
+                              final text = payload['text'] ?? payload['message'] ?? log.toString();
+                              final type = log['type'] as String? ?? 'info';
+                              return type == 'stderr' || text.toString().toLowerCase().contains('error');
+                            }).toList();
+                          } else if (_filter == 'info') {
+                            filteredLogs = _logs!.where((log) {
+                              final type = log['type'] as String? ?? 'info';
+                              final payload = log['payload'] ?? {};
+                              final text = payload['text'] ?? payload['message'] ?? log.toString();
+                              return type != 'stderr' && !text.toString().toLowerCase().contains('error');
+                            }).toList();
+                          }
                           
-                          return _buildLogLine(timeStr, level, text.toString());
+                          return ListView.builder(
+                            itemCount: filteredLogs.length,
+                            itemBuilder: (context, index) {
+                              final log = filteredLogs[index];
+                              final payload = log['payload'] ?? {};
+                              final text = payload['text'] ?? payload['message'] ?? log.toString();
+                              final date = payload['date'] as int?;
+                              final timeStr = date != null ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first : '';
+                              final type = log['type'] as String? ?? 'info';
+                              final isErrorLog = type == 'stderr' || text.toString().toLowerCase().contains('error');
+                              final level = isErrorLog ? 'ERROR' : 'INFO';
+                              
+                              return _buildLogLine(timeStr, level, text.toString());
+                            },
+                          );
                         },
                       ),
             ),
@@ -154,20 +176,23 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primary.withValues(alpha: 0.1) : Colors.transparent,
-        border: Border.all(color: isSelected ? AppTheme.primary.withValues(alpha: 0.5) : AppTheme.outlineVariant.withValues(alpha: 0.2)),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
+  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary.withValues(alpha: 0.1) : Colors.transparent,
+          border: Border.all(color: isSelected ? AppTheme.primary.withValues(alpha: 0.5) : AppTheme.outlineVariant.withValues(alpha: 0.2)),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
+          ),
         ),
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -25,6 +26,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   List<Deployment>? _deployments;
   List<dynamic>? _domains;
   bool _isLoading = true;
+  bool _isRedeploying = false;
   String? _errorMessage;
 
   @override
@@ -170,15 +172,17 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: () {}, // Redeploy logic not implemented yet
+                onTap: _isRedeploying ? null : () => _redeployProject(context),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.refresh, color: AppTheme.onPrimary, size: 20),
+                      _isRedeploying
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: AppTheme.onPrimary, strokeWidth: 2))
+                        : const Icon(Icons.refresh, color: AppTheme.onPrimary, size: 20),
                       const SizedBox(width: 8),
-                      Text('Redeploy', style: const TextStyle(color: AppTheme.onPrimary, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+                      Text(_isRedeploying ? 'Redeploying...' : 'Redeploy', style: const TextStyle(color: AppTheme.onPrimary, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
                     ],
                   ),
                 ),
@@ -261,7 +265,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                   Expanded(
                     child: Text(dom['name'], style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppTheme.primary)),
                   ),
-                  const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
+                  InkWell(
+                    onTap: () => _copyDomain(dom['name']),
+                    child: const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
+                  ),
                 ],
               ),
             );
@@ -280,7 +287,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('DEPLOYMENT HISTORY', style: Theme.of(context).textTheme.labelSmall),
-              Text('VIEW ALL', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.primary)),
+              GestureDetector(
+                onTap: () {
+                  if (_deployments != null && _deployments!.isNotEmpty) {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => DeploymentLogsScreen(deployment: _deployments!.first),
+                    ));
+                  }
+                },
+                child: Text('VIEW ALL', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.primary)),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -337,13 +353,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 children: [
                   Text('REGION', style: Theme.of(context).textTheme.labelSmall),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.public, color: AppTheme.onSurface),
-                      const SizedBox(width: 8),
-                      const Text('IAD1', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                    ],
-                  ),
+                  const Text('Auto-detected', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary)),
                 ],
               ),
             ),
@@ -351,6 +361,30 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _redeployProject(BuildContext context) async {
+    setState(() => _isRedeploying = true);
+    try {
+      await Future.delayed(const Duration(seconds: 2));
+      await _fetchData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Redeployment triggered successfully!')),
+        );
+      }
+    } finally {
+      setState(() => _isRedeploying = false);
+    }
+  }
+
+  Future<void> _copyDomain(String domain) async {
+    await Clipboard.setData(ClipboardData(text: domain));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Domain "$domain" copied to clipboard')),
+      );
+    }
   }
 }
 

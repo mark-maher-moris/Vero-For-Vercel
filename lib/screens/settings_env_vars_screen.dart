@@ -18,6 +18,12 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
   Project? _currentProject;
   String? _currentTeamId;
   Future<List<dynamic>>? _envVarsFuture;
+  final TextEditingController _keyController = TextEditingController();
+  final TextEditingController _valueController = TextEditingController();
+  bool _isProduction = true;
+  bool _isPreview = false;
+  bool _isDevelopment = false;
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -101,8 +107,10 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                       ),
-                      onPressed: () {},
-                      child: const Text('ADD VARIABLE', style: TextStyle(color: AppTheme.onPrimary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                      onPressed: _isLoading ? null : () => _addEnvVar(context),
+                      child: _isLoading
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: AppTheme.onPrimary, strokeWidth: 2))
+                        : const Text('ADD VARIABLE', style: TextStyle(color: AppTheme.onPrimary, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                     ),
                   ],
                 ),
@@ -114,12 +122,13 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                   decoration: BoxDecoration(color: AppTheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(2)),
                   child: Column(
                     children: [
-                      const Row(
+                      Row(
                         children: [
                           Expanded(
                             child: TextField(
-                              style: TextStyle(color: AppTheme.primary, fontFamily: 'monospace'),
-                              decoration: InputDecoration(
+                              controller: _keyController,
+                              style: const TextStyle(color: AppTheme.primary, fontFamily: 'monospace'),
+                              decoration: const InputDecoration(
                                 labelText: 'VARIABLE KEY',
                                 labelStyle: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5),
                                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.surfaceVariant)),
@@ -127,12 +136,13 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(width: 24),
+                          const SizedBox(width: 24),
                           Expanded(
                             child: TextField(
+                              controller: _valueController,
                               obscureText: true,
-                              style: TextStyle(color: AppTheme.primary, fontFamily: 'monospace'),
-                              decoration: InputDecoration(
+                              style: const TextStyle(color: AppTheme.primary, fontFamily: 'monospace'),
+                              decoration: const InputDecoration(
                                 labelText: 'VALUE',
                                 labelStyle: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5),
                                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.surfaceVariant)),
@@ -147,9 +157,9 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                         spacing: 16,
                         runSpacing: 12,
                         children: [
-                          _buildCheckbox('PRODUCTION', true),
-                          _buildCheckbox('PREVIEW', false),
-                          _buildCheckbox('DEVELOPMENT', false),
+                          _buildCheckbox('PRODUCTION', _isProduction, (val) => setState(() => _isProduction = val)),
+                          _buildCheckbox('PREVIEW', _isPreview, (val) => setState(() => _isPreview = val)),
+                          _buildCheckbox('DEVELOPMENT', _isDevelopment, (val) => setState(() => _isDevelopment = val)),
                         ],
                       ),
                     ],
@@ -180,6 +190,7 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                       final envs = snapshot.data!;
                       return Column(
                         children: envs.map((env) => _buildEnvVar(
+                          env['id'] ?? '',
                           env['key'] ?? 'UNKNOWN_KEY',
                           env['value'] ?? '••••••••',
                           env['target']?.contains('production') ?? false,
@@ -286,17 +297,21 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
     );
   }
 
-  Widget _buildCheckbox(String label, bool isChecked) {
-    return Row(
-      children: [
-        Icon(isChecked ? Icons.check_box : Icons.check_box_outline_blank, color: isChecked ? AppTheme.primary : AppTheme.surfaceVariant, size: 20),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.onSurface, letterSpacing: 1)),
-      ],
+  Widget _buildCheckbox(String label, bool isChecked, Function(bool) onChanged) {
+    return GestureDetector(
+      onTap: () => onChanged(!isChecked),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(isChecked ? Icons.check_box : Icons.check_box_outline_blank, color: isChecked ? AppTheme.primary : AppTheme.surfaceVariant, size: 20),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.onSurface, letterSpacing: 1)),
+        ],
+      ),
     );
   }
 
-  Widget _buildEnvVar(String key, String value, bool isPrimary, {bool isEncrypted = false}) {
+  Widget _buildEnvVar(String envId, String key, String value, bool isPrimary, {bool isEncrypted = false}) {
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 4),
@@ -345,11 +360,190 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
             ),
           ),
           const Spacer(),
-          const Icon(Icons.edit, size: 18, color: AppTheme.onSurfaceVariant),
-          const SizedBox(width: 16),
-          const Icon(Icons.delete, size: 18, color: AppTheme.onSurfaceVariant),
+          IconButton(
+            icon: const Icon(Icons.edit, size: 18, color: AppTheme.onSurfaceVariant),
+            onPressed: envId.isNotEmpty ? () => _showEditEnvVarDialog(context, envId, key, value) : null,
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.delete, size: 18, color: AppTheme.onSurfaceVariant),
+            onPressed: envId.isNotEmpty ? () => _deleteEnvVar(context, envId) : null,
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _addEnvVar(BuildContext context) async {
+    final key = _keyController.text.trim();
+    final value = _valueController.text.trim();
+
+    if (key.isEmpty || value.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both key and value')),
+      );
+      return;
+    }
+
+    final targets = <String>[];
+    if (_isProduction) targets.add('production');
+    if (_isPreview) targets.add('preview');
+    if (_isDevelopment) targets.add('development');
+
+    if (targets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one target environment')),
+      );
+      return;
+    }
+
+    final appState = context.read<AppState>();
+    final project = widget.project ?? appState.selectedProject;
+    if (project == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await appState.apiService.createEnvVars(project.id, [
+        {
+          'key': key,
+          'value': value,
+          'type': 'encrypted',
+          'target': targets,
+        }
+      ]);
+      _keyController.clear();
+      _valueController.clear();
+      setState(() {
+        _envVarsFuture = appState.apiService.getProjectEnvVars(project.id);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Environment variable "$key" added successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add environment variable: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deleteEnvVar(BuildContext context, String envId) async {
+    final appState = context.read<AppState>();
+    final project = widget.project ?? appState.selectedProject;
+    if (project == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        title: const Text('Delete Environment Variable?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: AppTheme.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await appState.apiService.deleteEnvVar(project.id, envId);
+      setState(() {
+        _envVarsFuture = appState.apiService.getProjectEnvVars(project.id);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Environment variable deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showEditEnvVarDialog(BuildContext context, String envId, String currentKey, String currentValue) async {
+    final editController = TextEditingController(text: currentValue);
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        title: Text('Edit $currentKey'),
+        content: TextField(
+          controller: editController,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'New Value',
+            hintText: 'Enter new value...',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newValue = editController.text.trim();
+              if (newValue.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Value cannot be empty')),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              await _updateEnvVar(context, envId, newValue);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updateEnvVar(BuildContext context, String envId, String newValue) async {
+    final appState = context.read<AppState>();
+    final project = widget.project ?? appState.selectedProject;
+    if (project == null) return;
+
+    try {
+      await appState.apiService.deleteEnvVar(project.id, envId);
+      await appState.apiService.createEnvVars(project.id, [
+        {
+          'value': newValue,
+          'type': 'encrypted',
+        }
+      ]);
+      setState(() {
+        _envVarsFuture = appState.apiService.getProjectEnvVars(project.id);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Environment variable updated')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update: $e')),
+        );
+      }
+    }
   }
 }

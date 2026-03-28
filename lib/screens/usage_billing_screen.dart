@@ -4,8 +4,87 @@ import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../widgets/project_selector_appbar.dart';
 
-class UsageBillingScreen extends StatelessWidget {
+class UsageBillingScreen extends StatefulWidget {
   const UsageBillingScreen({super.key});
+
+  @override
+  State<UsageBillingScreen> createState() => _UsageBillingScreenState();
+}
+
+class _UsageBillingScreenState extends State<UsageBillingScreen> {
+  Map<String, dynamic>? _billingData;
+  bool _isLoadingBilling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBillingData();
+  }
+
+  Future<void> _fetchBillingData() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    if (!appState.isAuthenticated) return;
+    
+    setState(() => _isLoadingBilling = true);
+    try {
+      final billing = await appState.apiService.getBilling();
+      if (mounted) {
+        setState(() {
+          _billingData = billing;
+          _isLoadingBilling = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingBilling = false);
+    }
+  }
+
+  List<Map<String, dynamic>> _getBillingItems() {
+    if (_billingData == null) return [];
+    
+    final items = <Map<String, dynamic>>[];
+    final breakdown = _billingData?['breakdown'] as List<dynamic>?;
+    
+    if (breakdown != null) {
+      for (final item in breakdown) {
+        items.add({
+          'title': item['name'] ?? 'Unknown',
+          'usage': _formatUsage(item['usage'], item['unit']),
+          'cost': '\$${(item['cost'] ?? 0).toStringAsFixed(2)}',
+          'icon': _getIconForItem(item['name']?.toString() ?? ''),
+        });
+      }
+    }
+    
+    return items.isNotEmpty ? items : _getDefaultBillingItems();
+  }
+
+  List<Map<String, dynamic>> _getDefaultBillingItems() {
+    return [
+      {'title': 'Edge Middleware', 'usage': 'Calculating...', 'cost': '-', 'icon': Icons.bolt},
+      {'title': 'Artifacts Storage', 'usage': 'Calculating...', 'cost': '-', 'icon': Icons.storage},
+      {'title': 'Team Seats', 'usage': 'Calculating...', 'cost': '-', 'icon': Icons.group},
+    ];
+  }
+
+  String _formatUsage(dynamic usage, String? unit) {
+    if (usage == null) return '-';
+    final value = usage is num ? usage : 0;
+    if (unit == 'GB') return '${value.toStringAsFixed(1)} GB';
+    if (unit == 'requests') return '${(value / 1000).toStringAsFixed(0)}K units';
+    if (unit == 'seats') return '${value.toInt()} Seats';
+    return '${value.toStringAsFixed(1)} ${unit ?? 'units'}';
+  }
+
+  IconData _getIconForItem(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('middleware') || lower.contains('edge')) return Icons.bolt;
+    if (lower.contains('storage') || lower.contains('artifact')) return Icons.storage;
+    if (lower.contains('team') || lower.contains('seat')) return Icons.group;
+    if (lower.contains('bandwidth')) return Icons.network_check;
+    if (lower.contains('function')) return Icons.code;
+    return Icons.receipt;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,25 +232,49 @@ class UsageBillingScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(4),
+            if (_isLoadingBilling)
+              const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+            else
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Column(
+                  children: _buildBillingRows(),
+                ),
               ),
-              child: Column(
-                children: [
-                  _buildTableRow('Edge Middleware', '1,204,500 units', '\$0.00', Icons.bolt),
-                  const Divider(color: AppTheme.outlineVariant, height: 1, thickness: 0.1),
-                  _buildTableRow('Artifacts Storage', '42.1 GB', '\$4.21', Icons.storage),
-                  const Divider(color: AppTheme.outlineVariant, height: 1, thickness: 0.1),
-                  _buildTableRow('Team Seats', '2 Seats', '\$40.00', Icons.group),
-                ],
-              ),
-            ),
           ],
         ),
       ),
     );
+  }
+
+  List<Widget> _buildBillingRows() {
+    final items = _getBillingItems();
+    if (items.isEmpty) {
+      return [
+        const Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('No billing data available', style: TextStyle(color: AppTheme.onSurfaceVariant)),
+        ),
+      ];
+    }
+    
+    final rows = <Widget>[];
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      rows.add(_buildTableRow(
+        item['title'] as String,
+        item['usage'] as String,
+        item['cost'] as String,
+        item['icon'] as IconData,
+      ));
+      if (i < items.length - 1) {
+        rows.add(const Divider(color: AppTheme.outlineVariant, height: 1, thickness: 0.1));
+      }
+    }
+    return rows;
   }
 
   Widget _buildMetricCard({required String title, required String primaryValue, required String unit, required String limitText, required double progress}) {

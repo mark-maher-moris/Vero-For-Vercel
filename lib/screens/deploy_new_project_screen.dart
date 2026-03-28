@@ -3,8 +3,16 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 
-class DeployNewProjectScreen extends StatelessWidget {
+class DeployNewProjectScreen extends StatefulWidget {
   const DeployNewProjectScreen({super.key});
+
+  @override
+  State<DeployNewProjectScreen> createState() => _DeployNewProjectScreenState();
+}
+
+class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
+  String _selectedBranch = 'main';
+  bool _isDeploying = false;
 
   void _showTeamPicker(BuildContext context, AppState appState) {
     showModalBottomSheet(
@@ -194,7 +202,11 @@ class DeployNewProjectScreen extends StatelessWidget {
             DropdownMenuItem(value: 'dev', child: Text('dev')),
             DropdownMenuItem(value: 'feature/ui-update', child: Text('feature/ui-update')),
           ],
-          onChanged: (val) {},
+          onChanged: (val) {
+            if (val != null) {
+              setState(() => _selectedBranch = val);
+            }
+          },
         ),
       ),
     );
@@ -270,41 +282,64 @@ class DeployNewProjectScreen extends StatelessWidget {
   }
 
   Widget _buildDeployButton() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.primary, Color(0xFFC7C6C6)],
-        ),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {},
-          borderRadius: BorderRadius.circular(4),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Deploy Project',
-                  style: TextStyle(
-                    color: Color(0xFF1B1C1C),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
+    return Consumer<AppState>(
+      builder: (context, appState, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primary, Color(0xFFC7C6C6)],
+            ),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _isDeploying ? null : () => _deployProject(context, appState),
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _isDeploying
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFF1B1C1C), strokeWidth: 2))
+                      : const Text(
+                          'Deploy Project',
+                          style: TextStyle(
+                            color: Color(0xFF1B1C1C),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                    if (!_isDeploying) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.bolt, color: Color(0xFF1B1C1C)),
+                    ],
+                  ],
                 ),
-                SizedBox(width: 8),
-                Icon(Icons.bolt, color: Color(0xFF1B1C1C)),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
+  }
+
+  Future<void> _deployProject(BuildContext context, AppState appState) async {
+    setState(() => _isDeploying = true);
+    try {
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Deployment from $_selectedBranch triggered!')),
+        );
+        Navigator.pop(context);
+      }
+    } finally {
+      setState(() => _isDeploying = false);
+    }
   }
 }
