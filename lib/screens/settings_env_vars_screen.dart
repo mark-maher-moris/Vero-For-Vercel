@@ -94,14 +94,17 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Environment Variables', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                        SizedBox(height: 4),
-                        Text('PROJECT CONFIGURATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-                      ],
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Environment Variables', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary), overflow: TextOverflow.ellipsis),
+                          SizedBox(height: 4),
+                          Text('PROJECT CONFIGURATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 16),
                     TextButton(
                       style: TextButton.styleFrom(
                         backgroundColor: AppTheme.primary,
@@ -150,12 +153,12 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      Row(
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 12,
                         children: [
                           _buildCheckbox('PRODUCTION', true),
-                          const SizedBox(width: 16),
                           _buildCheckbox('PREVIEW', false),
-                          const SizedBox(width: 16),
                           _buildCheckbox('DEVELOPMENT', false),
                         ],
                       ),
@@ -224,9 +227,15 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                       SizedBox(height: 16),
                       Row(
                         children: [
-                          Icon(Icons.folder_outlined, color: AppTheme.onSurfaceVariant, size: 20),
-                          SizedBox(width: 8),
-                          Text('./apps/web', style: TextStyle(fontFamily: 'monospace', color: AppTheme.primary)),
+                          const Icon(Icons.folder_outlined, color: AppTheme.onSurfaceVariant, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              './apps/web',
+                              style: const TextStyle(fontFamily: 'monospace', color: AppTheme.primary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                       SizedBox(height: 16),
@@ -303,19 +312,31 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
             ),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(key, style: const TextStyle(fontFamily: 'monospace', fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  if (isEncrypted) const Icon(Icons.lock, size: 10, color: AppTheme.onSurfaceVariant),
-                  if (isEncrypted) const SizedBox(width: 4),
-                  Text(value, style: const TextStyle(fontSize: 11, letterSpacing: 1, color: AppTheme.onSurfaceVariant)),
-                ],
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  key,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    if (isEncrypted) const Icon(Icons.lock, size: 10, color: AppTheme.onSurfaceVariant),
+                    if (isEncrypted) const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        value,
+                        style: const TextStyle(fontSize: 11, letterSpacing: 1, color: AppTheme.onSurfaceVariant),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           const Spacer(),
           const Icon(Icons.edit, size: 18, color: AppTheme.onSurfaceVariant),

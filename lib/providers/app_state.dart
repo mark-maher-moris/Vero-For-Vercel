@@ -10,12 +10,19 @@ class AppState extends ChangeNotifier {
   bool _isAuthenticated = false;
   bool _isLoading = true;
   List<Project> _projects = [];
+  Project? _selectedProject;
   Map<String, dynamic>? _user;
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   List<Project> get projects => _projects;
+  Project? get selectedProject => _selectedProject;
   Map<String, dynamic>? get user => _user;
+
+  void setSelectedProject(Project? project) {
+    _selectedProject = project;
+    notifyListeners();
+  }
 
   AppState() {
     _checkAuth();
@@ -62,6 +69,7 @@ class AppState extends ChangeNotifier {
     await _authService.deleteToken();
     _isAuthenticated = false;
     _projects = [];
+    _selectedProject = null;
     _user = null;
     notifyListeners();
   }
@@ -70,6 +78,9 @@ class AppState extends ChangeNotifier {
     try {
       _user = await _apiService.getUser();
       _projects = await _apiService.getProjects();
+      if (_projects.isNotEmpty && _selectedProject == null) {
+        _selectedProject = _projects.first;
+      }
     } catch (e) {
       if (kDebugMode) print('Error fetching data: \$e');
       // If unauthorized, we could logout here

@@ -135,7 +135,14 @@ class UsageBillingScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Cost Breakdown', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+              const Expanded(
+                child: Text(
+                  'Cost Breakdown',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 16),
               const Text('DOWNLOAD CSV', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
             ],
           ),
@@ -174,21 +181,24 @@ class UsageBillingScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
-                  const SizedBox(height: 4),
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(text: primaryValue, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1)),
-                        if (unit.isNotEmpty) TextSpan(text: ' \$unit', style: const TextStyle(fontSize: 20, color: AppTheme.onSurfaceVariant)),
-                      ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.onSurfaceVariant, letterSpacing: 1.5)),
+                    const SizedBox(height: 4),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(text: primaryValue, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1)),
+                          if (unit.isNotEmpty) TextSpan(text: ' $unit', style: const TextStyle(fontSize: 20, color: AppTheme.onSurfaceVariant)),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 16),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -220,8 +230,14 @@ class UsageBillingScreen extends StatelessWidget {
         children: [
           Icon(icon, color: AppTheme.onSurfaceVariant, size: 20),
           const SizedBox(width: 12),
-          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primary)),
-          const Spacer(),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primary),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
           Text(usage, style: const TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant)),
           const SizedBox(width: 24),
           SizedBox(
