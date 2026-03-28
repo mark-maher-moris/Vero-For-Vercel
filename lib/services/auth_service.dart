@@ -13,7 +13,7 @@ class AuthService {
   static const String clientId = 'cl_0MTgwuq7H4XfsAztxxn8dn2ef27WnPJ4';
   static const String clientSecret =
       'e3722eb43304b728e9f49d4566820da3be053bd51830417e21f37102fc55c519';
-  static const String redirectUri = 'https://YOUR-BRIDGE-DOMAIN.vercel.app/callback';
+  static const String redirectUri = 'https://vero-server.vercel.app/callback';
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();

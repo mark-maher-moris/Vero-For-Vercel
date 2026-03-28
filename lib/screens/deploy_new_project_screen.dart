@@ -22,7 +22,7 @@ class DeployNewProjectScreen extends StatelessWidget {
               child: const Icon(Icons.person, size: 20, color: AppTheme.primary),
             ),
             const SizedBox(width: 12),
-            const Text('Vercel', style: TextStyle(fontWeight: FontWeight.w900)),
+            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
           ],
         ),
         actions: [

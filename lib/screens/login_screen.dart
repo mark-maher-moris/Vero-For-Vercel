@@ -23,9 +23,16 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await context.read<AppState>().loginWithOAuth();
     } catch (e) {
-      setState(() {
-        _error = 'Authentication failed: $e';
-      });
+      if (mounted) {
+        // Don't show error if user just canceled
+        if (e.toString().contains('CANCELED')) {
+          setState(() => _isLoading = false);
+          return;
+        }
+        setState(() {
+          _error = 'Authentication failed: $e';
+        });
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -48,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'VERCEL',
+                'VERO',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       letterSpacing: 4,
@@ -96,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Icon(Icons.login, size: 20),
                           const SizedBox(width: 12),
                           Text(
-                            'SIGN IN WITH VERCEL',
+                            'CONNECT VERCEL ACCOUNT',
                             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                   color: AppTheme.onPrimary,
                                   fontWeight: FontWeight.bold,

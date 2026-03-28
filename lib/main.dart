@@ -9,18 +9,18 @@ void main() {
   runApp(
     ChangeNotifierProvider(
       create: (_) => AppState(),
-      child: const VercelApp(),
+      child: const VeroApp(),
     ),
   );
 }
 
-class VercelApp extends StatelessWidget {
-  const VercelApp({super.key});
+class VeroApp extends StatelessWidget {
+  const VeroApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Vercel App',
+      title: 'Vero For Vercel',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
       home: Consumer<AppState>(

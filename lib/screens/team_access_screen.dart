@@ -22,7 +22,7 @@ class TeamAccessScreen extends StatelessWidget {
               child: const Icon(Icons.change_history, size: 20, color: AppTheme.onPrimary),
             ),
             const SizedBox(width: 12),
-            const Text('Vercel', style: TextStyle(fontWeight: FontWeight.w900)),
+            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
           ],
         ),
         actions: [
