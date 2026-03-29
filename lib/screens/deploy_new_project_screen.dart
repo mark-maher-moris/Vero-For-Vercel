@@ -113,7 +113,7 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
         border: Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
       ),
       child: DropdownButtonHideUnderline(
@@ -144,7 +144,7 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
         border: Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
       ),
       child: DropdownButtonHideUnderline(
@@ -173,7 +173,7 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
       ),
       child: Column(
         children: [
@@ -226,7 +226,7 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppTheme.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
                 child: Row(
                   children: [
@@ -248,7 +248,7 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppTheme.onSurfaceVariant.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
                 child: const Row(
                   children: [
@@ -271,13 +271,13 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
                     end: Alignment.bottomRight,
                     colors: [AppTheme.primary, Color(0xFFC7C6C6)],
                   ),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: canDeploy ? () => _deployProject(context, appState) : null,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(2),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       child: Row(

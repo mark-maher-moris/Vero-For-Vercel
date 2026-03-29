@@ -171,7 +171,7 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
                 style: TextButton.styleFrom(
                   backgroundColor: AppTheme.surfaceContainerLow,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                 ),
                 child: const Text('Refresh activity', style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold)),
               ),

@@ -153,7 +153,7 @@ class _TeamAccessScreenState extends State<TeamAccessScreen> {
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
+                  decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(2)),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -223,7 +223,7 @@ class _TeamAccessScreenState extends State<TeamAccessScreen> {
                 flex: 2,
                 child: Container(
                   padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
+                  decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(2)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -251,7 +251,7 @@ class _TeamAccessScreenState extends State<TeamAccessScreen> {
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
+                  decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(2)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -273,7 +273,7 @@ class _TeamAccessScreenState extends State<TeamAccessScreen> {
 
           const SizedBox(height: 32),
           Container(
-            decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
+            decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(2)),
             child: Column(
               children: [
                 Padding(

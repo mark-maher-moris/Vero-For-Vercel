@@ -85,14 +85,25 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   }
 
   Future<void> _redeployProject() async {
+    final appState = Provider.of<AppState>(context, listen: false);
     setState(() => _isRedeploying = true);
     try {
-      await Future.delayed(const Duration(seconds: 2));
+      await appState.apiService.createDeployment(
+        projectId: widget.project.id,
+        target: 'production',
+        withLatestCommit: true,
+      );
       await _fetchData();
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Redeployment triggered!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to redeploy: $e')));
       }
     } finally {
       setState(() => _isRedeploying = false);
@@ -113,8 +124,8 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         title: Row(
           children: [
             Container(
-              width: 8,
-              height: 8,
+              width: 6,
+              height: 6,
               decoration: const BoxDecoration(
                 color: AppTheme.success,
                 shape: BoxShape.circle,
@@ -237,7 +248,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,7 +383,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(2),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,7 +470,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +508,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,7 +561,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(2),
           ),
           child: Column(children: features),
         ),
@@ -602,7 +613,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: const Center(
               child: Text(
@@ -628,7 +639,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: const Center(
               child: Text(
@@ -644,13 +655,13 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
+                    width: 6,
+                    height: 6,
                     decoration: BoxDecoration(
                       color: dep.state == 'READY' ? AppTheme.success : AppTheme.error,
                       shape: BoxShape.circle,
@@ -714,7 +725,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(2),
           ),
           child: Column(
             children: [
@@ -753,7 +764,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(2),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -824,7 +835,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: const Center(
               child: Text(
@@ -840,7 +851,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Row(
                 children: [
@@ -891,7 +902,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(2),
           ),
           child: Row(
             children: [
@@ -925,7 +936,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: const Center(
               child: Text(
@@ -940,9 +951,8 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLowest,
-                border: const Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
-                borderRadius: BorderRadius.circular(4),
+                color: AppTheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Row(
                 children: [
@@ -978,7 +988,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Row(
                 children: [

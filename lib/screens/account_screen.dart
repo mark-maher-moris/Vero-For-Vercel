@@ -72,7 +72,7 @@ class AccountScreen extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Row(
                 children: [
@@ -146,7 +146,7 @@ class AccountScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(2),
                   border: Border.all(
                     color: AppTheme.primary.withValues(alpha: 0.3),
                   ),
@@ -157,7 +157,7 @@ class AccountScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                       child: const Icon(
                         Icons.star,
@@ -196,7 +196,7 @@ class AccountScreen extends StatelessWidget {
                         foregroundColor: AppTheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                       child: const Text('Upgrade'),
@@ -256,7 +256,7 @@ class AccountScreen extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,7 +301,7 @@ class AccountScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppTheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(2),
           border: Border.all(
             color: AppTheme.outlineVariant.withValues(alpha: 0.1),
           ),

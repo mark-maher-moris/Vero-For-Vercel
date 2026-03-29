@@ -533,7 +533,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         border: Border.all(color: color.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -691,13 +691,24 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   Future<void> _redeployProject(BuildContext context) async {
+    final appState = Provider.of<AppState>(context, listen: false);
     setState(() => _isRedeploying = true);
     try {
-      await Future.delayed(const Duration(seconds: 2));
+      await appState.apiService.createDeployment(
+        projectId: widget.project.id,
+        target: 'production',
+        withLatestCommit: true,
+      );
       await _fetchData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Redeployment triggered successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to redeploy: $e')),
         );
       }
     } finally {

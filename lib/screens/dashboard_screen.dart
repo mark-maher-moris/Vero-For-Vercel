@@ -189,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       backgroundColor: AppTheme.surfaceContainerLow,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
       ),
       builder: (context) {
         return SafeArea(
@@ -241,7 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
       ),
       child: const TextField(
         style: TextStyle(color: AppTheme.onSurface),
@@ -286,9 +286,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
-        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
-        borderRadius: BorderRadius.circular(4),
+        color: AppTheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

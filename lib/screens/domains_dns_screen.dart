@@ -74,7 +74,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerLow,
               border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: Row(
               children: [
@@ -178,7 +178,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLow,
             border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(2),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

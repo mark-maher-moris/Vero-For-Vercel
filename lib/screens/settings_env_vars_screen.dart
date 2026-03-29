@@ -82,7 +82,7 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
 
           // Env Vars Section
           Container(
-            decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(4)),
+            decoration: BoxDecoration(color: AppTheme.surfaceContainerLow, borderRadius: BorderRadius.circular(2)),
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -154,7 +154,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                         height: 40,
                         decoration: BoxDecoration(
                           color: AppTheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                         child: Icon(
                           _getFrameworkIcon(project.framework),
@@ -284,7 +284,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
               height: 80,
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(4),
               ),
               child: const Icon(
                 Icons.security_outlined,
@@ -384,11 +384,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isEnabled ? Colors.orange.withOpacity(0.3) : AppTheme.outlineVariant,
-          width: isEnabled ? 2 : 1,
-        ),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,7 +395,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isEnabled ? Colors.orange.withOpacity(0.1) : AppTheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(2),
                 ),
                 child: Icon(
                   isEnabled ? Icons.warning_amber_rounded : Icons.shield_outlined,
@@ -446,7 +442,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.orange.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Row(
                 children: [
@@ -479,7 +475,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
       ),
       child: Column(
@@ -532,7 +528,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: Icon(icon, color: color, size: 24),
           ),
@@ -564,7 +560,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
       ),
       child: Column(
@@ -614,7 +610,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppTheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(2),
         ),
         child: Icon(icon, color: AppTheme.primary, size: 20),
       ),
@@ -714,7 +710,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(2),
         border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
       ),
       child: Row(
@@ -723,7 +719,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: actionColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: Icon(
               _getActionIcon(rule.action),
@@ -777,7 +773,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(2),
         border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
       ),
       child: Row(
@@ -786,7 +782,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.red.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: const Icon(
               Icons.block_outlined,
@@ -835,7 +831,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(2),
         border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
       ),
       child: Column(
@@ -876,8 +872,8 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.primary.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+              borderRadius: BorderRadius.circular(2),
+              border: Border.all(color: AppTheme.primary.withOpacity(0.15)),
             ),
             child: Row(
               children: [
@@ -924,7 +920,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(2),
         border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
       ),
       child: Row(
@@ -933,7 +929,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: ruleset.enabled ? Colors.green.withOpacity(0.1) : AppTheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: Icon(
               ruleset.enabled ? Icons.verified_user : Icons.verified_user_outlined,
@@ -967,7 +963,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: actionColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                       child: Text(
                         ruleset.action.toUpperCase(),
@@ -985,7 +981,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                         color: ruleset.enabled
                             ? Colors.green.withOpacity(0.1)
                             : Colors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                       child: Text(
                         ruleset.enabled ? 'ACTIVE' : 'INACTIVE',

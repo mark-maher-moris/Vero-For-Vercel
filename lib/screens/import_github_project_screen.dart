@@ -151,7 +151,7 @@ class _ImportGithubProjectScreenState extends State<ImportGithubProjectScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppTheme.error.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Row(
                 children: [
@@ -197,7 +197,7 @@ class _ImportGithubProjectScreenState extends State<ImportGithubProjectScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
         border: Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
       ),
       child: TextField(
@@ -219,7 +219,7 @@ class _ImportGithubProjectScreenState extends State<ImportGithubProjectScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
         border: Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
       ),
       child: DropdownButtonHideUnderline(
@@ -252,13 +252,13 @@ class _ImportGithubProjectScreenState extends State<ImportGithubProjectScreen> {
           end: Alignment.bottomRight,
           colors: [AppTheme.primary, Color(0xFFC7C6C6)],
         ),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: _isImporting ? null : _importProject,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(2),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: Row(

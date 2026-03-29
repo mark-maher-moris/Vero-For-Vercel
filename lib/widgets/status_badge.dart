@@ -23,7 +23,7 @@ class StatusBadge extends StatelessWidget {
             : (isReady
                 ? AppTheme.success.withValues(alpha: 0.1)
                 : AppTheme.surfaceContainerHigh),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
         border: isError
             ? Border.all(color: AppTheme.error.withValues(alpha: 0.2))
             : (isReady
