@@ -189,13 +189,16 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                       
                       final envs = snapshot.data!;
                       return Column(
-                        children: envs.map((env) => _buildEnvVar(
-                          env['id'] ?? '',
-                          env['key'] ?? 'UNKNOWN_KEY',
-                          env['value'] ?? '••••••••',
-                          env['target']?.contains('production') ?? false,
-                          isEncrypted: (env['type'] == 'secret' || env['type'] == 'encrypted'),
-                        )).toList(),
+                        children: envs.map((env) {
+                          final isEncrypted = env['type'] == 'secret' || env['type'] == 'encrypted';
+                          return _buildEnvVar(
+                            env['id'] ?? '',
+                            env['key'] ?? 'UNKNOWN_KEY',
+                            isEncrypted ? '••••••••' : (env['value'] ?? ''),
+                            env['target']?.contains('production') ?? false,
+                            isEncrypted: isEncrypted,
+                          );
+                        }).toList(),
                       );
                     },
                   ),

@@ -22,6 +22,14 @@ class EnvVar {
   });
 
   factory EnvVar.fromJson(Map<String, dynamic> json) {
+    // Handle timestamp as either int or string
+    int parseTimestamp(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
     return EnvVar(
       id: json['id'] as String? ?? json['key'] as String,
       key: json['key'] as String,
@@ -29,9 +37,9 @@ class EnvVar {
       type: json['type'] as String? ?? 'plain',
       target: (json['target'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
       gitBranch: json['gitBranch'] as String?,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int? ?? 0),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(parseTimestamp(json['createdAt'])),
       updatedAt: json['updatedAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'] as int)
+          ? DateTime.fromMillisecondsSinceEpoch(parseTimestamp(json['updatedAt']))
           : null,
       encrypted: json['encrypted'] as bool?,
     );

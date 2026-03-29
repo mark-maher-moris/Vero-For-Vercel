@@ -239,7 +239,7 @@ class VercelApi {
 
   Future<List<dynamic>> getDeploymentEvents(String deploymentId) async {
     final response = await http.get(
-      _buildUri('/v2/deployments/$deploymentId/events'),
+      _buildUri('/v3/deployments/$deploymentId/events'),
       headers: await _getHeaders(),
     );
     
@@ -292,11 +292,22 @@ class VercelApi {
     return data['envs'] as List<dynamic>? ?? [];
   }
 
+  Future<List<dynamic>> updateEnvVar(String projectId, String envVarId, Map<String, dynamic> envVar) async {
+    final response = await http.patch(
+      _buildUri('/v9/projects/$projectId/env/$envVarId'),
+      headers: await _getHeaders(),
+      body: json.encode(envVar),
+    );
+    final data = await _handleResponse(response);
+    return data['envs'] as List<dynamic>? ?? [];
+  }
+
   Future<void> deleteEnvVar(String projectId, String envVarId, {String? target}) async {
     final params = <String, String>{};
     if (target != null) params['target'] = target;
+    
     final response = await http.delete(
-      _buildUri('/v9/projects/$projectId/env/$envVarId', params),
+      _buildUri('/v9/projects/$projectId/env/$envVarId', params.isNotEmpty ? params : null),
       headers: await _getHeaders(),
     );
     await _handleResponse(response);

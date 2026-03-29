@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -7,8 +9,11 @@ import '../models/project.dart';
 import '../models/deployment.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/deployment_card.dart';
+import '../models/env_var.dart';
 import '../widgets/action_card.dart';
+import '../widgets/deployment_card.dart';
+import '../providers/subscription_provider.dart';
+import 'subscription_screen.dart';
 import 'deployment_logs_screen.dart';
 
 class ProjectWorkspaceScreen extends StatefulWidget {
@@ -22,6 +27,8 @@ class ProjectWorkspaceScreen extends StatefulWidget {
 
 class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     with SingleTickerProviderStateMixin {
+  final Map<String, bool> _revealedSecrets = {};
+  bool _isEditingEnvVar = false;
   late TabController _tabController;
   List<Deployment>? _deployments;
   List<dynamic>? _domains;
@@ -33,7 +40,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
     _fetchData();
   }
 
@@ -112,6 +119,10 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Watch subscription provider to check if user has Pro
+    final subscription = context.watch<SubscriptionProvider>();
+    final isPro = subscription.isPro;
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
@@ -162,16 +173,46 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          indicatorColor: AppTheme.primary,
+          onTap: (index) {
+            // If free user tries to access pro tabs, show paywall and reset to first tab
+            if (!isPro && index > 1) {
+              _showPaywall(context);
+              // Reset to first tab after a short delay
+              Future.delayed(const Duration(milliseconds: 100), () {
+                if (mounted) {
+                  _tabController.animateTo(0);
+                }
+              });
+            }
+          },
+          indicator: BoxDecoration(
+            color: AppTheme.surfaceContainerHigh,
+            border: const Border(
+              bottom: BorderSide(color: AppTheme.primary, width: 2),
+            ),
+          ),
+          indicatorSize: TabBarIndicatorSize.tab,
           labelColor: AppTheme.primary,
           unselectedLabelColor: AppTheme.onSurfaceVariant,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Deployments'),
-            Tab(text: 'Logs'),
-            Tab(text: 'Security'),
-            Tab(text: 'Env Vars'),
-            Tab(text: 'Domains'),
+          labelStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.05 * 11,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.05 * 11,
+          ),
+          tabs: [
+            const Tab(text: 'OVERVIEW'),
+            const Tab(text: 'DEPLOYMENTS'),
+            // Show pro tabs with blur effect for free users
+            _buildProTab('LOGS', isPro),
+            _buildProTab('ACTIVITY', isPro),
+            _buildProTab('SECURITY', isPro),
+            _buildProTab('ENV VARS', isPro),
+            _buildProTab('DOMAINS', isPro),
           ],
         ),
       ),
@@ -182,16 +223,122 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               ? _buildErrorView()
               : TabBarView(
                 controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(), // Prevent swipe for free users
                 children: [
                   _buildOverviewTab(),
                   _buildDeploymentsTab(),
-                  _buildLogsTab(),
-                  _buildSecurityTab(),
-                  _buildEnvVarsTab(),
-                  _buildDomainsTab(),
+                  // Pro tabs - show blur overlay for free users
+                  _buildBlurredTabIfNeeded(_buildLogsTab(), isPro, context),
+                  _buildBlurredTabIfNeeded(_buildActivityTab(), isPro, context),
+                  _buildBlurredTabIfNeeded(_buildSecurityTab(), isPro, context),
+                  _buildBlurredTabIfNeeded(_buildEnvVarsTab(), isPro, context),
+                  _buildBlurredTabIfNeeded(_buildDomainsTab(), isPro, context),
                 ],
               ),
     );
+  }
+
+  Widget _buildProTab(String text, bool isPro) {
+    if (isPro) {
+      return Tab(text: text);
+    }
+    // For free users, show tab with lock icon
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(text),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.lock,
+            size: 10,
+            color: AppTheme.onSurfaceVariant.withOpacity(0.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlurredTabIfNeeded(Widget child, bool isPro, BuildContext context) {
+    if (isPro) {
+      return child;
+    }
+
+    // For free users, wrap with blur overlay
+    return Stack(
+      children: [
+        child,
+        Positioned.fill(
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                color: AppTheme.surface.withOpacity(0.8),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.lock_outline,
+                        color: AppTheme.primary,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Pro Feature',
+                        style: TextStyle(
+                          color: AppTheme.onSurface,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Upgrade to Vero Pro to access this feature',
+                        style: TextStyle(
+                          color: AppTheme.onSurfaceVariant,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () => _showPaywall(context),
+                        icon: const Icon(Icons.star, size: 18),
+                        label: const Text('Upgrade to Pro'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showPaywall(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SubscriptionScreen(),
+      ),
+    ).then((_) {
+      // Refresh subscription status when returning from paywall
+      if (mounted) {
+        final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
+        subscription.refresh();
+      }
+    });
   }
 
   Widget _buildErrorView() {
@@ -325,6 +472,10 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   }
 
   Widget _buildQuickActions() {
+    // Get subscription status
+    final subscription = context.watch<SubscriptionProvider>();
+    final isPro = subscription.isPro;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -350,7 +501,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               child: ActionCard(
                 icon: Icons.terminal,
                 label: 'Logs',
-                onTap: () => _tabController.animateTo(2),
+                onTap: isPro
+                    ? () => _tabController.animateTo(2)
+                    : () => _showPaywall(context),
               ),
             ),
             const SizedBox(width: 12),
@@ -358,7 +511,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               child: ActionCard(
                 icon: Icons.settings,
                 label: 'Config',
-                onTap: () => _tabController.animateTo(4),
+                onTap: isPro
+                    ? () => _tabController.animateTo(4)
+                    : () => _showPaywall(context),
               ),
             ),
           ],
@@ -623,7 +778,17 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             ),
           )
         else
-          ..._deployments!.map((dep) => DeploymentCard(deployment: dep)),
+          ..._deployments!.map((dep) => DeploymentCard(
+            deployment: dep,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DeploymentLogsScreen(deployment: dep),
+                ),
+              );
+            },
+          )),
       ],
     );
   }
@@ -707,6 +872,150 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           }),
       ],
     );
+  }
+
+  Widget _buildActivityTab() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('PROJECT ACTIVITY', style: Theme.of(context).textTheme.labelSmall),
+            if (_deployments != null)
+              Text(
+                '${_deployments!.length} events',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        if (_deployments == null || _deployments!.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: const Center(
+              child: Text(
+                'No activity found for this project',
+                style: TextStyle(color: AppTheme.onSurfaceVariant),
+              ),
+            ),
+          )
+        else
+          Column(
+            children: List.generate(_deployments!.length, (index) {
+              final deployment = _deployments![index];
+              final isLast = index == _deployments!.length - 1;
+              final createdDate = DateTime.fromMillisecondsSinceEpoch(deployment.created * 1000);
+              
+              return _buildActivityItem(
+                isLast: isLast,
+                icon: _getIconForState(deployment.state),
+                title: deployment.name,
+                timeAgo: timeago.format(createdDate).toUpperCase(),
+                description: TextSpan(
+                  children: [
+                    const TextSpan(text: 'Deployment to '),
+                    TextSpan(
+                      text: deployment.url,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
+                    ),
+                    TextSpan(text: ' is ${deployment.state.toLowerCase()}.'),
+                  ],
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DeploymentLogsScreen(deployment: deployment),
+                    ),
+                  );
+                },
+              );
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildActivityItem({
+    required bool isLast,
+    required IconData icon,
+    required String title,
+    required String timeAgo,
+    required TextSpan description,
+    VoidCallback? onTap,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLow,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
+                ),
+                child: Icon(icon, size: 20, color: AppTheme.primary),
+              ),
+              Expanded(
+                child: Container(
+                  width: 1,
+                  color: isLast ? Colors.transparent : AppTheme.surfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 32, top: 2),
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.onSurface, fontSize: 14)),
+                        Text(timeAgo, style: const TextStyle(fontWeight: FontWeight.w500, color: AppTheme.onSurfaceVariant, fontSize: 11, letterSpacing: 1)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    RichText(
+                      text: TextSpan(
+                        style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 14, height: 1.5),
+                        children: [description],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getIconForState(String state) {
+    switch (state) {
+      case 'READY': return Icons.rocket_launch;
+      case 'ERROR': return Icons.error_outline;
+      case 'BUILDING': return Icons.loop;
+      default: return Icons.history;
+    }
   }
 
   Widget _buildSecurityTab() {
@@ -820,13 +1129,29 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('ENVIRONMENT VARIABLES', style: Theme.of(context).textTheme.labelSmall),
-            if (_envVars != null)
-              Text(
-                '${_envVars!.length} variables',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.onSurfaceVariant,
+            Row(
+              children: [
+                if (_envVars != null)
+                  Text(
+                    '${_envVars!.length} variables',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: _isEditingEnvVar ? null : () => _showAddEnvVarDialog(),
+                  icon: const Icon(Icons.add, size: 16, color: Colors.black),
+                  label: const Text('ADD', style: TextStyle(color: Colors.black)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -845,58 +1170,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             ),
           )
         else
-          ..._envVars!.map((env) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.key, color: AppTheme.onSurfaceVariant),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          env['key'] ?? 'Unknown',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        Text(
-                          env['target']?.join(', ') ?? 'All environments',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Text(
-                      '****',
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+          ..._envVars!.map((env) => _buildEnvVarCard(env)),
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(16),
@@ -910,7 +1184,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Environment variables are encrypted and only available at runtime.',
+                  'Secret values are hidden by default. Click the eye icon to reveal. Changes require redeployment to take effect.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.onSurfaceVariant,
                   ),
@@ -921,6 +1195,419 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildEnvVarCard(dynamic env) {
+    final envVar = env is EnvVar ? env : EnvVar.fromJson(env);
+    final isRevealed = _revealedSecrets[envVar.id] ?? false;
+    final hasValue = envVar.value != null && envVar.value!.isNotEmpty;
+    final displayValue = envVar.isSecret && (!isRevealed || !hasValue) ? '••••••••' : (envVar.value ?? '');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                envVar.isSecret ? Icons.lock : Icons.key,
+                color: envVar.isSecret ? AppTheme.error : AppTheme.onSurfaceVariant,
+                size: 18,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  envVar.key,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              if (envVar.isSecret)
+                IconButton(
+                  icon: Icon(
+                    isRevealed ? Icons.visibility_off : Icons.visibility,
+                    size: 18,
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _revealedSecrets[envVar.id] = !isRevealed;
+                    });
+                  },
+                  tooltip: isRevealed ? 'Hide' : 'Reveal',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
+              IconButton(
+                icon: const Icon(Icons.edit, size: 18, color: AppTheme.primary),
+                onPressed: _isEditingEnvVar ? null : () => _showEditEnvVarDialog(envVar),
+                tooltip: 'Edit',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, size: 18, color: AppTheme.error),
+                onPressed: _isEditingEnvVar ? null : () => _showDeleteEnvVarDialog(envVar),
+                tooltip: 'Delete',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    displayValue.isEmpty ? '(empty)' : displayValue,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      color: displayValue.isEmpty ? AppTheme.onSurfaceVariant : AppTheme.onSurface,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                if (displayValue.isNotEmpty && hasValue)
+                  InkWell(
+                    onTap: () => _copyToClipboard(envVar.value ?? ''),
+                    child: Icon(
+                      Icons.copy,
+                      size: 14,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  envVar.target.join(', '),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (envVar.type != 'plain') ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Text(
+                    envVar.type.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddEnvVarDialog() async {
+    final keyController = TextEditingController();
+    final valueController = TextEditingController();
+    String selectedTarget = 'production';
+    bool isSecret = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppTheme.surfaceContainerLow,
+          title: const Text('Add Environment Variable'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: keyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Key',
+                    hintText: 'e.g., API_KEY',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: valueController,
+                  decoration: const InputDecoration(
+                    labelText: 'Value',
+                    hintText: 'Enter value',
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: isSecret,
+                  maxLines: isSecret ? 1 : 3,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedTarget,
+                  decoration: const InputDecoration(
+                    labelText: 'Target',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'production', child: Text('Production')),
+                    DropdownMenuItem(value: 'preview', child: Text('Preview')),
+                    DropdownMenuItem(value: 'development', child: Text('Development')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => selectedTarget = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text('Secret (encrypted)'),
+                  subtitle: const Text('Value will be hidden and encrypted'),
+                  value: isSecret,
+                  onChanged: (value) {
+                    setDialogState(() => isSecret = value ?? false);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('CANCEL'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (keyController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Key is required')),
+                  );
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+              child: const Text('ADD', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() => _isEditingEnvVar = true);
+      try {
+        final appState = Provider.of<AppState>(context, listen: false);
+        await appState.apiService.createEnvVars(
+          widget.project.id,
+          [{
+            'key': keyController.text.trim(),
+            'value': valueController.text,
+            'target': [selectedTarget],
+            'type': isSecret ? 'secret' : 'plain',
+          }],
+        );
+        await _fetchData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Environment variable added')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add: $e')),
+          );
+        }
+      } finally {
+        setState(() => _isEditingEnvVar = false);
+      }
+    }
+  }
+
+  Future<void> _showEditEnvVarDialog(EnvVar envVar) async {
+    final valueController = TextEditingController(text: envVar.value ?? '');
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        title: Text('Edit ${envVar.key}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Key: ${envVar.key}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: valueController,
+                decoration: InputDecoration(
+                  labelText: 'Value',
+                  hintText: 'Enter new value',
+                  border: const OutlineInputBorder(),
+                  helperText: envVar.isSecret ? 'Leave empty to keep current value' : null,
+                ),
+                obscureText: envVar.isSecret,
+                maxLines: envVar.isSecret ? 1 : 3,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Target: ${envVar.target.join(', ')}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.onSurfaceVariant,
+                ),
+              ),
+              if (envVar.isSecret)
+                Text(
+                  'Type: ENCRYPTED',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.error,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() => _isEditingEnvVar = true);
+      try {
+        final appState = Provider.of<AppState>(context, listen: false);
+        final newValue = valueController.text;
+        
+        // If secret and empty, don't update value
+        if (envVar.isSecret && newValue.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No changes made')),
+            );
+          }
+          setState(() => _isEditingEnvVar = false);
+          return;
+        }
+
+        await appState.apiService.updateEnvVar(
+          widget.project.id,
+          envVar.id,
+          {
+            'value': newValue,
+            'target': envVar.target,
+            'type': envVar.type,
+          },
+        );
+        await _fetchData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Environment variable updated')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update: $e')),
+          );
+        }
+      } finally {
+        setState(() => _isEditingEnvVar = false);
+      }
+    }
+  }
+
+  Future<void> _showDeleteEnvVarDialog(EnvVar envVar) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        title: const Text('Delete Environment Variable'),
+        content: Text('Are you sure you want to delete "${envVar.key}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() => _isEditingEnvVar = true);
+      try {
+        final appState = Provider.of<AppState>(context, listen: false);
+        await appState.apiService.deleteEnvVar(
+          widget.project.id,
+          envVar.id,
+          target: envVar.target.isNotEmpty ? envVar.target.first : null,
+        );
+        await _fetchData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Environment variable deleted')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete: $e')),
+          );
+        }
+      } finally {
+        setState(() => _isEditingEnvVar = false);
+      }
+    }
   }
 
   Widget _buildDomainsTab() {

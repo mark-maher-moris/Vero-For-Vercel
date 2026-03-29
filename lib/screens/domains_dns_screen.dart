@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../models/domain.dart';
@@ -192,7 +193,15 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
                       child: Row(
                         children: [
                           Flexible(
-                            child: Text(domain, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                            child: InkWell(
+                              onTap: () async {
+                                final uri = Uri.parse('https://$domain');
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              child: Text(domain, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Container(

@@ -1,13 +1,23 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:url_launcher/url_launcher.dart';
 import '../models/project.dart';
 import '../theme/app_theme.dart';
 import '../screens/project_workspace_screen.dart';
 
 class ProjectCard extends StatelessWidget {
   final Project project;
+  final bool isBlurred;
+  final VoidCallback? onSubscribeTap;
 
-  const ProjectCard({super.key, required this.project});
+  const ProjectCard({
+    super.key,
+    required this.project,
+    this.isBlurred = false,
+    this.onSubscribeTap,
+  });
 
   String get _frameworkIcon {
     switch (project.framework?.toLowerCase()) {
@@ -87,21 +97,30 @@ class ProjectCard extends StatelessWidget {
   List<Widget> _buildUrlRows() {
     final urls = project.allUrls;
     if (urls.isEmpty) {
+      final defaultUrl = '${project.name}.vercel.app';
       return [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                '${project.name}.vercel.app',
-                style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+        InkWell(
+          onTap: () async {
+            final uri = Uri.parse('https://$defaultUrl');
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  defaultUrl,
+                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.open_in_new, size: 16, color: AppTheme.onSurfaceVariant),
-          ],
+              const SizedBox(width: 8),
+              const Icon(Icons.open_in_new, size: 16, color: AppTheme.onSurfaceVariant),
+            ],
+          ),
         ),
       ];
     }
@@ -109,20 +128,28 @@ class ProjectCard extends StatelessWidget {
     return urls.map((url) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                url,
-                style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+        child: InkWell(
+          onTap: () async {
+            final uri = Uri.parse(!url.startsWith('http') ? 'https://$url' : url);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  url,
+                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.open_in_new, size: 16, color: AppTheme.onSurfaceVariant),
-          ],
+              const SizedBox(width: 8),
+              const Icon(Icons.open_in_new, size: 16, color: AppTheme.onSurfaceVariant),
+            ],
+          ),
         ),
       );
     }).toList();
@@ -143,22 +170,26 @@ class ProjectCard extends StatelessWidget {
       }
     }
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProjectWorkspaceScreen(project: project),
-          ),
-        );
-      },
+    Widget cardContent = GestureDetector(
+      onTap: isBlurred
+          ? onSubscribeTap
+          : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProjectWorkspaceScreen(project: project),
+                ),
+              );
+            },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppTheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(2),
         ),
-        child: Column(
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -218,6 +249,7 @@ class ProjectCard extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
               Column(
                 children: [
                   Container(
@@ -249,6 +281,74 @@ class ProjectCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
     );
+
+    if (isBlurred) {
+      return Stack(
+        children: [
+          cardContent,
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.lock,
+                          color: AppTheme.primary,
+                          size: 32,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Pro Feature',
+                          style: TextStyle(
+                            color: AppTheme.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Upgrade to access more projects',
+                          style: TextStyle(
+                            color: AppTheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: onSubscribeTap,
+                          icon: const Icon(Icons.star, size: 16),
+                          label: const Text('Upgrade to Pro'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return cardContent;
   }
 }

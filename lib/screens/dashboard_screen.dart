@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import '../providers/subscription_provider.dart';
 import '../models/project.dart';
 import '../theme/app_theme.dart';
 import '../widgets/project_card.dart';
 import 'import_github_project_screen.dart';
+import 'subscription_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -33,8 +35,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final from = DateTime(now.year, now.month, 1);
       
       final usage = await appState.apiService.getUsage(
-        from: (from.toUtc().millisecondsSinceEpoch ~/ 1000).toString(),
-        to: (now.toUtc().millisecondsSinceEpoch ~/ 1000).toString(),
+        from: from.toUtc().toIso8601String(),
+        to: now.toUtc().toIso8601String(),
       );
       if (mounted) {
         setState(() {
@@ -262,6 +264,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Text('No projects found.', style: TextStyle(color: AppTheme.onSurfaceVariant)),
       );
     }
+
+    // Watch subscription provider
+    final subscription = context.watch<SubscriptionProvider>();
+    final isPro = subscription.isPro;
     
     return GridView.builder(
       shrinkWrap: true,
@@ -274,9 +280,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       itemCount: projects.length,
       itemBuilder: (context, index) {
-        return ProjectCard(project: projects[index]);
+        final isBlurred = !isPro && index > 0;
+        return ProjectCard(
+          project: projects[index],
+          isBlurred: isBlurred,
+          onSubscribeTap: () => _showPaywall(context),
+        );
       },
     );
+  }
+
+  void _showPaywall(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SubscriptionScreen(),
+      ),
+    ).then((_) {
+      // Refresh subscription status when returning from paywall
+      if (mounted) {
+        final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
+        subscription.refresh();
+      }
+    });
   }
 
   Widget _buildUsageOverview() {

@@ -2,8 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
-import 'activity_feed_screen.dart';
-import 'deploy_new_project_screen.dart';
 import 'account_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -18,8 +16,6 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const DashboardScreen(),
-    const ActivityFeedScreen(),
-    const DeployNewProjectScreen(),
     const AccountScreen(),
   ];
 
@@ -59,22 +55,10 @@ class _MainScreenState extends State<MainScreen> {
                         onTap: () => setState(() => _currentIndex = 0),
                       ),
                       _NavItem(
-                        icon: Icons.notifications_outlined,
-                        label: 'Activity',
-                        isActive: _currentIndex == 1,
-                        onTap: () => setState(() => _currentIndex = 1),
-                      ),
-                      _NavItem(
-                        icon: Icons.rocket_launch,
-                        label: 'Deploy',
-                        isActive: _currentIndex == 2,
-                        onTap: () => setState(() => _currentIndex = 2),
-                      ),
-                      _NavItem(
                         icon: Icons.account_circle_outlined,
                         label: 'Account',
-                        isActive: _currentIndex == 3,
-                        onTap: () => setState(() => _currentIndex = 3),
+                        isActive: _currentIndex == 1,
+                        onTap: () => setState(() => _currentIndex = 1),
                       ),
                     ],
                   ),

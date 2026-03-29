@@ -295,6 +295,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           Text('DOMAINS', style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: 16),
           ...domainsToShow.map((dom) {
+            final domainName = dom['name'] as String? ?? '';
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(16),
@@ -308,10 +309,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                   const Icon(Icons.language, color: AppTheme.onSurfaceVariant),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(dom['name'], style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                    child: InkWell(
+                      onTap: () async {
+                        final uri = Uri.parse('https://$domainName');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: Text(domainName, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                    ),
                   ),
                   InkWell(
-                    onTap: () => _copyDomain(dom['name']),
+                    onTap: () => _copyDomain(domainName),
                     child: const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
                   ),
                 ],
