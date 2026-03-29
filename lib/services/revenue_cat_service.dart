@@ -282,12 +282,35 @@ class RevenueCatService {
   /// Call this when user logs out
   Future<void> logout() async {
     try {
+      // Check if user is anonymous - if so, skip logout to avoid error
+      final userId = _customerInfo?.originalAppUserId;
+      if (userId == null || userId.startsWith('\$RCAnonymousID:')) {
+        if (kDebugMode) {
+          print('RevenueCat: User is anonymous, skipping logout');
+        }
+        return;
+      }
+      
       final customerInfo = await Purchases.logOut();
       _customerInfo = customerInfo;
       
       if (kDebugMode) {
         print('RevenueCat: User logged out');
       }
+    } on PlatformException catch (e) {
+      // Handle the specific case where logout was called on anonymous user
+      if (e.code == '22' || 
+          e.message?.contains('anonymous') == true ||
+          e.details?.toString().contains('LOGOUT_CALLED_WITH_ANONYMOUS_USER') == true) {
+        if (kDebugMode) {
+          print('RevenueCat: User is anonymous, logout not needed');
+        }
+        return;
+      }
+      if (kDebugMode) {
+        print('RevenueCat: Logout error - $e');
+      }
+      rethrow;
     } catch (e) {
       if (kDebugMode) {
         print('RevenueCat: Logout error - $e');

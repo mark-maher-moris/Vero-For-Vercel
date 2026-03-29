@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
+import '../services/revenue_cat_service.dart';
 import '../models/project.dart';
 import '../theme/app_theme.dart';
 import '../widgets/project_card.dart';
 import 'import_github_project_screen.dart';
-import 'subscription_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -290,19 +290,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showPaywall(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SubscriptionScreen(),
-      ),
-    ).then((_) {
-      // Refresh subscription status when returning from paywall
-      if (mounted) {
-        final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
-        subscription.refresh();
-      }
-    });
+  void _showPaywall(BuildContext context) async {
+    final revenueCat = RevenueCatService();
+    await revenueCat.presentPaywall();
+    // Refresh subscription status after paywall closes
+    if (mounted) {
+      final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
+      subscription.refresh();
+    }
   }
 
   Widget _buildUsageOverview() {

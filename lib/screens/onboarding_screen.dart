@@ -260,47 +260,48 @@ class _PrivacySlide extends StatelessWidget {
             offset: Offset(0, slideAnimation.value),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 40),
-                  Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: const Icon(
-                          Icons.shield_outlined,
-                          color: AppTheme.primary,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: const Text(
-                          'PRIVACY FIRST',
-                          style: TextStyle(
-                            color: AppTheme.onSurfaceVariant,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 40),
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: const Icon(
+                            Icons.shield_outlined,
+                            color: AppTheme.primary,
+                            size: 28,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: const Text(
+                            'PRIVACY FIRST',
+                            style: TextStyle(
+                              color: AppTheme.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 40),
                   Text(
                     'Your Data\nStays Yours',
@@ -350,7 +351,7 @@ class _PrivacySlide extends StatelessWidget {
               ),
             ),
           ),
-        );
+        ));
       },
     );
   }

@@ -8,12 +8,12 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
 import '../providers/app_state.dart';
+import '../providers/subscription_provider.dart';
+import '../services/revenue_cat_service.dart';
 import '../theme/app_theme.dart';
 import '../models/env_var.dart';
 import '../widgets/action_card.dart';
 import '../widgets/deployment_card.dart';
-import '../providers/subscription_provider.dart';
-import 'subscription_screen.dart';
 import 'deployment_logs_screen.dart';
 
 class ProjectWorkspaceScreen extends StatefulWidget {
@@ -223,7 +223,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               ? _buildErrorView()
               : TabBarView(
                 controller: _tabController,
-                physics: const NeverScrollableScrollPhysics(), // Prevent swipe for free users
                 children: [
                   _buildOverviewTab(),
                   _buildDeploymentsTab(),
@@ -326,19 +325,14 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     );
   }
 
-  void _showPaywall(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SubscriptionScreen(),
-      ),
-    ).then((_) {
-      // Refresh subscription status when returning from paywall
-      if (mounted) {
-        final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
-        subscription.refresh();
-      }
-    });
+  void _showPaywall(BuildContext context) async {
+    final revenueCat = RevenueCatService();
+    await revenueCat.presentPaywall();
+    // Refresh subscription status after paywall closes
+    if (mounted) {
+      final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
+      subscription.refresh();
+    }
   }
 
   Widget _buildErrorView() {

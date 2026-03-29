@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
-import '../widgets/project_selector_appbar.dart';
 import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
 
@@ -39,7 +39,18 @@ class AccountScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: const ProjectSelectorAppBar(),
+      appBar: AppBar(
+        backgroundColor: AppTheme.surface,
+        elevation: 0,
+        title: const Text(
+          'Account',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.primary,
+          ),
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: appState.fetchInitialData,
         child: ListView(
@@ -276,13 +287,100 @@ class AccountScreen extends StatelessWidget {
                   _buildInfoRow('Current Team', teamName),
                   const Divider(height: 24),
                   _buildInfoRow('Projects', '${appState.projects.length}'),
+                  const Divider(height: 24),
+                  _buildInfoRow('Vercel Plan', _getVercelPlan(appState.user)),
                 ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Open Source Section
+            GestureDetector(
+              onTap: () => _launchGitHub(context),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'OPEN SOURCE',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.onSurfaceVariant,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.code,
+                          color: AppTheme.primary,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'View on GitHub',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Contribute or report issues',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.open_in_new,
+                          color: AppTheme.onSurfaceVariant,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _launchGitHub(BuildContext context) async {
+    final uri = Uri.parse('https://github.com/mark-maher-moris/Vero-For-Vercel');
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not launch $uri');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open GitHub link'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildActionCard(
@@ -359,6 +457,17 @@ class AccountScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _getVercelPlan(Map<String, dynamic>? userData) {
+    if (userData == null) return 'Unknown';
+    // Plan can be nested under 'user' key or directly in the response
+    final user = userData['user'] as Map<String, dynamic>?;
+    final plan = user?['plan'] ?? userData['plan'];
+    if (plan is String) {
+      return plan.isEmpty ? 'Hobby' : plan;
+    }
+    return 'Hobby';
   }
 
   void _showLogoutDialog(BuildContext context, AppState appState) {

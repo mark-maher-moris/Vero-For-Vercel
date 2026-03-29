@@ -30,9 +30,13 @@ class _UsageBillingScreenState extends State<UsageBillingScreen> {
       final now = DateTime.now();
       final from = DateTime(now.year, now.month, 1);
 
+      // Format dates to ISO 8601 with milliseconds (truncate microseconds)
+      final fromStr = from.toUtc().toIso8601String().split('.').first + 'Z';
+      final toStr = now.toUtc().toIso8601String().split('.').first + 'Z';
+
       final usage = await appState.apiService.getUsage(
-        from: from.toUtc().toIso8601String(),
-        to: now.toUtc().toIso8601String(),
+        from: fromStr,
+        to: toStr,
       );
       if (mounted) {
         setState(() {
