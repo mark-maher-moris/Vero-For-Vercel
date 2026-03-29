@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import 'package:in_app_review/in_app_review.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 
@@ -71,22 +72,39 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _animationControllers[page].forward(from: 0);
   }
 
-  void _nextPage() {
+  void _nextPage() async {
     if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
       );
     } else {
-      _completeOnboarding();
+      // On last page, request review then show paywall
+      await _requestReviewThenComplete();
     }
   }
 
-  void _completeOnboarding() async {
-    await context.read<AppState>().markOnboardingComplete();
+  Future<void> _requestReviewThenComplete() async {
+    try {
+      final inAppReview = InAppReview.instance;
+      final isAvailable = await inAppReview.isAvailable();
+      debugPrint('InAppReview isAvailable: $isAvailable');
+      if (isAvailable) {
+        debugPrint('Requesting review...');
+        await inAppReview.requestReview();
+        debugPrint('Review requested');
+      } else {
+        debugPrint('InAppReview not available, opening store listing');
+        await inAppReview.openStoreListing(appStoreId: '6761316027');
+      }
+    } catch (e) {
+      debugPrint('Review request error: $e');
+    }
+    // Show paywall then mark complete
+    await _showPaywallThenLogin();
   }
 
-  void _showPaywallThenLogin() async {
+  Future<void> _showPaywallThenLogin() async {
     try {
       await RevenueCatUI.presentPaywallIfNeeded("pro");
     } catch (e) {
@@ -108,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: _onPageChanged,
-                physics: const ClampingScrollPhysics(),
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: _totalPages,
                 itemBuilder: (context, index) {
                   switch (index) {
@@ -444,7 +462,12 @@ class _OpenSourceSlideState extends State<_OpenSourceSlide> {
         ),
       )
       ..loadRequest(Uri.parse(
-          'https://github.com/mark-maher-moris/Vero-For-Vercel/blob/main/lib/main.dart'));
+          'https://github.com/mark-maher-moris/Vero-For-Vercel'));
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -513,9 +536,9 @@ class _OpenSourceSlideState extends State<_OpenSourceSlide> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 14),
                   Text(
-                    'Fully\nTransparent',
+                    'Fully Transparent',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           color: AppTheme.onSurface,
                           fontWeight: FontWeight.bold,
@@ -587,7 +610,7 @@ class _OpenSourceSlideState extends State<_OpenSourceSlide> {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'View Full Source on GitHub',
+                            'View Full Code on GitHub',
                             style: TextStyle(
                               color: AppTheme.primary,
                               fontSize: 14,
@@ -608,7 +631,7 @@ class _OpenSourceSlideState extends State<_OpenSourceSlide> {
   }
 }
 
-class _GitHubSlide extends StatelessWidget {
+class _GitHubSlide extends StatefulWidget {
   final Animation<double> fadeAnimation;
   final Animation<double> slideAnimation;
   final VoidCallback onNext;
@@ -620,20 +643,25 @@ class _GitHubSlide extends StatelessWidget {
   });
 
   @override
+  State<_GitHubSlide> createState() => _GitHubSlideState();
+}
+
+class _GitHubSlideState extends State<_GitHubSlide> {
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: fadeAnimation,
+      animation: widget.fadeAnimation,
       builder: (context, child) {
         return Opacity(
-          opacity: fadeAnimation.value,
+          opacity: widget.fadeAnimation.value,
           child: Transform.translate(
-            offset: Offset(0, slideAnimation.value),
+            offset: Offset(0, widget.slideAnimation.value),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 60),
                   Container(
                     width: 80,
                     height: 80,
@@ -642,14 +670,14 @@ class _GitHubSlide extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                     child: const Icon(
-                      Icons.rocket_launch,
+                      Icons.star,
                       color: AppTheme.primary,
                       size: 40,
                     ),
                   ),
                   const SizedBox(height: 48),
                   Text(
-                    'Ready to\nDeploy?',
+                    'Support\nThis Project',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           color: AppTheme.onSurface,
                           fontWeight: FontWeight.bold,
@@ -659,143 +687,19 @@ class _GitHubSlide extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Join thousands of developers managing their Vercel deployments with confidence.',
+                    'Please consider rating Vero to support this open source project and help others discover it.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.onSurfaceVariant,
                           height: 1.6,
                         ),
                     textAlign: TextAlign.center,
                   ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            _buildStatItem('10K+', 'Downloads'),
-                            const SizedBox(width: 24),
-                            _buildStatItem('4.8★', 'Rating'),
-                            const SizedBox(width: 24),
-                            _buildStatItem('100%', 'Open'),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        const Divider(
-                          color: AppTheme.outlineVariant,
-                          height: 1,
-                          indent: 0,
-                          endIndent: 0,
-                        ),
-                        const SizedBox(height: 24),
-                        GestureDetector(
-                          onTap: () async {
-                            final uri = Uri.parse(
-                                'https://github.com/mark-maher-moris/Vero-For-Vercel');
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri,
-                                  mode: LaunchMode.externalApplication);
-                            }
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.code,
-                                color: AppTheme.onSurfaceVariant,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Review the app code',
-                                style: TextStyle(
-                                  color: AppTheme.onSurfaceVariant,
-                                  fontSize: 14,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: AppTheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  GestureDetector(
-                    onTap: onNext,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppTheme.primary,
-                            AppTheme.secondaryFixedDim,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'GET STARTED',
-                            style: TextStyle(
-                              color: AppTheme.onPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Icon(
-                            Icons.arrow_forward,
-                            color: AppTheme.onPrimary,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                 ],
               ),
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildStatItem(String value, String label) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppTheme.primary,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppTheme.onSurfaceVariant,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

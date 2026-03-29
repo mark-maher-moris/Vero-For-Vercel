@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -51,6 +52,16 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.read<AppState>().resetOnboarding();
+          },
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -66,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'VERO',
+                'VERO For Vercel',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       letterSpacing: 4,
@@ -110,21 +121,48 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  InkWell(
-                    onTap: () async {
-                      final uri = Uri.parse('https://vercel.com/account/settings/tokens');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
-                    },
-                    child: Text(
-                      'Get your token from vercel.com/account/settings/tokens',
-                      style: TextStyle(
-                        color: AppTheme.primary,
-                        fontSize: 12,
-                        decoration: TextDecoration.underline,
+                  Flexible(
+                    child: InkWell(
+                      onTap: () async {
+                        final uri = Uri.parse('https://vercel.com/account/settings/tokens');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      onLongPress: () {
+                        Clipboard.setData(const ClipboardData(text: 'https://vercel.com/account/settings/tokens'));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Link copied to clipboard'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Get your token from vercel.com/account/settings/tokens',
+                        style: TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 12,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 16),
+                    color: AppTheme.primary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      Clipboard.setData(const ClipboardData(text: 'https://vercel.com/account/settings/tokens'));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Link copied to clipboard'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(width: 8),
                   IconButton(
@@ -133,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () {
-                      Share.share('Get your Vercel token at: https://vercel.com/account/settings/tokens');
+                      Share.share('https://vercel.com/account/settings/tokens');
                     },
                   ),
                 ],
