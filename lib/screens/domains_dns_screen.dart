@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
+import '../models/domain.dart';
 import '../models/project.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -13,22 +14,16 @@ class DomainsDnsScreen extends StatefulWidget {
 }
 
 class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
-  Project? _currentProject;
-  String? _currentTeamId;
-  Future<List<dynamic>>? _domainsFuture;
+  Future<List<Domain>>? _domainsFuture;
   final TextEditingController _domainController = TextEditingController();
   bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    final project = appState.selectedProject;
-    final teamId = appState.currentTeamId;
 
-    if (project != _currentProject || teamId != _currentTeamId) {
-      _currentProject = project;
-      _currentTeamId = teamId;
-      _domainsFuture = project != null ? appState.apiService.getProjectDomains(project.id) : null;
+    if (_domainsFuture == null) {
+      _domainsFuture = _fetchAllDomains(appState);
     }
     return Scaffold(
       backgroundColor: AppTheme.surface,
@@ -115,15 +110,15 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
 
           const SizedBox(height: 32),
 
-          if (project == null)
+          if (appState.projects.isEmpty)
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(32.0),
-                child: Text('Select a project to view domains.', style: TextStyle(color: AppTheme.onSurfaceVariant)),
+                child: Text('No projects found.', style: TextStyle(color: AppTheme.onSurfaceVariant)),
               ),
             )
           else
-            FutureBuilder<List<dynamic>>(
+            FutureBuilder<List<Domain>>(
               future: _domainsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -131,25 +126,29 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
                 } else if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppTheme.error)));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No domains found for this project.', style: TextStyle(color: AppTheme.onSurfaceVariant)));
+                  return const Center(child: Text('No domains found in your account.', style: TextStyle(color: AppTheme.onSurfaceVariant)));
                 }
 
                 final domains = snapshot.data!;
                 return Column(
                   children: domains.map((domain) {
-                    final name = domain['name'] as String? ?? 'Unknown';
-                    final verified = domain['verified'] as bool? ?? false;
-                    final createdAt = domain['createdAt'] as int?;
-                    final ageStr = createdAt != null 
-                        ? timeago.format(DateTime.fromMillisecondsSinceEpoch(createdAt)) 
-                        : 'Unknown';
+                    final name = domain.name;
+                    final verified = domain.verified;
+                    final ageStr = timeago.format(domain.createdAt);
+                    final projectName = domain.projectId != null 
+                        ? appState.projects.firstWhere(
+                            (p) => p.id == domain.projectId,
+                            orElse: () => Project(id: '', name: 'Unknown', createdAt: DateTime.now(), updatedAt: DateTime.now()),
+                          ).name 
+                        : 'Not assigned';
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: _buildDomainCard(
                         domain: name,
                         isValid: verified,
-                        projectAssigned: project.name,
+                        projectAssigned: projectName,
+                        projectId: domain.projectId ?? '',
                         age: ageStr,
                         errorMessage: verified ? null : 'Invalid Configuration',
                         errorDetails: verified ? null : 'Pending verification or DNS updates.',
@@ -168,6 +167,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
     required String domain,
     required bool isValid,
     required String projectAssigned,
+    required String projectId,
     required String age,
     String? errorMessage,
     String? errorDetails,
@@ -223,13 +223,13 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                           ),
-                          onPressed: () => _showDomainOptions(context, appState, domain, isValid),
+                          onPressed: () => _showDomainOptions(context, appState, domain, isValid, projectId),
                           child: const Text('Manage', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.more_vert, color: AppTheme.onSurfaceVariant),
-                          onPressed: () => _showDomainOptions(context, appState, domain, isValid),
+                          onPressed: () => _showDomainOptions(context, appState, domain, isValid, projectId),
                         ),
                       ],
                     ),
@@ -261,7 +261,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                               ),
-                              onPressed: () => _verifyDomain(context, appState, domain),
+                              onPressed: () => _verifyDomain(context, appState, domain, projectId),
                               child: const Text('Verify again', style: TextStyle(color: AppTheme.surface, fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
                           ],
@@ -325,15 +325,18 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
     }
 
     final project = appState.selectedProject;
-    if (project == null) return;
+    if (project == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a project first')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
       await appState.apiService.addDomain(project.id, domain);
       _domainController.clear();
-      setState(() {
-        _domainsFuture = appState.apiService.getProjectDomains(project.id);
-      });
+      await _refreshDomains(appState);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Domain "$domain" added successfully')),
@@ -350,15 +353,10 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
     }
   }
 
-  Future<void> _verifyDomain(BuildContext context, AppState appState, String domain) async {
-    final project = appState.selectedProject;
-    if (project == null) return;
-
+  Future<void> _verifyDomain(BuildContext context, AppState appState, String domain, String projectId) async {
     try {
-      await appState.apiService.verifyDomain(project.id, domain);
-      setState(() {
-        _domainsFuture = appState.apiService.getProjectDomains(project.id);
-      });
+      await appState.apiService.verifyDomain(projectId, domain);
+      await _refreshDomains(appState);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Domain verification triggered')),
@@ -373,15 +371,10 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
     }
   }
 
-  Future<void> _removeDomain(BuildContext context, AppState appState, String domain) async {
-    final project = appState.selectedProject;
-    if (project == null) return;
-
+  Future<void> _removeDomain(BuildContext context, AppState appState, String domain, String projectId) async {
     try {
-      await appState.apiService.removeDomain(project.id, domain);
-      setState(() {
-        _domainsFuture = appState.apiService.getProjectDomains(project.id);
-      });
+      await appState.apiService.removeDomain(projectId, domain);
+      await _refreshDomains(appState);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Domain "$domain" removed')),
@@ -396,7 +389,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
     }
   }
 
-  void _showDomainOptions(BuildContext context, AppState appState, String domain, bool isVerified) {
+  void _showDomainOptions(BuildContext context, AppState appState, String domain, bool isVerified, String projectId) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.surfaceContainerLow,
@@ -421,7 +414,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
                 title: const Text('Verify Domain'),
                 onTap: () {
                   Navigator.pop(context);
-                  _verifyDomain(context, appState, domain);
+                  _verifyDomain(context, appState, domain, projectId);
                 },
               ),
             ListTile(
@@ -443,7 +436,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
                       TextButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          _removeDomain(context, appState, domain);
+                          _removeDomain(context, appState, domain, projectId);
                         },
                         child: const Text('Remove', style: TextStyle(color: AppTheme.error)),
                       ),
@@ -456,5 +449,16 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
         ),
       ),
     );
+  }
+
+  Future<List<Domain>> _fetchAllDomains(AppState appState) async {
+    // Use the v5/domains endpoint for efficient global domain listing
+    return await appState.apiService.getDomains();
+  }
+
+  Future<void> _refreshDomains(AppState appState) async {
+    setState(() {
+      _domainsFuture = _fetchAllDomains(appState);
+    });
   }
 }

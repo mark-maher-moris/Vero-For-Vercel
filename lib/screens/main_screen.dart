@@ -4,7 +4,6 @@ import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
 import 'activity_feed_screen.dart';
 import 'deploy_new_project_screen.dart';
-import 'usage_billing_screen.dart';
 import 'account_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -21,7 +20,6 @@ class _MainScreenState extends State<MainScreen> {
     const DashboardScreen(),
     const ActivityFeedScreen(),
     const DeployNewProjectScreen(),
-    const UsageBillingScreen(),
     const AccountScreen(),
   ];
 
@@ -73,16 +71,10 @@ class _MainScreenState extends State<MainScreen> {
                         onTap: () => setState(() => _currentIndex = 2),
                       ),
                       _NavItem(
-                        icon: Icons.bar_chart,
-                        label: 'Usage',
-                        isActive: _currentIndex == 3,
-                        onTap: () => setState(() => _currentIndex = 3),
-                      ),
-                      _NavItem(
                         icon: Icons.account_circle_outlined,
                         label: 'Account',
-                        isActive: _currentIndex == 4,
-                        onTap: () => setState(() => _currentIndex = 4),
+                        isActive: _currentIndex == 3,
+                        onTap: () => setState(() => _currentIndex = 3),
                       ),
                     ],
                   ),

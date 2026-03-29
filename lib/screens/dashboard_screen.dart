@@ -4,6 +4,7 @@ import '../providers/app_state.dart';
 import '../models/project.dart';
 import '../theme/app_theme.dart';
 import '../widgets/project_card.dart';
+import 'import_github_project_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -28,7 +29,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     setState(() => _isLoadingUsage = true);
     try {
-      final usage = await appState.apiService.getUsage();
+      final now = DateTime.now();
+      final from = DateTime(now.year, now.month, 1);
+      
+      final usage = await appState.apiService.getUsage(
+        from: (from.toUtc().millisecondsSinceEpoch ~/ 1000).toString(),
+        to: (now.toUtc().millisecondsSinceEpoch ~/ 1000).toString(),
+      );
       if (mounted) {
         setState(() {
           _usageData = usage;
@@ -81,6 +88,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline, color: AppTheme.onSurfaceVariant),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ImportGithubProjectScreen()),
+              );
+            },
+            tooltip: 'Import GitHub Project',
+          ),
           IconButton(
             icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
             onPressed: () => _showTeamPicker(context, appState),

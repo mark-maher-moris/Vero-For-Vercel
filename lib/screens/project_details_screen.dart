@@ -127,6 +127,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 _buildPrimaryActions(),
                 _buildDomainSection(),
                 _buildDeploymentHistory(),
+                _buildGitSection(),
+                _buildSecuritySection(),
+                _buildEnvVarsSection(),
+                _buildAliasesSection(),
+                _buildFeaturesSection(),
                 _buildTechnicalStats(),
               ],
             ),
@@ -134,6 +139,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   Widget _buildHeroSection() {
+    final repoUrl = widget.project.link != null 
+        ? 'https://github.com/${widget.project.link!['org']}/${widget.project.link!['repo']}'
+        : null;
+    
     return Container(
       color: AppTheme.surface,
       padding: const EdgeInsets.all(24),
@@ -152,7 +161,43 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           const SizedBox(height: 8),
           Text(widget.project.name, style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w900, color: AppTheme.primary, letterSpacing: -1.5)),
           const SizedBox(height: 8),
-          Text('Updated ${timeago.format(widget.project.updatedAt)}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
+          Row(
+            children: [
+              Text('Updated ${timeago.format(widget.project.updatedAt)}', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
+              if (repoUrl != null) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _launchUrl(repoUrl),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.code, size: 16, color: AppTheme.primary),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text('${widget.project.link!['org']}/${widget.project.link!['repo']}', 
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.fingerprint, size: 12, color: AppTheme.onSurfaceVariant.withOpacity(0.6)),
+              const SizedBox(width: 4),
+              Text(widget.project.id, style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant.withOpacity(0.6), fontFamily: 'monospace')),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _copyToClipboard(widget.project.id),
+                child: Icon(Icons.copy, size: 12, color: AppTheme.onSurfaceVariant.withOpacity(0.6)),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -336,6 +381,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                       Text(widget.project.framework ?? 'Other', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary)),
                     ],
                   ),
+                  if (widget.project.nodeVersion != null) ...[
+                    const SizedBox(height: 4),
+                    Text('Node ${widget.project.nodeVersion}', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
+                  ],
                 ],
               ),
             ),
@@ -353,11 +402,289 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 children: [
                   Text('REGION', style: Theme.of(context).textTheme.labelSmall),
                   const SizedBox(height: 8),
-                  const Text('Auto-detected', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                  Text(
+                    widget.project.serverlessFunctionRegion ?? 'Auto-detected', 
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                  ),
+                  if (widget.project.serverlessFunctionZeroConfigFailover == true) ...[
+                    const SizedBox(height: 4),
+                    Text('Zero-config failover enabled', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
+                  ],
                 ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGitSection() {
+    if (widget.project.link == null) return const SizedBox.shrink();
+    
+    final link = widget.project.link!;
+    final type = link['type'] as String? ?? 'unknown';
+    final branch = link['productionBranch'] as String? ?? 'main';
+    final repo = link['repo'] as String? ?? '';
+    final org = link['org'] as String? ?? '';
+    final deployHooks = (link['deployHooks'] as List?)?.length ?? 0;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('GIT CONFIGURATION', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.code, color: AppTheme.onSurfaceVariant, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('$org/$repo', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                          Text(type.toUpperCase(), style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Production Branch', style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant)),
+                          Text(branch, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Deploy Hooks', style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant)),
+                          Text('$deployHooks configured', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecuritySection() {
+    final hasSecurity = widget.project.security != null || widget.project.ssoProtection != null || widget.project.passwordProtection != null;
+    if (!hasSecurity) return const SizedBox.shrink();
+    
+    final security = widget.project.security ?? {};
+    final firewallEnabled = security['firewallEnabled'] == true;
+    final attackMode = security['attackModeEnabled'] == true;
+    final ssoEnabled = widget.project.ssoProtection != null;
+    final passwordProtected = widget.project.passwordProtection != null;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('SECURITY', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (firewallEnabled)
+                _buildSecurityChip(Icons.shield, 'Firewall', AppTheme.success),
+              if (attackMode)
+                _buildSecurityChip(Icons.gpp_maybe, 'Attack Mode', AppTheme.error),
+              if (ssoEnabled)
+                _buildSecurityChip(Icons.people, 'SSO', AppTheme.primary),
+              if (passwordProtected)
+                _buildSecurityChip(Icons.lock, 'Password', AppTheme.error),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecurityChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnvVarsSection() {
+    final envCount = widget.project.env?.length ?? 0;
+    if (envCount == 0) return const SizedBox.shrink();
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ENVIRONMENT VARIABLES', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.key, color: AppTheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Text('$envCount variables configured', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => SettingsEnvVarsScreen(project: widget.project),
+                    ));
+                  },
+                  child: const Text('MANAGE'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAliasesSection() {
+    final aliases = widget.project.alias ?? [];
+    if (aliases.isEmpty) return const SizedBox.shrink();
+    
+    final displayAliases = aliases.take(3).toList();
+    final remaining = aliases.length - 3;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ALIASES', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 12),
+          ...displayAliases.map((alias) {
+            final domain = alias['domain'] as String? ?? '';
+            final target = alias['target'] as String? ?? '';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.language, size: 18, color: AppTheme.onSurfaceVariant),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(domain, style: const TextStyle(fontFamily: 'monospace')),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: Text(target, style: TextStyle(fontSize: 10, color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          }),
+          if (remaining > 0)
+            Text('+ $remaining more aliases', style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturesSection() {
+    final features = <Widget>[];
+    
+    if (widget.project.analytics != null && widget.project.analytics!['enabledAt'] != null) {
+      features.add(_buildFeatureItem(Icons.analytics, 'Analytics', 'Enabled'));
+    }
+    if (widget.project.webAnalytics != null && widget.project.webAnalytics!['enabledAt'] != null) {
+      features.add(_buildFeatureItem(Icons.speed, 'Web Analytics', 'Enabled'));
+    }
+    if (widget.project.speedInsights != null && widget.project.speedInsights!['enabledAt'] != null) {
+      features.add(_buildFeatureItem(Icons.bolt, 'Speed Insights', 'Enabled'));
+    }
+    if (widget.project.gitComments?['onPullRequest'] == true || widget.project.gitComments?['onCommit'] == true) {
+      features.add(_buildFeatureItem(Icons.comment, 'Git Comments', 'Enabled'));
+    }
+    if (widget.project.autoExposeSystemEnvs == true) {
+      features.add(_buildFeatureItem(Icons.build, 'System Envs', 'Exposed'));
+    }
+    
+    if (features.isEmpty) return const SizedBox.shrink();
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('FEATURES', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Column(children: features),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(IconData icon, String name, String status) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppTheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(child: Text(name)),
+          Text(status, style: TextStyle(fontSize: 12, color: AppTheme.success, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -383,6 +710,15 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Domain "$domain" copied to clipboard')),
+      );
+    }
+  }
+
+  Future<void> _copyToClipboard(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Copied to clipboard')),
       );
     }
   }

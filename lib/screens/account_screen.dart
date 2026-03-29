@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
+import '../providers/subscription_provider.dart';
 import '../widgets/project_selector_appbar.dart';
-import 'settings_env_vars_screen.dart';
 import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
 
@@ -20,6 +20,8 @@ class AccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
+    final subscriptionProvider = context.watch<SubscriptionProvider>();
+    final isPro = subscriptionProvider.isPro;
     final user = appState.user?['user'];
     final username = user?['username'] ?? 'User';
     final email = user?['email'] ?? '';
@@ -138,6 +140,73 @@ class AccountScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
+            // Upgrade Banner (non-pro users only)
+            if (!isPro)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: AppTheme.primary.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(
+                        Icons.star,
+                        color: AppTheme.onPrimary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Upgrade to Pro',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Unlock all features',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => subscriptionProvider.showPaywall(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: AppTheme.onPrimary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: const Text('Upgrade'),
+                    ),
+                  ],
+                ),
+              ),
+
+            if (!isPro) const SizedBox(height: 32),
+
             // Quick Actions Grid
             GridView.count(
               shrinkWrap: true,
@@ -160,13 +229,6 @@ class AccountScreen extends StatelessWidget {
                   title: 'Domains',
                   subtitle: 'DNS & SSL',
                   onTap: () => _navigateTo(context, const DomainsDnsScreen()),
-                ),
-                _buildActionCard(
-                  context,
-                  icon: Icons.key,
-                  title: 'Environment',
-                  subtitle: 'Env Variables',
-                  onTap: () => _navigateTo(context, const SettingsEnvVarsScreen()),
                 ),
                 _buildActionCard(
                   context,

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
+import '../widgets/project_selector_appbar.dart';
 
 class DeployNewProjectScreen extends StatefulWidget {
   const DeployNewProjectScreen({super.key});
@@ -12,60 +14,9 @@ class DeployNewProjectScreen extends StatefulWidget {
 
 class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
   String _selectedBranch = 'main';
+  String _selectedTarget = 'preview';
   bool _isDeploying = false;
-
-  void _showTeamPicker(BuildContext context, AppState appState) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surfaceContainerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Switch Account for Deployment',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ),
-              const Divider(),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: AppTheme.surfaceContainerHigh,
-                  child: Icon(Icons.person, color: AppTheme.onSurfaceVariant),
-                ),
-                title: const Text('Personal Account'),
-                trailing: appState.currentTeamId == null ? const Icon(Icons.check, color: AppTheme.primary) : null,
-                onTap: () {
-                  appState.switchTeam(null);
-                  Navigator.pop(context);
-                },
-              ),
-              ...appState.teams.map((team) {
-                return ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppTheme.surfaceContainerHigh,
-                    child: Icon(Icons.group, color: AppTheme.onSurfaceVariant),
-                  ),
-                  title: Text(team['name'] ?? 'Team'),
-                  trailing: appState.currentTeamId == team['id'] ? const Icon(Icons.check, color: AppTheme.primary) : null,
-                  onTap: () {
-                    appState.switchTeam(team['id']);
-                    Navigator.pop(context);
-                  },
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -73,34 +24,7 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
     
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceContainerLow,
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.surfaceContainerHigh,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(6.0),
-                child: Image.asset('assets/logo.png', fit: BoxFit.contain),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () => _showTeamPicker(context, appState),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const ProjectSelectorAppBar(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 48, 24, 120),
         children: [
@@ -116,9 +40,11 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Ship your latest updates to the edge instantly.',
-            style: TextStyle(
+          Text(
+            appState.selectedProject != null
+              ? 'Ship ${appState.selectedProject!.name} to the edge instantly.'
+              : 'Select a project to deploy.',
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: AppTheme.onSurfaceVariant,
@@ -128,13 +54,18 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
 
           _buildSectionLabel('SELECT BRANCH'),
           const SizedBox(height: 16),
-          _buildDropdown(),
+          _buildBranchDropdown(),
+
+          const SizedBox(height: 24),
+          _buildSectionLabel('DEPLOYMENT TARGET'),
+          const SizedBox(height: 16),
+          _buildTargetDropdown(),
 
           const SizedBox(height: 40),
           _buildBuildSettings(),
 
           const SizedBox(height: 40),
-          _buildDeployButton(),
+          _buildDeployButton(context),
         ],
       ),
     );
@@ -177,7 +108,7 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
     );
   }
 
-  Widget _buildDropdown() {
+  Widget _buildBranchDropdown() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -187,7 +118,7 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: 'main',
+          value: _selectedBranch,
           dropdownColor: AppTheme.surfaceContainerHigh,
           icon: const Icon(Icons.expand_more, color: AppTheme.onSurfaceVariant),
           isExpanded: true,
@@ -195,11 +126,41 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
           items: const [
             DropdownMenuItem(value: 'main', child: Text('main')),
             DropdownMenuItem(value: 'dev', child: Text('dev')),
-            DropdownMenuItem(value: 'feature/ui-update', child: Text('feature/ui-update')),
+            DropdownMenuItem(value: 'staging', child: Text('staging')),
+            DropdownMenuItem(value: 'production', child: Text('production')),
           ],
           onChanged: (val) {
             if (val != null) {
               setState(() => _selectedBranch = val);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTargetDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(4),
+        border: Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedTarget,
+          dropdownColor: AppTheme.surfaceContainerHigh,
+          icon: const Icon(Icons.expand_more, color: AppTheme.onSurfaceVariant),
+          isExpanded: true,
+          style: const TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.normal),
+          items: const [
+            DropdownMenuItem(value: 'preview', child: Text('Preview')),
+            DropdownMenuItem(value: 'production', child: Text('Production')),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              setState(() => _selectedTarget = val);
             }
           },
         ),
@@ -252,65 +213,142 @@ class _DeployNewProjectScreenState extends State<DeployNewProjectScreen> {
     );
   }
 
-  Widget _buildDeployButton() {
+  Widget _buildDeployButton(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, appState, child) {
-        return Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppTheme.primary, Color(0xFFC7C6C6)],
-            ),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _isDeploying ? null : () => _deployProject(context, appState),
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
+        final selectedProject = appState.selectedProject;
+        final bool canDeploy = selectedProject != null && !_isDeploying;
+        
+        return Column(
+          children: [
+            if (_errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _isDeploying
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFF1B1C1C), strokeWidth: 2))
-                      : const Text(
-                          'Deploy Project',
-                          style: TextStyle(
-                            color: Color(0xFF1B1C1C),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                    if (!_isDeploying) ...[
-                      const SizedBox(width: 8),
-                      const Icon(Icons.bolt, color: Color(0xFF1B1C1C)),
-                    ],
+                    const Icon(Icons.error_outline, color: AppTheme.error, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: AppTheme.error, fontSize: 13),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ),
+              const SizedBox(height: 16),
+            ],
+            if (selectedProject == null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.onSurfaceVariant.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppTheme.onSurfaceVariant, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Select a project to deploy',
+                        style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppTheme.primary, Color(0xFFC7C6C6)],
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: canDeploy ? () => _deployProject(context, appState) : null,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _isDeploying
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFF1B1C1C), strokeWidth: 2))
+                            : Text(
+                                'Deploy ${selectedProject.name}',
+                                style: const TextStyle(
+                                  color: Color(0xFF1B1C1C),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                          if (!_isDeploying) ...[
+                            const SizedBox(width: 8),
+                            const Icon(Icons.bolt, color: Color(0xFF1B1C1C)),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
   }
 
   Future<void> _deployProject(BuildContext context, AppState appState) async {
-    setState(() => _isDeploying = true);
+    final selectedProject = appState.selectedProject;
+    if (selectedProject == null) return;
+
+    setState(() {
+      _isDeploying = true;
+      _errorMessage = null;
+    });
+
     try {
-      await Future.delayed(const Duration(seconds: 2));
+      final deployment = await appState.apiService.createDeployment(
+        projectId: selectedProject.id,
+        target: _selectedTarget,
+        withLatestCommit: true,
+      );
+
+      debugPrint('Deployment created: ${deployment.uid} - ${deployment.url}');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Deployment from $_selectedBranch triggered!')),
+          SnackBar(
+            content: Text('Deployment triggered for ${selectedProject.name} ($_selectedBranch)'),
+            backgroundColor: AppTheme.primary,
+          ),
         );
         Navigator.pop(context);
       }
+    } on VercelApiException catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = 'Failed to create deployment: $e');
+      }
     } finally {
-      setState(() => _isDeploying = false);
+      if (mounted) {
+        setState(() => _isDeploying = false);
+      }
     }
   }
 }

@@ -261,37 +261,6 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
           ),
 
           const SizedBox(height: 24),
-          // Danger Zone
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.errorContainer.withValues(alpha: 0.05),
-              border: Border.all(color: AppTheme.error.withValues(alpha: 0.2)),
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Danger Zone', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.error)),
-                const SizedBox(height: 8),
-                const Text('Permanently remove this project and all of its deployments and domain aliases.', style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant)),
-                const SizedBox(height: 24),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    side: BorderSide(color: AppTheme.error.withValues(alpha: 0.5)),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Project deletion is disabled for safety in this demo.', style: TextStyle(color: AppTheme.onPrimary))),
-                    );
-                  },
-                  child: const Text('DELETE PROJECT', style: TextStyle(color: AppTheme.error, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );

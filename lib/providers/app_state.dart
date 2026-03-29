@@ -184,7 +184,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> fetchProjects() async {
     try {
-      _projects = await _apiService.getProjects();
+      _projects = await _apiService.getProjectsList();
       if (_projects.isNotEmpty) {
         _selectedProject = _projects.first;
       } else {
