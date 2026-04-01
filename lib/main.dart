@@ -5,6 +5,7 @@ import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'providers/app_state.dart';
 import 'providers/subscription_provider.dart';
 import 'services/revenue_cat_service.dart';
+import 'services/superwall_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
@@ -16,6 +17,9 @@ Future<void> main() async {
   
   // Initialize RevenueCat SDK
   await RevenueCatService().initialize();
+  
+  // Initialize Superwall SDK (with RevenueCat integration)
+  await SuperwallService().initialize();
   
   runApp(
     MultiProvider(
