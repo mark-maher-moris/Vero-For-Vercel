@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import '../services/superwall_service.dart';
@@ -118,11 +119,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.exit_to_app, color: AppTheme.onSurfaceVariant),
-            onPressed: () {
-              SuperwallService().trackUserAction('logout', context: 'dashboard');
-              appState.logout();
+            icon: const Icon(Icons.email, color: AppTheme.onSurfaceVariant),
+            onPressed: () async {
+              final uri = Uri(scheme: 'mailto', path: 'hi@buildagon.com');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
             },
+            tooltip: 'Contact Us',
           ),
         ],
       ),

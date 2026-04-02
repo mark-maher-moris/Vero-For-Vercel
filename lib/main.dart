@@ -51,7 +51,7 @@ class VeroApp extends StatelessWidget {
             // Register placement for authenticated users
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               try {
-                await SuperwallService().registerPlacement('authenticated_home');
+                await SuperwallService().registerPlacement('manual_paywall'); 
               } catch (e) {
                 debugPrint('Superwall placement error: $e');
               }

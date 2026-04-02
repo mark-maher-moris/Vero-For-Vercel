@@ -359,5 +359,8 @@ class _SuperwallDelegateImpl extends sw.SuperwallDelegate {
     if (kDebugMode) {
       print('Superwall: Subscription status changed to $status');
     }
+    
+    // Update internal subscription status based on Superwall's status
+    SuperwallService()._updateSubscriptionStatus(status.isActive);
   }
 }
