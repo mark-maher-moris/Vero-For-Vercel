@@ -2,25 +2,17 @@ PODS:
   - Flutter (1.0.0)
   - in_app_review (2.0.0):
     - Flutter
-  - purchases_flutter (9.15.1):
-    - Flutter
-    - PurchasesHybridCommon (= 17.53.0)
-  - purchases_ui_flutter (9.15.1):
-    - Flutter
-    - PurchasesHybridCommonUI (= 17.53.0)
-  - PurchasesHybridCommon (17.53.0):
-    - RevenueCat (= 5.66.0)
-  - PurchasesHybridCommonUI (17.53.0):
-    - PurchasesHybridCommon (= 17.53.0)
-    - RevenueCatUI (= 5.66.0)
-  - RevenueCat (5.66.0)
-  - RevenueCatUI (5.66.0):
-    - RevenueCat (= 5.66.0)
   - share_plus (0.0.1):
     - Flutter
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - Superscript (1.0.13)
+  - SuperwallKit (4.14.1):
+    - Superscript (= 1.0.13)
+  - superwallkit_flutter (0.0.1):
+    - Flutter
+    - SuperwallKit (= 4.14.1)
   - url_launcher_ios (0.0.1):
     - Flutter
   - webview_flutter_wkwebview (0.0.1):
@@ -30,33 +22,28 @@ PODS:
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - in_app_review (from `.symlinks/plugins/in_app_review/ios`)
-  - purchases_flutter (from `.symlinks/plugins/purchases_flutter/ios`)
-  - purchases_ui_flutter (from `.symlinks/plugins/purchases_ui_flutter/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - superwallkit_flutter (from `.symlinks/plugins/superwallkit_flutter/ios`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
   - webview_flutter_wkwebview (from `.symlinks/plugins/webview_flutter_wkwebview/darwin`)
 
 SPEC REPOS:
   trunk:
-    - PurchasesHybridCommon
-    - PurchasesHybridCommonUI
-    - RevenueCat
-    - RevenueCatUI
+    - Superscript
+    - SuperwallKit
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
   in_app_review:
     :path: ".symlinks/plugins/in_app_review/ios"
-  purchases_flutter:
-    :path: ".symlinks/plugins/purchases_flutter/ios"
-  purchases_ui_flutter:
-    :path: ".symlinks/plugins/purchases_ui_flutter/ios"
   share_plus:
     :path: ".symlinks/plugins/share_plus/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
+  superwallkit_flutter:
+    :path: ".symlinks/plugins/superwallkit_flutter/ios"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
   webview_flutter_wkwebview:
@@ -65,17 +52,14 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   in_app_review: 436034b18594851a7328d7f1c2ed5ec235b79cfc
-  purchases_flutter: 76edf3aa4fa3c1f65250898c28ad206c31216cda
-  purchases_ui_flutter: 7bd7b98663d3725a4ef7e68d6cbbadb260740106
-  PurchasesHybridCommon: 53d966ac5c39df13c3c759289bb3ef3e2f9f1622
-  PurchasesHybridCommonUI: c9ac2debefc5a098cfeca28bf05a9602eb49cb32
-  RevenueCat: a3cf721ad8b1b56a930d748a40342aba16c09bbb
-  RevenueCatUI: 1091be7f4e7eb6068bc0c78d470af3a2a19d3a49
   share_plus: 8b6f8b3447e494cca5317c8c3073de39b3600d1f
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
+  Superscript: bcb4099b41bed108ab7e88cfc56af0ed1170b582
+  SuperwallKit: 841ee108a1a152d83e4c4db8497208dfe1bc61ed
+  superwallkit_flutter: 5279f60943bf51a4bb1b8c75b88f8c4a404ffc2f
   url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
   webview_flutter_wkwebview: 29eb20d43355b48fe7d07113835b9128f84e3af4
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: e30f02f9d1c72c47bb6344a0a748c9d268180865
 
 COCOAPODS: 1.16.2

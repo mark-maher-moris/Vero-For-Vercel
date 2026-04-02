@@ -42,6 +42,21 @@ class VercelApi {
     return Uri.parse('$baseUrl$path').replace(queryParameters: params.isNotEmpty ? params : null);
   }
 
+  /// Truncate ISO 8601 string to millisecond precision (Vercel API compatibility)
+  /// Dart's toIso8601String() includes microseconds which Vercel rejects
+  String _truncateIso8601(String isoDate) {
+    // Remove microseconds if present (e.g., 2026-04-02T00:18:15.885942Z → 2026-04-02T00:18:15.885Z)
+    if (isoDate.contains('.') && isoDate.endsWith('Z')) {
+      final dotIndex = isoDate.lastIndexOf('.');
+      final zIndex = isoDate.length - 1;
+      final fraction = isoDate.substring(dotIndex + 1, zIndex);
+      if (fraction.length > 3) {
+        return '${isoDate.substring(0, dotIndex + 1)}${fraction.substring(0, 3)}Z';
+      }
+    }
+    return isoDate;
+  }
+
   Future<dynamic> _handleResponse(http.Response response) async {
     final dynamic data = json.decode(response.body);
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -324,9 +339,9 @@ class VercelApi {
 
   Future<Map<String, dynamic>> getUsage({required String from, String? to, String? projectId}) async {
     final params = <String, String>{
-      'from': from,
+      'from': _truncateIso8601(from),
     };
-    if (to != null) params['to'] = to;
+    if (to != null) params['to'] = _truncateIso8601(to);
     if (projectId != null) params['projectId'] = projectId;
     
     final response = await http.get(
