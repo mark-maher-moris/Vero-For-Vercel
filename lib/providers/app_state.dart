@@ -2,12 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
-import '../services/revenue_cat_service.dart';
+import '../services/superwall_service.dart';
 import '../models/project.dart';
 
 class AppState extends ChangeNotifier {
   final AuthService _authService = AuthService();
-  final RevenueCatService _revenueCatService = RevenueCatService();
+  final SuperwallService _superwallService = SuperwallService();
   VercelApi _apiService = VercelApi();
 
   bool _isAuthenticated = false;
@@ -79,11 +79,18 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> switchTeam(String? teamId) async {
+    final previousTeamId = _currentTeamId;
     _currentTeamId = teamId;
     _apiService = VercelApi(teamId: teamId);
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+    
+    // Track team switch
+    await _superwallService.trackUserAction('switch_team', context: 'app_state', properties: {
+      'from_team': previousTeamId ?? 'personal',
+      'to_team': teamId ?? 'personal',
+    });
     
     try {
       await fetchProjects();
@@ -109,9 +116,24 @@ class AppState extends ChangeNotifier {
       _isAuthenticated = true;
       await fetchInitialData();
       
-      // Sync login with RevenueCat using user ID
+      // Sync login with Superwall using user ID
       if (_user != null && _user!['id'] != null) {
-        await _revenueCatService.login(_user!['id'].toString());
+        final userId = _user!['id'].toString();
+        await _superwallService.identify(userId);
+        
+        // Set user attributes for analytics segmentation
+        await _superwallService.setUserAttributes({
+          'user_id': userId,
+          'username': _user!['username'] ?? '',
+          'email': _user!['email'] ?? '',
+          'plan': _user!['plan'] ?? 'free',
+          'project_count': _projects.length,
+          'team_count': _teams.length,
+          'has_pro': _user!['plan'] == 'pro',
+        });
+        
+        // Track successful login
+        await _superwallService.trackUserAction('login_success', context: 'app_state');
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -122,11 +144,14 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    // Sync logout with RevenueCat
+    // Track logout before resetting
+    await _superwallService.trackUserAction('logout', context: 'app_state');
+    
+    // Sync logout with Superwall
     try {
-      await _revenueCatService.logout();
+      await _superwallService.reset();
     } catch (e) {
-      if (kDebugMode) print('RevenueCat logout error: $e');
+      if (kDebugMode) print('Superwall logout error: $e');
     }
     
     await _authService.deleteToken();

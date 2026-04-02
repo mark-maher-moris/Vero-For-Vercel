@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'providers/app_state.dart';
 import 'providers/subscription_provider.dart';
-import 'services/revenue_cat_service.dart';
 import 'services/superwall_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
@@ -15,10 +13,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   
-  // Initialize RevenueCat SDK
-  await RevenueCatService().initialize();
-  
-  // Initialize Superwall SDK (with RevenueCat integration)
+  // Initialize Superwall SDK
   await SuperwallService().initialize();
   
   runApp(
@@ -53,12 +48,12 @@ class VeroApp extends StatelessWidget {
             );
           }
           if (appState.isAuthenticated) {
-            // Show paywall for new authenticated users
+            // Register placement for authenticated users
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               try {
-                await RevenueCatUI.presentPaywallIfNeeded('pro');
+                await SuperwallService().registerPlacement('authenticated_home');
               } catch (e) {
-                debugPrint('Paywall presentation error: $e');
+                debugPrint('Superwall placement error: $e');
               }
             });
             return const MainScreen();

@@ -2,15 +2,22 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:purchases_flutter/purchases_flutter.dart' as rc;
 import 'package:superwallkit_flutter/superwallkit_flutter.dart' as sw;
 
-/// Superwall Service - Manages paywall presentation and integrates with RevenueCat
+/// Superwall Service - Manages paywall presentation, in-app purchases, and analytics tracking
 /// 
-/// This service uses RevenueCat as the purchase controller, allowing Superwall
-/// to present paywalls while RevenueCat handles the actual purchasing logic.
+/// This service uses Superwall to:
+/// 1. Present paywalls and handle purchases
+/// 2. Track user behavior and analytics
+/// 3. Set user attributes for segmentation
+/// 4. Manage placements for funnel analysis
+/// 
+/// Superwall events are automatically tracked for:
+/// - User identification
+/// - Feature engagement
+/// - Subscription events
+/// - Custom user actions
 class SuperwallService {
   static final SuperwallService _instance = SuperwallService._internal();
   factory SuperwallService() => _instance;
@@ -19,6 +26,14 @@ class SuperwallService {
   /// Whether Superwall has been initialized
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
+
+  /// Stream controller for subscription status changes
+  final _subscriptionController = StreamController<bool>.broadcast();
+  Stream<bool> get subscriptionStream => _subscriptionController.stream;
+
+  /// Current subscription status
+  bool _hasActiveSubscription = false;
+  bool get hasActiveSubscription => _hasActiveSubscription;
 
   /// Get the appropriate Superwall API key based on platform
   String _getApiKey() {
@@ -42,8 +57,8 @@ class SuperwallService {
     );
   }
 
-  /// Initialize Superwall SDK with RevenueCat integration
-  /// Call this in main.dart after RevenueCat is initialized
+  /// Initialize Superwall SDK
+  /// Call this in main.dart before runApp()
   Future<void> initialize() async {
     if (_isInitialized) {
       if (kDebugMode) print('Superwall: Already initialized');
@@ -53,14 +68,9 @@ class SuperwallService {
     try {
       final apiKey = _getApiKey();
       
-      // Create purchase controller that delegates to RevenueCat
-      final purchaseController = RCPurchaseController();
-      
-      // Configure Superwall with RevenueCat purchase controller
-      await sw.Superwall.configure(
-        apiKey,
-        purchaseController: purchaseController,
-      );
+      // Configure Superwall without external purchase controller
+      // Superwall handles all purchase logic internally
+      await sw.Superwall.configure(apiKey);
 
       // Set up Superwall delegate to listen for events
       sw.Superwall.shared.setDelegate(_SuperwallDelegateImpl());
@@ -141,9 +151,134 @@ class SuperwallService {
     }
   }
 
+  /// Present a paywall manually
+  Future<void> presentPaywall() async {
+    if (!_isInitialized) return;
+    
+    try {
+      // Register a generic placement to trigger paywall presentation
+      await sw.Superwall.shared.registerPlacement('manual_paywall');
+      if (kDebugMode) print('Superwall: Presented manual paywall');
+    } catch (e) {
+      if (kDebugMode) print('Superwall: Present paywall error - $e');
+    }
+  }
+
+  /// Restore purchases
+  Future<void> restorePurchases() async {
+    if (!_isInitialized) return;
+    
+    try {
+      await sw.Superwall.shared.restorePurchases();
+      if (kDebugMode) print('Superwall: Restore purchases called');
+    } catch (e) {
+      if (kDebugMode) print('Superwall: Restore purchases error - $e');
+    }
+  }
+
+  /// Track a custom analytics event
+  /// 
+  /// [eventName] - The event name to track
+  /// [properties] - Optional event properties
+  Future<void> trackEvent(String eventName, {Map<String, dynamic>? properties}) async {
+    if (!_isInitialized) return;
+    
+    try {
+      final params = <String, Object>{
+        'event_name': eventName,
+        if (properties != null)
+          ...properties.map((key, value) => MapEntry(key, value as Object)),
+      };
+      
+      await sw.Superwall.shared.registerPlacement('custom_event', params: params);
+      
+      if (kDebugMode) {
+        print('Superwall: Tracked event - $eventName with ${properties?.length ?? 0} properties');
+      }
+    } catch (e) {
+      if (kDebugMode) print('Superwall: Track event error - $e');
+    }
+  }
+
+  /// Track screen view
+  /// 
+  /// [screenName] - The name of the screen
+  /// [additionalProps] - Additional properties
+  Future<void> trackScreenView(String screenName, {Map<String, dynamic>? additionalProps}) async {
+    await trackEvent('screen_view', properties: {
+      'screen_name': screenName,
+      ...?additionalProps,
+    });
+  }
+
+  /// Track user action
+  /// 
+  /// [action] - The action name
+  /// [context] - Context where the action occurred
+  Future<void> trackUserAction(String action, {String? context, Map<String, dynamic>? properties}) async {
+    await trackEvent('user_action', properties: {
+      'action': action,
+      if (context != null) 'context': context,
+      ...?properties,
+    });
+  }
+
+  /// Track feature usage
+  /// 
+  /// [featureName] - The feature being used
+  /// [isProFeature] - Whether this is a pro feature
+  Future<void> trackFeatureUsage(String featureName, {bool isProFeature = false, Map<String, dynamic>? properties}) async {
+    await trackEvent('feature_usage', properties: {
+      'feature_name': featureName,
+      'is_pro_feature': isProFeature,
+      ...?properties,
+    });
+  }
+
+  /// Track deployment action
+  Future<void> trackDeploymentAction(String action, String projectId, {Map<String, dynamic>? properties}) async {
+    await trackEvent('deployment_action', properties: {
+      'action': action,
+      'project_id': projectId,
+      ...?properties,
+    });
+  }
+
+  /// Track project action
+  Future<void> trackProjectAction(String action, {String? projectId, Map<String, dynamic>? properties}) async {
+    await trackEvent('project_action', properties: {
+      'action': action,
+      if (projectId != null) 'project_id': projectId,
+      ...?properties,
+    });
+  }
+
+  /// Track subscription-related event
+  Future<void> trackSubscriptionEvent(String eventType, {Map<String, dynamic>? properties}) async {
+    await trackEvent('subscription_$eventType', properties: {
+      'event_type': eventType,
+      ...?properties,
+    });
+  }
+
+  /// Track error events
+  Future<void> trackError(String errorType, String message, {Map<String, dynamic>? properties}) async {
+    await trackEvent('error', properties: {
+      'error_type': errorType,
+      'error_message': message,
+      ...?properties,
+    });
+  }
+
+  /// Update subscription status internally
+  void _updateSubscriptionStatus(bool hasActiveSubscription) {
+    _hasActiveSubscription = hasActiveSubscription;
+    _subscriptionController.add(hasActiveSubscription);
+  }
+
   /// Dispose of resources
   void dispose() {
-    // Cleanup if needed
+    _subscriptionController.close();
   }
 }
 
@@ -224,186 +359,5 @@ class _SuperwallDelegateImpl extends sw.SuperwallDelegate {
     if (kDebugMode) {
       print('Superwall: Subscription status changed to $status');
     }
-  }
-}
-
-/// RevenueCat Purchase Controller for Superwall
-/// 
-/// This class implements the PurchaseController interface to delegate
-/// all purchase operations to RevenueCat while keeping Superwall as
-/// the paywall presentation layer.
-class RCPurchaseController extends sw.PurchaseController {
-  /// Configure RevenueCat and sync subscription status with Superwall
-  /// This should be called before Superwall.configure()
-  Future<void> configureAndSyncSubscriptionStatus() async {
-    // RevenueCat is already configured in RevenueCatService
-    // Just set up the listener for subscription status changes
-    
-    rc.Purchases.addCustomerInfoUpdateListener((customerInfo) async {
-      // Convert RevenueCat entitlements to Superwall entitlements
-      final entitlements = customerInfo.entitlements.active.keys
-          .map((id) => sw.Entitlement(id: id))
-          .toSet();
-
-      final hasActiveEntitlementOrSubscription = 
-          customerInfo.activeSubscriptions.isNotEmpty || 
-          customerInfo.entitlements.active.isNotEmpty;
-
-      if (hasActiveEntitlementOrSubscription) {
-        await sw.Superwall.shared.setSubscriptionStatus(
-          sw.SubscriptionStatusActive(entitlements: entitlements),
-        );
-      } else {
-        await sw.Superwall.shared.setSubscriptionStatus(sw.SubscriptionStatusInactive());
-      }
-      
-      if (kDebugMode) {
-        print('Superwall: Subscription status updated - active: $hasActiveEntitlementOrSubscription');
-      }
-    });
-  }
-
-  /// Purchase from App Store via RevenueCat
-  @override
-  Future<sw.PurchaseResult> purchaseFromAppStore(String productId) async {
-    try {
-      // Get products from RevenueCat
-      final products = await _getAllProducts([productId]);
-      final storeProduct = products.firstOrNull;
-
-      if (storeProduct == null) {
-        return sw.PurchaseResult.failed('Failed to find store product for $productId');
-      }
-
-      return await _purchaseStoreProduct(storeProduct);
-    } catch (e) {
-      return sw.PurchaseResult.failed('Purchase error: $e');
-    }
-  }
-
-  /// Purchase from Google Play via RevenueCat
-  @override
-  Future<sw.PurchaseResult> purchaseFromGooglePlay(
-    String productId, 
-    String? basePlanId, 
-    String? offerId,
-  ) async {
-    try {
-      final products = await _getAllProducts([productId]);
-      
-      // Find matching product for base plan
-      final storeProductId = basePlanId != null ? '$productId:$basePlanId' : productId;
-      rc.StoreProduct? matchingProduct;
-      
-      for (final product in products) {
-        if (product.identifier == storeProductId) {
-          matchingProduct = product;
-          break;
-        }
-      }
-      
-      final storeProduct = matchingProduct ?? (products.isNotEmpty ? products.first : null);
-      
-      if (storeProduct == null) {
-        return sw.PurchaseResult.failed('Product not found');
-      }
-
-      // Handle subscription vs non-subscription
-      if (storeProduct.productCategory == rc.ProductCategory.subscription) {
-        final subscriptionOptions = storeProduct.subscriptionOptions;
-        if (subscriptionOptions != null && subscriptionOptions.isNotEmpty) {
-          final optionId = _buildSubscriptionOptionId(basePlanId, offerId);
-          
-          rc.SubscriptionOption? subscriptionOption;
-          for (final option in subscriptionOptions) {
-            if (option.id == optionId) {
-              subscriptionOption = option;
-              break;
-            }
-          }
-          subscriptionOption ??= storeProduct.defaultOption;
-          
-          if (subscriptionOption != null) {
-            return await _purchaseSubscriptionOption(subscriptionOption);
-          }
-        }
-        return sw.PurchaseResult.failed('No valid subscription option found');
-      } else {
-        return await _purchaseStoreProduct(storeProduct);
-      }
-    } catch (e) {
-      return sw.PurchaseResult.failed('Purchase error: $e');
-    }
-  }
-
-  /// Purchase a subscription option
-  Future<sw.PurchaseResult> _purchaseSubscriptionOption(rc.SubscriptionOption subscriptionOption) async {
-    return await _handleSharedPurchase(() async {
-      final result = await rc.Purchases.purchaseSubscriptionOption(subscriptionOption);
-      return result.customerInfo;
-    });
-  }
-
-  /// Purchase a store product
-  Future<sw.PurchaseResult> _purchaseStoreProduct(rc.StoreProduct storeProduct) async {
-    return await _handleSharedPurchase(() async {
-      final result = await rc.Purchases.purchaseStoreProduct(storeProduct);
-      return result.customerInfo;
-    });
-  }
-
-  /// Handle shared purchase logic
-  Future<sw.PurchaseResult> _handleSharedPurchase(Future<rc.CustomerInfo> Function() performPurchase) async {
-    try {
-      final customerInfo = await performPurchase();
-      
-      if (customerInfo.activeSubscriptions.isNotEmpty || 
-          customerInfo.entitlements.active.isNotEmpty) {
-        return sw.PurchaseResult.purchased;
-      } else {
-        return sw.PurchaseResult.failed('No active subscriptions found');
-      }
-    } on PlatformException catch (e) {
-      final errorCode = rc.PurchasesErrorHelper.getErrorCode(e);
-      if (errorCode == rc.PurchasesErrorCode.paymentPendingError) {
-        return sw.PurchaseResult.pending;
-      } else if (errorCode == rc.PurchasesErrorCode.purchaseCancelledError) {
-        return sw.PurchaseResult.cancelled;
-      } else {
-        return sw.PurchaseResult.failed(e.message ?? 'Purchase failed');
-      }
-    }
-  }
-
-  /// Restore purchases via RevenueCat
-  @override
-  Future<sw.RestorationResult> restorePurchases() async {
-    try {
-      await rc.Purchases.restorePurchases();
-      return sw.RestorationResult.restored;
-    } on PlatformException catch (e) {
-      return sw.RestorationResult.failed(e.message ?? 'Restore failed');
-    }
-  }
-
-  /// Build subscription option ID from base plan and offer
-  String _buildSubscriptionOptionId(String? basePlanId, String? offerId) {
-    final parts = <String>[];
-    if (basePlanId != null) parts.add(basePlanId);
-    if (offerId != null) parts.add(offerId);
-    return parts.join(':');
-  }
-
-  /// Get all products from RevenueCat
-  Future<List<rc.StoreProduct>> _getAllProducts(List<String> productIdentifiers) async {
-    final subscriptionProducts = await rc.Purchases.getProducts(
-      productIdentifiers,
-      productCategory: rc.ProductCategory.subscription,
-    );
-    final nonSubscriptionProducts = await rc.Purchases.getProducts(
-      productIdentifiers,
-      productCategory: rc.ProductCategory.nonSubscription,
-    );
-    return [...subscriptionProducts, ...nonSubscriptionProducts];
   }
 }

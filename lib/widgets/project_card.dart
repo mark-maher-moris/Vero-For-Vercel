@@ -11,12 +11,14 @@ class ProjectCard extends StatelessWidget {
   final Project project;
   final bool isBlurred;
   final VoidCallback? onSubscribeTap;
+  final VoidCallback? onProjectTap;
 
   const ProjectCard({
     super.key,
     required this.project,
     this.isBlurred = false,
     this.onSubscribeTap,
+    this.onProjectTap,
   });
 
   String get _frameworkIcon {
@@ -174,6 +176,7 @@ class ProjectCard extends StatelessWidget {
       onTap: isBlurred
           ? onSubscribeTap
           : () {
+              onProjectTap?.call();
               Navigator.push(
                 context,
                 MaterialPageRoute(

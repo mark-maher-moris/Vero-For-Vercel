@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/subscription_provider.dart';
+import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 
 /// Screen for managing subscriptions and displaying paywall
-/// Uses RevenueCat Paywall UI or custom UI depending on configuration
+/// Uses Superwall Paywall UI or custom UI depending on configuration
 class SubscriptionScreen extends StatelessWidget {
   const SubscriptionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Track subscription screen view
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final subscription = context.read<SubscriptionProvider>();
+      SuperwallService().trackScreenView('subscription', additionalProps: {
+        'is_pro': subscription.isPro,
+        'has_error': subscription.hasError,
+      });
+    });
+    
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
@@ -29,7 +39,7 @@ class SubscriptionScreen extends StatelessWidget {
       ),
       body: Consumer<SubscriptionProvider>(
         builder: (context, subscription, child) {
-          if (subscription.isLoading && subscription.offerings == null) {
+          if (subscription.isLoading) {
             return const Center(
               child: CircularProgressIndicator(color: AppTheme.primary),
             );
@@ -44,8 +54,8 @@ class SubscriptionScreen extends StatelessWidget {
             return _buildProStatus(context, subscription);
           }
 
-          // Otherwise show upgrade options
-          return _buildUpgradeOptions(context, subscription);
+          // Show upgrade button that triggers Superwall paywall
+          return _buildUpgradeButton(context, subscription);
         },
       ),
     );
@@ -117,37 +127,33 @@ class SubscriptionScreen extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Status Card
-          _buildStatusCard(subscription),
+          _buildStatusCard(),
           const SizedBox(height: 32),
 
           // Benefits
-          _buildBenefitsList(),
+          _buildBenefitsList(context),
           const SizedBox(height: 32),
 
-          // Manage Subscription Button
-          if (Platform.isIOS || Platform.isAndroid)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _showCustomerCenter(context, subscription),
-                icon: const Icon(Icons.settings),
-                label: const Text('Manage Subscription'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white30),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
+          // Restore/Manage Button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _restorePurchases(context, subscription),
+              icon: const Icon(Icons.restore),
+              label: const Text('Restore Purchases'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Colors.white30),
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatusCard(SubscriptionProvider subscription) {
-    final expirationDate = subscription.proExpirationDate;
-    final willRenew = subscription.willRenew;
-
+  Widget _buildStatusCard() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -173,29 +179,13 @@ class SubscriptionScreen extends StatelessWidget {
             'Active',
             Colors.green,
           ),
-          if (expirationDate != null) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow(
-              Icons.calendar_today,
-              expirationDate.isAfter(DateTime.now().add(const Duration(days: 365 * 50)))
-                  ? 'Valid Until'
-                  : willRenew ? 'Renews On' : 'Expires On',
-              expirationDate.isAfter(DateTime.now().add(const Duration(days: 365 * 50)))
-                  ? 'Lifetime'
-                  : _formatDate(expirationDate),
-              Colors.white70,
-            ),
-          ],
-          if (!willRenew && expirationDate != null && 
-              !expirationDate.isAfter(DateTime.now().add(const Duration(days: 365 * 50)))) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow(
-              Icons.info_outline,
-              'Auto-Renewal',
-              'Off - Will not renew',
-              Colors.orange,
-            ),
-          ],
+          const SizedBox(height: 12),
+          _buildDetailRow(
+            Icons.info_outline,
+            'Management',
+            'Manage in App Store / Play Store',
+            Colors.white70,
+          ),
         ],
       ),
     );
@@ -221,7 +211,7 @@ class SubscriptionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBenefitsList() {
+  Widget _buildBenefitsList(BuildContext context) {
     final benefits = [
       'Unlimited projects',
       'Priority deployments',
@@ -271,62 +261,60 @@ class SubscriptionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUpgradeOptions(BuildContext context, SubscriptionProvider subscription) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          const Text(
-            'Upgrade to Vero Pro',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+  Widget _buildUpgradeButton(BuildContext context, SubscriptionProvider subscription) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.lock_open,
+              color: AppTheme.primary,
+              size: 64,
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Unlock the full power of Vero for Vercel',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Benefits
-          _buildBenefitsList(),
-          const SizedBox(height: 48),
-
-          // Upgrade Button - Opens RevenueCat Paywall
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: subscription.isLoading
-                  ? null
-                  : () => _openPaywall(context, subscription),
-              icon: const Icon(Icons.lock_open),
-              label: const Text(
-                'Upgrade Now',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            const SizedBox(height: 24),
+            const Text(
+              'Upgrade to Vero Pro',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Unlock unlimited projects, priority deployments, and more premium features.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 48),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: subscription.isLoading
+                    ? null
+                    : () => _openPaywall(context, subscription),
+                icon: const Icon(Icons.star),
+                label: const Text(
+                  'Upgrade Now',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-
-          // Restore Purchases
-          Center(
-            child: TextButton(
+            const SizedBox(height: 16),
+            TextButton(
               onPressed: subscription.isLoading
                   ? null
                   : () => _restorePurchases(context, subscription),
@@ -335,20 +323,29 @@ class SubscriptionScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.white54),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-
 
   Future<void> _openPaywall(
     BuildContext context,
     SubscriptionProvider subscription,
   ) async {
+    // Track paywall open attempt
+    SuperwallService().trackSubscriptionEvent('paywall_opened', properties: {
+      'context': 'subscription_screen',
+    });
+    
     final hasPro = await subscription.showPaywall();
     
     if (hasPro && context.mounted) {
+      // Track successful subscription
+      SuperwallService().trackSubscriptionEvent('purchase_complete', properties: {
+        'context': 'subscription_screen',
+      });
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Welcome to Vero Pro!'),
@@ -362,10 +359,21 @@ class SubscriptionScreen extends StatelessWidget {
     BuildContext context,
     SubscriptionProvider subscription,
   ) async {
+    // Track restore attempt
+    SuperwallService().trackSubscriptionEvent('restore_started', properties: {
+      'context': 'subscription_screen',
+    });
+    
     final hasPro = await subscription.restorePurchases();
     
     if (context.mounted) {
       if (hasPro) {
+        // Track successful restore
+        SuperwallService().trackSubscriptionEvent('restore_complete', properties: {
+          'context': 'subscription_screen',
+          'found_subscription': true,
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Your Vero Pro subscription has been restored!'),
@@ -373,6 +381,12 @@ class SubscriptionScreen extends StatelessWidget {
           ),
         );
       } else {
+        // Track failed restore
+        SuperwallService().trackSubscriptionEvent('restore_complete', properties: {
+          'context': 'subscription_screen',
+          'found_subscription': false,
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No previous purchases found.'),
@@ -382,25 +396,4 @@ class SubscriptionScreen extends StatelessWidget {
       }
     }
   }
-
-  Future<void> _showCustomerCenter(
-    BuildContext context,
-    SubscriptionProvider subscription,
-  ) async {
-    await subscription.showCustomerCenter();
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day}/${date.year}';
-  }
-}
-
-// Platform stub for web compatibility
-class Platform {
-  static bool get isIOS => false;
-  static bool get isAndroid => false;
-  static bool get isMacOS => false;
-  static bool get isWindows => false;
-  static bool get isLinux => false;
-  static bool get isFuchsia => false;
 }

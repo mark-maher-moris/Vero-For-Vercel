@@ -1,54 +1,27 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
-import '../services/revenue_cat_service.dart';
+import '../services/superwall_service.dart';
 
 /// Provider for managing subscription state in the app
 /// Uses Provider pattern for reactive UI updates
 class SubscriptionProvider extends ChangeNotifier {
-  final RevenueCatService _revenueCatService = RevenueCatService();
+  final SuperwallService _superwallService = SuperwallService();
   
   // State
   bool _isLoading = false;
   bool _isPro = false;
   String? _errorMessage;
-  Offerings? _offerings;
-  CustomerInfo? _customerInfo;
   
   // Getters
   bool get isLoading => _isLoading;
   bool get isPro => _isPro;
   String? get errorMessage => _errorMessage;
-  Offerings? get offerings => _offerings;
-  CustomerInfo? get customerInfo => _customerInfo;
-  
-  // Product getters
-  Package? get monthlyPackage => _offerings.monthlyPackage;
-  Package? get yearlyPackage => _offerings.yearlyPackage;
-  Package? get lifetimePackage => _offerings.lifetimePackage;
   
   // Computed properties for UI
   bool get hasActiveSubscription => _isPro;
   bool get hasError => _errorMessage != null;
-  bool get hasOfferings => _offerings?.current != null;
   
-  /// Entitlement details
-  EntitlementInfo? get proEntitlementInfo => 
-      _customerInfo?.entitlements.all[kVeroProEntitlement];
-  
-  DateTime? get proExpirationDate {
-    final info = proEntitlementInfo;
-    if (info == null) return null;
-    final expiration = info.expirationDate;
-    if (expiration == null) return null;
-    return DateTime.tryParse(expiration);
-  }
-  
-  bool get willRenew => proEntitlementInfo?.willRenew ?? false;
-  String? get proPurchaseDate => proEntitlementInfo?.originalPurchaseDate?.toString();
-  
-  StreamSubscription<CustomerInfo>? _customerInfoSubscription;
+  StreamSubscription<bool>? _subscriptionStatusSubscription;
 
   SubscriptionProvider() {
     _init();
@@ -59,18 +32,19 @@ class SubscriptionProvider extends ChangeNotifier {
     _setLoading(true);
     
     try {
-      // Listen to customer info updates
-      _customerInfoSubscription = _revenueCatService.customerInfoStream.listen(
-        _onCustomerInfoUpdate,
+      // Listen to subscription status updates from Superwall
+      _subscriptionStatusSubscription = _superwallService.subscriptionStream.listen(
+        _onSubscriptionStatusUpdate,
         onError: (error) {
           if (kDebugMode) {
-            print('SubscriptionProvider: Customer info stream error - $error');
+            print('SubscriptionProvider: Subscription stream error - $error');
           }
         },
       );
       
-      // Load initial data
-      await refresh();
+      // Check initial subscription status
+      _isPro = _superwallService.hasActiveSubscription;
+      notifyListeners();
     } catch (e) {
       _setError('Failed to initialize subscriptions: $e');
     } finally {
@@ -78,20 +52,16 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Handle customer info updates from RevenueCat
-  void _onCustomerInfoUpdate(CustomerInfo info) {
-    _customerInfo = info;
-    final newProStatus = info.hasVeroPro;
+  /// Handle subscription status updates from Superwall
+  void _onSubscriptionStatusUpdate(bool hasActiveSubscription) {
+    _isPro = hasActiveSubscription;
     
-    if (newProStatus != _isPro) {
-      _isPro = newProStatus;
-      if (kDebugMode) {
-        print('SubscriptionProvider: Pro status changed to $_isPro');
-      }
-      notifyListeners();
+    if (kDebugMode) {
+      print('SubscriptionProvider: Pro status changed to $_isPro');
     }
     
     _errorMessage = null;
+    notifyListeners();
   }
 
   /// Refresh subscription data
@@ -100,17 +70,13 @@ class SubscriptionProvider extends ChangeNotifier {
     _clearError();
     
     try {
-      // Refresh offerings
-      await _revenueCatService.fetchOfferings();
-      _offerings = _revenueCatService.offerings;
-      
-      // Refresh customer info
-      _customerInfo = await _revenueCatService.getCustomerInfo();
-      _isPro = _customerInfo?.hasVeroPro ?? false;
+      // Update subscription status from Superwall
+      _isPro = _superwallService.hasActiveSubscription;
       
       if (kDebugMode) {
         print('SubscriptionProvider: Refreshed - Pro: $_isPro');
       }
+      notifyListeners();
     } catch (e) {
       _setError('Failed to refresh subscription data: $e');
     } finally {
@@ -118,49 +84,35 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Purchase a specific package
-  Future<bool> purchasePackage(Package package) async {
+  /// Present Superwall paywall for manual purchase
+  Future<bool> showPaywall() async {
     _setLoading(true);
     _clearError();
     
     try {
-      final result = await _revenueCatService.purchasePackage(package);
+      await _superwallService.presentPaywall();
       
-      if (result != null) {
-        _isPro = result.hasVeroPro;
-        _customerInfo = result;
-        notifyListeners();
-        return true;
-      }
-      
-      return false;
-    } on PlatformException catch (e) {
-      final errorCode = PurchasesErrorHelper.getErrorCode(e);
-      
-      // Handle specific error codes
-      switch (errorCode) {
-        case PurchasesErrorCode.purchaseCancelledError:
-          // User cancelled - not an error
-          break;
-        case PurchasesErrorCode.productAlreadyPurchasedError:
-          _setError('You have already purchased this item. Try restoring purchases.');
-          break;
-        case PurchasesErrorCode.storeProblemError:
-          _setError('There was a problem with the store. Please try again later.');
-          break;
-        case PurchasesErrorCode.purchaseNotAllowedError:
-          _setError('Purchases are not allowed on this device.');
-          break;
-        case PurchasesErrorCode.paymentPendingError:
-          _setError('Payment is pending. It may take a few minutes to process.');
-          break;
-        default:
-          _setError('Purchase failed: ${e.message}');
-      }
-      
-      return false;
+      // Refresh data after paywall is dismissed
+      await refresh();
+      return _isPro;
     } catch (e) {
-      _setError('Purchase failed: $e');
+      _setError('Failed to show paywall: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Register placement and potentially show paywall
+  Future<bool> registerPlacement(String placement, {Map<String, dynamic>? params}) async {
+    _setLoading(true);
+    _clearError();
+    
+    try {
+      await _superwallService.registerPlacement(placement, params: params);
+      return _isPro;
+    } catch (e) {
+      _setError('Failed to register placement: $e');
       return false;
     } finally {
       _setLoading(false);
@@ -173,11 +125,10 @@ class SubscriptionProvider extends ChangeNotifier {
     _clearError();
     
     try {
-      final result = await _revenueCatService.restorePurchases();
-      _isPro = result.hasVeroPro;
-      _customerInfo = result;
+      await _superwallService.restorePurchases();
       
-      notifyListeners();
+      // Refresh after restore
+      await refresh();
       return _isPro;
     } catch (e) {
       _setError('Failed to restore purchases: $e');
@@ -187,41 +138,10 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Present the RevenueCat Paywall
-  Future<bool> showPaywall() async {
-    final result = await _revenueCatService.presentPaywall();
-    
-    // Refresh data after paywall is dismissed
-    await refresh();
-    return result;
-  }
-
-  /// Present the RevenueCat Paywall if user doesn't have Pro
-  Future<bool> showPaywallIfNeeded() async {
-    final result = await _revenueCatService.presentPaywallIfNeeded(kVeroProEntitlement);
-    
-    // Refresh data after paywall is dismissed
-    await refresh();
-    return result;
-  }
-
-  /// Present the Customer Center
-  Future<void> showCustomerCenter() async {
-    await _revenueCatService.presentCustomerCenter();
-    
-    // Refresh data after customer center is dismissed
-    await refresh();
-  }
-
-  /// Check if user can make purchases
-  Future<bool> checkCanMakePurchases() async {
-    return await _revenueCatService.canMakePayments();
-  }
-
-  /// Sync user login with RevenueCat
+  /// Sync user login with Superwall
   Future<void> onUserLogin(String userId) async {
     try {
-      await _revenueCatService.login(userId);
+      await _superwallService.identify(userId);
       await refresh();
     } catch (e) {
       if (kDebugMode) {
@@ -230,12 +150,11 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Sync user logout with RevenueCat
+  /// Sync user logout with Superwall
   Future<void> onUserLogout() async {
     try {
-      await _revenueCatService.logout();
+      await _superwallService.reset();
       _isPro = false;
-      _customerInfo = null;
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
@@ -268,7 +187,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _customerInfoSubscription?.cancel();
+    _subscriptionStatusSubscription?.cancel();
     super.dispose();
   }
 }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/app_state.dart';
+import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,6 +18,15 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _error;
   final _tokenController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Track login screen view
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SuperwallService().trackScreenView('login');
+    });
+  }
 
   @override
   void dispose() {
@@ -36,10 +46,15 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
 
+    // Track login attempt
+    SuperwallService().trackUserAction('login_attempt', context: 'login');
+
     try {
       await context.read<AppState>().login(token);
     } catch (e) {
       if (mounted) {
+        // Track login error
+        SuperwallService().trackError('login_failed', e.toString());
         setState(() {
           _error = 'Invalid token: $e';
         });

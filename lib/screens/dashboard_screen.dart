@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
-import '../services/revenue_cat_service.dart';
+import '../services/superwall_service.dart';
 import '../models/project.dart';
 import '../theme/app_theme.dart';
 import '../widgets/project_card.dart';
@@ -23,6 +23,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _fetchUsageData();
+    // Track dashboard screen view
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SuperwallService().trackScreenView('dashboard', additionalProps: {
+        'project_count': context.read<AppState>().projects.length,
+        'has_teams': context.read<AppState>().teams.isNotEmpty,
+      });
+      // Register placement for potential paywall
+      SuperwallService().registerPlacement('projects_screen');
+    });
   }
 
   Future<void> _fetchUsageData() async {
@@ -93,6 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: AppTheme.onSurfaceVariant),
             onPressed: () {
+              SuperwallService().trackUserAction('import_github_project', context: 'dashboard');
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ImportGithubProjectScreen()),
@@ -102,11 +112,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () => _showTeamPicker(context, appState),
+            onPressed: () {
+              SuperwallService().trackUserAction('switch_team', context: 'dashboard');
+              _showTeamPicker(context, appState);
+            },
           ),
           IconButton(
             icon: const Icon(Icons.exit_to_app, color: AppTheme.onSurfaceVariant),
-            onPressed: () => appState.logout(),
+            onPressed: () {
+              SuperwallService().trackUserAction('logout', context: 'dashboard');
+              appState.logout();
+            },
           ),
         ],
       ),
@@ -285,14 +301,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           project: projects[index],
           isBlurred: isBlurred,
           onSubscribeTap: () => _showPaywall(context),
+          onProjectTap: () {
+            SuperwallService().trackProjectAction('view_project', 
+              projectId: projects[index].id,
+              properties: {'project_name': projects[index].name}
+            );
+          },
         );
       },
     );
   }
 
   void _showPaywall(BuildContext context) async {
-    final revenueCat = RevenueCatService();
-    await revenueCat.presentPaywall();
+    await SuperwallService().presentPaywall();
     // Refresh subscription status after paywall closes
     if (mounted) {
       final subscription = Provider.of<SubscriptionProvider>(context, listen: false);

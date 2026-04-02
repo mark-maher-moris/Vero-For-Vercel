@@ -8,6 +8,7 @@ import '../models/deployment.dart';
 import '../theme/app_theme.dart';
 import '../widgets/deployment_card.dart';
 import '../widgets/action_card.dart';
+import '../services/superwall_service.dart';
 import 'settings_env_vars_screen.dart';
 
 import 'package:provider/provider.dart';
@@ -34,6 +35,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchData();
+      // Register Superwall placement when viewing project details
+      SuperwallService().registerPlacement('project_details', params: {
+        'project_id': widget.project.id,
+        'project_name': widget.project.name,
+      });
     });
   }
 

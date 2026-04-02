@@ -9,7 +9,7 @@ import '../models/project.dart';
 import '../models/deployment.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
-import '../services/revenue_cat_service.dart';
+import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 import '../models/env_var.dart';
 import '../widgets/action_card.dart';
@@ -41,11 +41,35 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 7, vsync: this);
+    // Track project workspace view
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SuperwallService().trackScreenView('project_workspace', additionalProps: {
+        'project_id': widget.project.id,
+        'project_name': widget.project.name,
+        'framework': widget.project.framework,
+      });
+    });
+    // Listen to tab changes for analytics
+    _tabController.addListener(_onTabChanged);
     _fetchData();
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      final tabNames = ['overview', 'deployments', 'logs', 'activity', 'security', 'env_vars', 'domains'];
+      SuperwallService().trackUserAction('switch_tab', 
+        context: 'project_workspace',
+        properties: {
+          'tab_name': tabNames[_tabController.index],
+          'project_id': widget.project.id,
+        }
+      );
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -94,6 +118,12 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   Future<void> _redeployProject() async {
     final appState = Provider.of<AppState>(context, listen: false);
     setState(() => _isRedeploying = true);
+    
+    // Track deployment action
+    SuperwallService().trackDeploymentAction('redeploy', widget.project.id, properties: {
+      'project_name': widget.project.name,
+    });
+    
     try {
       await appState.apiService.createDeployment(
         projectId: widget.project.id,
@@ -174,8 +204,22 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           controller: _tabController,
           isScrollable: true,
           onTap: (index) {
+            // Track tab tap attempt
+            final tabNames = ['overview', 'deployments', 'logs', 'activity', 'security', 'env_vars', 'domains'];
+            SuperwallService().trackUserAction('tab_tapped', 
+              context: 'project_workspace',
+              properties: {
+                'tab_name': tabNames[index],
+                'is_pro_tab': index > 1,
+                'is_pro_user': isPro,
+              }
+            );
             // If free user tries to access pro tabs, show paywall and reset to first tab
             if (!isPro && index > 1) {
+              SuperwallService().trackSubscriptionEvent('paywall_triggered', properties: {
+                'trigger': 'pro_tab_access',
+                'tab_name': tabNames[index],
+              });
               _showPaywall(context);
               // Reset to first tab after a short delay
               Future.delayed(const Duration(milliseconds: 100), () {
@@ -326,8 +370,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   }
 
   void _showPaywall(BuildContext context) async {
-    final revenueCat = RevenueCatService();
-    await revenueCat.presentPaywall();
+    await SuperwallService().presentPaywall();
     // Refresh subscription status after paywall closes
     if (mounted) {
       final subscription = Provider.of<SubscriptionProvider>(context, listen: false);

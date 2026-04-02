@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'package:in_app_review/in_app_review.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
+import '../services/superwall_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -56,6 +56,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         .toList();
 
     _animationControllers[0].forward();
+    
+    // Track onboarding start
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SuperwallService().trackScreenView('onboarding', additionalProps: {
+        'total_pages': _totalPages,
+        'current_page': 0,
+      });
+    });
   }
 
   @override
@@ -70,6 +78,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void _onPageChanged(int page) {
     setState(() => _currentPage = page);
     _animationControllers[page].forward(from: 0);
+    
+    // Track onboarding page view
+    final pageNames = ['privacy', 'opensource', 'github_support'];
+    SuperwallService().trackUserAction('onboarding_page_view', context: 'onboarding', properties: {
+      'page_index': page,
+      'page_name': pageNames[page],
+      'total_pages': _totalPages,
+    });
   }
 
   void _nextPage() async {
@@ -105,11 +121,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Future<void> _showPaywallThenLogin() async {
-    try {
-      await RevenueCatUI.presentPaywallIfNeeded("pro");
-    } catch (e) {
-      debugPrint('Paywall error: $e');
-    }
+    // Track onboarding completion
+    SuperwallService().trackUserAction('onboarding_complete', context: 'onboarding', properties: {
+      'total_pages_viewed': _currentPage + 1,
+    });
+    
+    // Register Superwall placement after onboarding
+    await SuperwallService().registerPlacement('after_onboarding');
+    
     if (mounted) {
       await context.read<AppState>().markOnboardingComplete();
     }
