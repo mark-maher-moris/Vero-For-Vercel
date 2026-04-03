@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:label="Vero For Vercel"
         android:name="${applicationName}"
@@ -35,7 +36,8 @@
         <activity
             android:name="com.superwall.sdk.paywall.view.SuperwallPaywallActivity"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"
-            android:configChanges="orientation|screenSize|keyboardHidden">
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            tools:replace="android:theme">
         </activity>
         
         <!-- Optional: Superwall Debug Activities -->
