@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:superwallkit_flutter/superwallkit_flutter.dart' as sw;
 
 /// Superwall Service - Manages paywall presentation, in-app purchases, and analytics tracking
@@ -135,10 +136,21 @@ class SuperwallService {
   /// 
   /// [placement] - The placement identifier configured in Superwall dashboard
   /// [params] - Optional parameters to pass to the paywall
-  Future<void> registerPlacement(String placement, {Map<String, dynamic>? params}) async {
+  /// [skipIfOnboardingIncomplete] - If true, skips showing paywall if onboarding is not complete
+  Future<void> registerPlacement(String placement, {Map<String, dynamic>? params, bool skipIfOnboardingIncomplete = true}) async {
     if (!_isInitialized) {
       if (kDebugMode) print('Superwall: Not initialized, skipping placement $placement');
       return;
+    }
+
+    // Check if onboarding is complete before showing paywall
+    if (skipIfOnboardingIncomplete) {
+      final prefs = await SharedPreferences.getInstance();
+      final hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+      if (!hasCompletedOnboarding) {
+        if (kDebugMode) print('Superwall: Skipping placement $placement - onboarding not complete');
+        return;
+      }
     }
     
     try {
@@ -152,8 +164,18 @@ class SuperwallService {
   }
 
   /// Present a paywall manually
-  Future<void> presentPaywall() async {
+  Future<void> presentPaywall({bool skipIfOnboardingIncomplete = true}) async {
     if (!_isInitialized) return;
+
+    // Check if onboarding is complete before showing paywall
+    if (skipIfOnboardingIncomplete) {
+      final prefs = await SharedPreferences.getInstance();
+      final hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+      if (!hasCompletedOnboarding) {
+        if (kDebugMode) print('Superwall: Skipping manual paywall - onboarding not complete');
+        return;
+      }
+    }
     
     try {
       // Register a generic placement to trigger paywall presentation
@@ -176,7 +198,10 @@ class SuperwallService {
     }
   }
 
-  /// Track a custom analytics event
+  /// Track a custom analytics event (pure analytics, no paywall trigger)
+  /// 
+  /// This uses a dedicated analytics placement that should be configured 
+  /// in Superwall dashboard to NOT trigger paywalls.
   /// 
   /// [eventName] - The event name to track
   /// [properties] - Optional event properties
@@ -190,10 +215,12 @@ class SuperwallService {
           ...properties.map((key, value) => MapEntry(key, value as Object)),
       };
       
-      await sw.Superwall.shared.registerPlacement('custom_event', params: params);
+      // Use 'analytics' placement - configure this in Superwall dashboard 
+      // to NOT show paywalls (for pure analytics tracking only)
+      await sw.Superwall.shared.registerPlacement('analytics', params: params);
       
       if (kDebugMode) {
-        print('Superwall: Tracked event - $eventName with ${properties?.length ?? 0} properties');
+        print('Superwall: Tracked event - $eventName');
       }
     } catch (e) {
       if (kDebugMode) print('Superwall: Track event error - $e');

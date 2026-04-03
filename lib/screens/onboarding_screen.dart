@@ -126,8 +126,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       'total_pages_viewed': _currentPage + 1,
     });
     
-    // Register Superwall placement after onboarding
-    await SuperwallService().registerPlacement('after_onboarding');
+    // Register Superwall placement after onboarding (explicitly allow showing)
+    await SuperwallService().registerPlacement('after_onboarding', skipIfOnboardingIncomplete: false);
     
     if (mounted) {
       await context.read<AppState>().markOnboardingComplete();
@@ -163,7 +163,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       return _GitHubSlide(
                         fadeAnimation: _fadeAnimations[2],
                         slideAnimation: _slideAnimations[2],
-                        onNext: _showPaywallThenLogin,
                       );
                     default:
                       return const SizedBox.shrink();
@@ -650,31 +649,23 @@ class _OpenSourceSlideState extends State<_OpenSourceSlide> {
   }
 }
 
-class _GitHubSlide extends StatefulWidget {
+class _GitHubSlide extends StatelessWidget {
   final Animation<double> fadeAnimation;
   final Animation<double> slideAnimation;
-  final VoidCallback onNext;
 
   const _GitHubSlide({
     required this.fadeAnimation,
     required this.slideAnimation,
-    required this.onNext,
   });
-
-  @override
-  State<_GitHubSlide> createState() => _GitHubSlideState();
-}
-
-class _GitHubSlideState extends State<_GitHubSlide> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: widget.fadeAnimation,
+      animation: fadeAnimation,
       builder: (context, child) {
         return Opacity(
-          opacity: widget.fadeAnimation.value,
+          opacity: fadeAnimation.value,
           child: Transform.translate(
-            offset: Offset(0, widget.slideAnimation.value),
+            offset: Offset(0, slideAnimation.value),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
               child: Column(

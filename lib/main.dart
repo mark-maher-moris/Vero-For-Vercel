@@ -48,14 +48,6 @@ class VeroApp extends StatelessWidget {
             );
           }
           if (appState.isAuthenticated) {
-            // Register placement for authenticated users
-            WidgetsBinding.instance.addPostFrameCallback((_) async {
-              try {
-                await SuperwallService().registerPlacement('manual_paywall'); 
-              } catch (e) {
-                debugPrint('Superwall placement error: $e');
-              }
-            });
             return const MainScreen();
           }
           // Show onboarding first, then login
