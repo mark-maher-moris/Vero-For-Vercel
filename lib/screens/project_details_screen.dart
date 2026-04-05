@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'deployment_logs_screen.dart';
+import 'deployment_actions_screen.dart';
+import 'advanced_logs_screen.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
 import '../theme/app_theme.dart';
@@ -261,6 +263,26 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               const SizedBox(width: 12),
               Expanded(child: ActionCard(icon: Icons.settings, label: 'Config', onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsEnvVarsScreen(project: widget.project)));
+              })),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: ActionCard(icon: Icons.tune, label: 'Advanced Logs', onTap: () {
+                if (_deployments != null && _deployments!.isNotEmpty) {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => AdvancedLogsScreen(deployment: _deployments!.first, projectId: widget.project.id)));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No deployments available.')));
+                }
+              })),
+              const SizedBox(width: 12),
+              Expanded(child: ActionCard(icon: Icons.arrow_upward, label: 'Actions', onTap: () {
+                if (_deployments != null && _deployments!.isNotEmpty) {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => DeploymentActionsScreen(deployment: _deployments!.first, projectId: widget.project.id)));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No deployments available.')));
+                }
               })),
             ],
           ),

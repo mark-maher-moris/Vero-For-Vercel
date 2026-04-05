@@ -6,6 +6,7 @@ import '../providers/app_state.dart';
 import '../models/domain.dart';
 import '../models/project.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'domain_dns_details_screen.dart';
 
 class DomainsDnsScreen extends StatefulWidget {
   const DomainsDnsScreen({super.key});
@@ -226,6 +227,23 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            side: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.2)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DomainDnsDetailsScreen(domain: domain),
+                              ),
+                            );
+                          },
+                          child: const Text('DNS', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 8),
                         TextButton(
                           style: TextButton.styleFrom(
                             side: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.2)),

@@ -23,7 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final List<Animation<double>> _fadeAnimations;
   late final List<Animation<double>> _slideAnimations;
 
-  final int _totalPages = 3;
+  final int _totalPages = 4;
 
   @override
   void initState() {
@@ -80,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _animationControllers[page].forward(from: 0);
     
     // Track onboarding page view
-    final pageNames = ['privacy', 'opensource', 'github_support'];
+    final pageNames = ['privacy', 'opensource', 'github_support', 'features'];
     SuperwallService().trackUserAction('onboarding_page_view', context: 'onboarding', properties: {
       'page_index': page,
       'page_name': pageNames[page],
@@ -89,18 +89,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _nextPage() async {
-    if (_currentPage < _totalPages - 1) {
+    if (_currentPage == 2) {
+      // On Support slide, request review then go to Features
+      await _requestReviewThenContinue();
+    } else if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
       );
     } else {
-      // On last page, request review then show paywall
-      await _requestReviewThenComplete();
+      // On last page, complete onboarding
+      await _showPaywallThenLogin();
     }
   }
 
-  Future<void> _requestReviewThenComplete() async {
+  Future<void> _requestReviewThenContinue() async {
     try {
       final inAppReview = InAppReview.instance;
       final isAvailable = await inAppReview.isAvailable();
@@ -116,8 +119,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } catch (e) {
       debugPrint('Review request error: $e');
     }
-    // Show paywall then mark complete
-    await _showPaywallThenLogin();
+    // Continue to Features slide after review
+    if (mounted) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
+      );
+    }
   }
 
   Future<void> _showPaywallThenLogin() async {
@@ -163,6 +171,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       return _GitHubSlide(
                         fadeAnimation: _fadeAnimations[2],
                         slideAnimation: _slideAnimations[2],
+                      );
+                    case 3:
+                      return _FeaturesSlide(
+                        fadeAnimation: _fadeAnimations[3],
+                        slideAnimation: _slideAnimations[3],
                       );
                     default:
                       return const SizedBox.shrink();
@@ -657,6 +670,7 @@ class _GitHubSlide extends StatelessWidget {
     required this.fadeAnimation,
     required this.slideAnimation,
   });
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -710,6 +724,210 @@ class _GitHubSlide extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _FeaturesSlide extends StatelessWidget {
+  final Animation<double> fadeAnimation;
+  final Animation<double> slideAnimation;
+
+  const _FeaturesSlide({
+    required this.fadeAnimation,
+    required this.slideAnimation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: fadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: fadeAnimation.value,
+          child: Transform.translate(
+            offset: Offset(0, slideAnimation.value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 40),
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: const Icon(
+                            Icons.apps,
+                            color: AppTheme.primary,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: const Text(
+                            'FEATURES',
+                            style: TextStyle(
+                              color: AppTheme.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    Text(
+                      'Everything You\'ll Get',
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                            color: AppTheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                            height: 1.1,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Powerful tools to manage your Vercel infrastructure right from your mobile device.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.onSurfaceVariant,
+                            height: 1.6,
+                          ),
+                    ),
+                    const SizedBox(height: 32),
+                    _buildFeatureCard(
+                      icon: Icons.folder_outlined,
+                      title: 'Project Management',
+                      description:
+                          'View, search, and manage all your Vercel projects with real-time status updates.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureCard(
+                      icon: Icons.rocket_launch_outlined,
+                      title: 'One-Touch Deploy',
+                      description:
+                          'Deploy new projects instantly from templates or import directly from GitHub.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureCard(
+                      icon: Icons.terminal_outlined,
+                      title: 'Live Logs',
+                      description:
+                          'Monitor deployment logs in real-time with filtering and search capabilities.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureCard(
+                      icon: Icons.language_outlined,
+                      title: 'Domains & DNS',
+                      description:
+                          'Manage custom domains, configure DNS records, and check SSL certificate status.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureCard(
+                      icon: Icons.key_outlined,
+                      title: 'Environment Variables',
+                      description:
+                          'Securely add, edit, and sync environment variables across all your projects.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureCard(
+                      icon: Icons.people_outline,
+                      title: 'Team Collaboration',
+                      description:
+                          'Switch between personal and team accounts with full access control management.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureCard(
+                      icon: Icons.bar_chart_outlined,
+                      title: 'Usage & Billing',
+                      description:
+                          'Track bandwidth, requests, and billing with detailed analytics dashboards.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureCard(
+                      icon: Icons.notifications_outlined,
+                      title: 'Activity Feed',
+                      description:
+                          'Stay updated with real-time notifications for deployments and team activity.',
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFeatureCard({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Icon(
+              icon,
+              color: AppTheme.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: AppTheme.onSurfaceVariant,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

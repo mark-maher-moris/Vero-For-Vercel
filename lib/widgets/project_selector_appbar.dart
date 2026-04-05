@@ -6,8 +6,9 @@ import '../theme/app_theme.dart';
 
 class ProjectSelectorAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Map<String, dynamic>? user;
+  final bool enableProjectSelection;
   
-  const ProjectSelectorAppBar({super.key, this.user});
+  const ProjectSelectorAppBar({super.key, this.user, this.enableProjectSelection = true});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -42,39 +43,46 @@ class ProjectSelectorAppBar extends StatelessWidget implements PreferredSizeWidg
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildTeamBadge(context, appState),
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<Project?>(
-                        isExpanded: true,
-                        value: selectedProject,
-                        dropdownColor: AppTheme.surfaceContainerHigh,
-                        icon: const Icon(Icons.unfold_more, color: AppTheme.onSurfaceVariant, size: 20),
-                        onChanged: (Project? newValue) {
-                          appState.setSelectedProject(newValue);
-                        },
-                        items: [
-                          ...projects.map<DropdownMenuItem<Project?>>((Project project) {
-                            return DropdownMenuItem<Project?>(
-                              value: project,
-                              child: Text(
-                                project.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    ),
+                    enableProjectSelection
+                      ? DropdownButtonHideUnderline(
+                          child: DropdownButton<Project?>(
+                            isExpanded: true,
+                            value: selectedProject,
+                            dropdownColor: AppTheme.surfaceContainerHigh,
+                            icon: const Icon(Icons.unfold_more, color: AppTheme.onSurfaceVariant, size: 20),
+                            onChanged: (Project? newValue) {
+                              appState.setSelectedProject(newValue);
+                            },
+                            items: [
+                              ...projects.map<DropdownMenuItem<Project?>>((Project project) {
+                                return DropdownMenuItem<Project?>(
+                                  value: project,
+                                  child: Text(
+                                    project.name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        )
+                      : Text(
+                          selectedProject?.name ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                   ],
                 ),
               ),
             ],
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-              onPressed: () => _showTeamPicker(context, appState),
-            ),
+            if (enableProjectSelection)
+              IconButton(
+                icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
+                onPressed: () => _showTeamPicker(context, appState),
+              ),
             const SizedBox(width: 8),
           ],
         );

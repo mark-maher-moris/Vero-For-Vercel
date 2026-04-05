@@ -1,19 +1,91 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
 
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
+
+  @override
+  State<AccountScreen> createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  String _supportId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSupportId();
+  }
+
+  Future<void> _loadSupportId() async {
+    final supportId = await SuperwallService().getUserId();
+    if (mounted) {
+      setState(() {
+        _supportId = supportId;
+      });
+    }
+  }
+
+  void _copySupportId() {
+    if (_supportId.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: _supportId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Support ID copied to clipboard'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   void _navigateTo(BuildContext context, Widget screen) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => screen),
+    );
+  }
+
+  Widget _buildCopyableInfoRow(String label, String value, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.onSurfaceVariant,
+            ),
+          ),
+          Row(
+            children: [
+              Text(
+                value.length > 20 ? '${value.substring(0, 17)}...' : value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.copy,
+                size: 16,
+                color: AppTheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -289,6 +361,10 @@ class AccountScreen extends StatelessWidget {
                   _buildInfoRow('Projects', '${appState.projects.length}'),
                   const Divider(height: 24),
                   _buildInfoRow('Vercel Plan', _getVercelPlan(appState.user)),
+                  if (_supportId.isNotEmpty) ...[
+                    const Divider(height: 24),
+                    _buildCopyableInfoRow('Support ID', _supportId, _copySupportId),
+                  ],
                 ],
               ),
             ),

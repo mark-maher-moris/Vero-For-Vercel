@@ -344,6 +344,19 @@ class VercelApi {
     if (to != null) params['to'] = _truncateIso8601(to);
     if (projectId != null) params['projectId'] = projectId;
     
+    // Try v4 first (works for hobby plans), fallback to v1 for Pro/Enterprise
+    try {
+      final response = await http.get(
+        _buildUri('/v4/usage', params),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return await _handleResponse(response);
+      }
+    } catch (e) {
+      // v4 failed, try v1 as fallback
+    }
+    
     final response = await http.get(
       _buildUri('/v1/usage', params),
       headers: await _getHeaders(),
@@ -609,6 +622,170 @@ class VercelApi {
       body: json.encode(body),
     );
     await _handleResponse(response);
+  }
+
+  // ==================== DEPLOYMENT ACTIONS ====================
+
+  /// Promote a deployment to production
+  /// [projectId] - The project ID
+  /// [deploymentId] - The deployment ID to promote
+  Future<Map<String, dynamic>> promoteDeployment({
+    required String projectId,
+    required String deploymentId,
+  }) async {
+    final response = await http.post(
+      _buildUri('/v13/deployments/$deploymentId/promote'),
+      headers: await _getHeaders(),
+      body: json.encode({'target': 'production'}),
+    );
+    return await _handleResponse(response);
+  }
+
+  /// Rollback to a previous deployment
+  /// [projectId] - The project ID
+  /// [deploymentId] - The deployment ID to rollback to
+  Future<Map<String, dynamic>> rollbackDeployment({
+    required String projectId,
+    required String deploymentId,
+  }) async {
+    final response = await http.post(
+      _buildUri('/v13/deployments/$deploymentId/rollback'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  /// Cancel an ongoing deployment
+  /// [projectId] - The project ID
+  /// [deploymentId] - The deployment ID to cancel
+  Future<Map<String, dynamic>> cancelDeployment({
+    required String projectId,
+    required String deploymentId,
+  }) async {
+    final response = await http.patch(
+      _buildUri('/v13/deployments/$deploymentId/cancel'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  // ==================== LOGS & OBSERVABILITY ====================
+
+  /// Get runtime logs for a deployment
+  /// [projectId] - The project ID
+  /// [deploymentId] - The deployment ID
+  /// [limit] - Maximum number of log entries to return
+  /// [since] - Timestamp to get logs since (milliseconds)
+  /// [until] - Timestamp to get logs until (milliseconds)
+  Future<List<Map<String, dynamic>>> getDeploymentRuntimeLogs({
+    required String projectId,
+    required String deploymentId,
+    int? limit,
+    int? since,
+    int? until,
+  }) async {
+    final params = <String, String>{};
+    if (limit != null) params['limit'] = limit.toString();
+    if (since != null) params['since'] = since.toString();
+    if (until != null) params['until'] = until.toString();
+
+    final response = await http.get(
+      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/runtime-logs', params.isNotEmpty ? params : null),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final logs = data['logs'] as List<dynamic>? ?? [];
+    return logs.cast<Map<String, dynamic>>();
+  }
+
+  /// Get function logs for a deployment
+  /// [projectId] - The project ID
+  /// [deploymentId] - The deployment ID
+  /// [functionName] - Optional specific function name to filter
+  /// [limit] - Maximum number of log entries
+  Future<List<Map<String, dynamic>>> getDeploymentFunctionLogs({
+    required String projectId,
+    required String deploymentId,
+    String? functionName,
+    int? limit,
+  }) async {
+    final params = <String, String>{};
+    if (functionName != null) params['function'] = functionName;
+    if (limit != null) params['limit'] = limit.toString();
+
+    final response = await http.get(
+      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/function-logs', params.isNotEmpty ? params : null),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final logs = data['logs'] as List<dynamic>? ?? [];
+    return logs.cast<Map<String, dynamic>>();
+  }
+
+  /// Get request logs for a deployment
+  /// [projectId] - The project ID
+  /// [deploymentId] - The deployment ID
+  /// [limit] - Maximum number of log entries
+  /// [since] - Timestamp to get logs since
+  Future<List<Map<String, dynamic>>> getDeploymentRequestLogs({
+    required String projectId,
+    required String deploymentId,
+    int? limit,
+    int? since,
+  }) async {
+    final params = <String, String>{};
+    if (limit != null) params['limit'] = limit.toString();
+    if (since != null) params['since'] = since.toString();
+
+    final response = await http.get(
+      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/request-logs', params.isNotEmpty ? params : null),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final logs = data['logs'] as List<dynamic>? ?? [];
+    return logs.cast<Map<String, dynamic>>();
+  }
+
+  /// Get domain configuration including DNS details
+  /// [domain] - The domain name
+  Future<Map<String, dynamic>> getDomainConfiguration(String domain) async {
+    final response = await http.get(
+      _buildUri('/v6/domains/$domain'),
+      headers: await _getHeaders(),
+    );
+    return await _handleResponse(response);
+  }
+
+  /// Get deployment-specific domains
+  /// [projectId] - The project ID
+  /// [deploymentId] - The deployment ID
+  Future<List<Map<String, dynamic>>> getDeploymentDomains({
+    required String projectId,
+    required String deploymentId,
+  }) async {
+    final response = await http.get(
+      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/domains'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final domains = data['domains'] as List<dynamic>? ?? [];
+    return domains.cast<Map<String, dynamic>>();
+  }
+
+  /// Get build logs for a deployment
+  /// [projectId] - The project ID
+  /// [deploymentId] - The deployment ID
+  Future<List<Map<String, dynamic>>> getDeploymentBuildLogs({
+    required String projectId,
+    required String deploymentId,
+  }) async {
+    final response = await http.get(
+      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/build-logs'),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final logs = data['logs'] as List<dynamic>? ?? [];
+    return logs.cast<Map<String, dynamic>>();
   }
 }
 

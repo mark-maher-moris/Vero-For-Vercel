@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
-import '../widgets/project_selector_appbar.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 
@@ -58,7 +57,10 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      appBar: const ProjectSelectorAppBar(),
+      appBar: AppBar(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        title: const Text('Deployment Logs'),
+      ),
       body: Column(
         children: [
           // Subheader Info
@@ -118,7 +120,7 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
             child: Container(
               color: const Color(0xFF000000), // Pure black terminal background
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               child: _isLoading 
                 ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
                 : _errorMessage != null
@@ -143,17 +145,15 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
                           List<dynamic> filteredLogs = _logs!;
                           if (_filter == 'errors') {
                             filteredLogs = _logs!.where((log) {
-                              final payload = log['payload'] ?? {};
-                              final text = payload['text'] ?? payload['message'] ?? log.toString();
-                              final type = log['type'] as String? ?? 'info';
-                              return type == 'stderr' || text.toString().toLowerCase().contains('error');
+                              final text = _extractLogText(log);
+                              final type = _extractLogType(log);
+                              return type == 'stderr' || text.toLowerCase().contains('error');
                             }).toList();
                           } else if (_filter == 'info') {
                             filteredLogs = _logs!.where((log) {
-                              final type = log['type'] as String? ?? 'info';
-                              final payload = log['payload'] ?? {};
-                              final text = payload['text'] ?? payload['message'] ?? log.toString();
-                              return type != 'stderr' && !text.toString().toLowerCase().contains('error');
+                              final type = _extractLogType(log);
+                              final text = _extractLogText(log);
+                              return type != 'stderr' && !text.toLowerCase().contains('error');
                             }).toList();
                           }
                           
@@ -161,11 +161,10 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
                             itemCount: filteredLogs.length,
                             itemBuilder: (context, index) {
                               final log = filteredLogs[index];
-                              final payload = log['payload'] ?? {};
-                              final text = payload['text'] ?? payload['message'] ?? log.toString();
-                              final date = payload['date'] as int?;
+                              final text = _extractLogText(log);
+                              final date = _extractLogDate(log);
                               final timeStr = date != null ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first : '';
-                              final type = log['type'] as String? ?? 'info';
+                              final type = _extractLogType(log);
                               final isErrorLog = type == 'stderr' || text.toString().toLowerCase().contains('error');
                               final level = isErrorLog ? 'ERROR' : 'INFO';
                               
@@ -179,6 +178,67 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
         ],
       ),
     );
+  }
+
+  String _extractLogText(dynamic log) {
+    if (log is! Map) return log.toString();
+
+    // Try flat structure first (Vercel API format)
+    if (log['text'] != null) return log['text'].toString();
+    if (log['message'] != null) return log['message'].toString();
+
+    // Fall back to nested payload structure
+    final payload = log['payload'];
+    if (payload is Map) {
+      if (payload['text'] != null) return payload['text'].toString();
+      if (payload['message'] != null) return payload['message'].toString();
+    }
+
+    // Last resort
+    return log.toString();
+  }
+
+  int? _extractLogDate(dynamic log) {
+    if (log is! Map) return null;
+
+    // Try flat structure first
+    if (log['date'] != null) {
+      final date = log['date'];
+      if (date is int) return date;
+      if (date is String) return int.tryParse(date);
+    }
+    if (log['created'] != null) {
+      final created = log['created'];
+      if (created is int) return created;
+      if (created is String) return int.tryParse(created);
+    }
+
+    // Fall back to nested payload
+    final payload = log['payload'];
+    if (payload is Map) {
+      if (payload['date'] != null) {
+        final date = payload['date'];
+        if (date is int) return date;
+        if (date is String) return int.tryParse(date);
+      }
+    }
+
+    return null;
+  }
+
+  String _extractLogType(dynamic log) {
+    if (log is! Map) return 'info';
+
+    // Try flat structure first
+    if (log['type'] != null) return log['type'].toString();
+
+    // Fall back to nested payload
+    final payload = log['payload'];
+    if (payload is Map && payload['type'] != null) {
+      return payload['type'].toString();
+    }
+
+    return 'info';
   }
 
   Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
@@ -217,29 +277,34 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 70,
-            child: Text(
-              time,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 13, color: Color(0xFF666666)),
-            ),
+          // Time row
+          Text(
+            time,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Color(0xFF666666)),
           ),
-          SizedBox(
-            width: 45,
-            child: Text(
-              level,
-              style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: levelColor, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: level == 'ERROR' ? AppTheme.error : AppTheme.onSurface),
-            ),
+          const SizedBox(height: 2),
+          // Level and message row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 45,
+                child: Text(
+                  level,
+                  style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: levelColor, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: level == 'ERROR' ? AppTheme.error : AppTheme.onSurface),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -252,14 +317,13 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
     try {
       final buffer = StringBuffer();
       for (final log in _logs!) {
-        final payload = log['payload'] ?? {};
-        final text = payload['text'] ?? payload['message'] ?? log.toString();
-        final date = payload['date'] as int?;
-        final timeStr = date != null 
-          ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first 
+        final text = _extractLogText(log);
+        final date = _extractLogDate(log);
+        final timeStr = date != null
+          ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first
           : '';
-        final type = log['type'] as String? ?? 'info';
-        final isError = type == 'stderr' || text.toString().toLowerCase().contains('error');
+        final type = _extractLogType(log);
+        final isError = type == 'stderr' || text.toLowerCase().contains('error');
         buffer.writeln('[$timeStr] ${isError ? 'ERROR' : 'INFO'}: $text');
       }
       

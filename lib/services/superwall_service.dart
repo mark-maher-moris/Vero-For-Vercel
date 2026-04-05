@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -301,6 +303,17 @@ class SuperwallService {
   void _updateSubscriptionStatus(bool hasActiveSubscription) {
     _hasActiveSubscription = hasActiveSubscription;
     _subscriptionController.add(hasActiveSubscription);
+  }
+
+  /// Get the current Superwall user ID (support ID)
+  Future<String> getUserId() async {
+    if (!_isInitialized) return '';
+    try {
+      return await sw.Superwall.shared.getUserId();
+    } catch (e) {
+      if (kDebugMode) print('Superwall: Get userId error - $e');
+      return '';
+    }
   }
 
   /// Dispose of resources
