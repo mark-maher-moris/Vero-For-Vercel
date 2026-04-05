@@ -169,28 +169,52 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
-              const SizedBox(height: 16),
-              const Text('Failed to load logs', style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12)),
-              const SizedBox(height: 24),
-              ElevatedButton(onPressed: _fetchLogs, child: const Text('Retry')),
-            ],
+      return RefreshIndicator(
+        onRefresh: _fetchLogs,
+        color: AppTheme.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
+                  const SizedBox(height: 16),
+                  const Text('Failed to load logs', style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12)),
+                  const SizedBox(height: 24),
+                  ElevatedButton(onPressed: _fetchLogs, child: const Text('Retry')),
+                  const SizedBox(height: 100), // Extra space for pull-to-refresh
+                ],
+              ),
+            ),
           ),
         ),
       );
     }
 
     if (logs == null || logs.isEmpty) {
-      return Center(
-        child: Text('No logs available', style: TextStyle(color: AppTheme.onSurfaceVariant)),
+      return RefreshIndicator(
+        onRefresh: _fetchLogs,
+        color: AppTheme.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('No logs available', style: TextStyle(color: AppTheme.onSurfaceVariant)),
+                  const SizedBox(height: 100), // Extra space for pull-to-refresh
+                ],
+              ),
+            ),
+          ),
+        ),
       );
     }
 
@@ -207,19 +231,24 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
       }).toList();
     }
 
-    return Container(
-      color: const Color(0xFF000000),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: filteredLogs.length,
-        itemBuilder: (context, index) {
-          final log = filteredLogs[index];
-          final message = log['message'] ?? log['text'] ?? log.toString();
-          final timestamp = log['timestamp'] ?? log['date'];
-          final level = message.toString().toLowerCase().contains('error') ? 'ERROR' : 'INFO';
+    return RefreshIndicator(
+      onRefresh: _fetchLogs,
+      color: AppTheme.primary,
+      child: Container(
+        color: const Color(0xFF000000),
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          itemCount: filteredLogs.length,
+          itemBuilder: (context, index) {
+            final log = filteredLogs[index];
+            final message = log['message'] ?? log['text'] ?? log.toString();
+            final timestamp = log['timestamp'] ?? log['date'];
+            final level = message.toString().toLowerCase().contains('error') ? 'ERROR' : 'INFO';
 
-          return _buildLogLine(timestamp, level, message.toString());
-        },
+            return _buildLogLine(timestamp, level, message.toString());
+          },
+        ),
       ),
     );
   }

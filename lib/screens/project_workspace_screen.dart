@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import '../models/env_var.dart';
 import '../widgets/action_card.dart';
 import '../widgets/deployment_card.dart';
+import '../widgets/traffic_globe.dart';
 import 'deployment_logs_screen.dart';
 
 class ProjectWorkspaceScreen extends StatefulWidget {
@@ -411,19 +412,25 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             ? 'https://github.com/${widget.project.link!['org']}/${widget.project.link!['repo']}'
             : null;
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        _buildInfoCard(),
-        const SizedBox(height: 24),
-        _buildQuickActions(),
-        const SizedBox(height: 24),
-        if (repoUrl != null) _buildGitSection(repoUrl),
-        if (repoUrl != null) const SizedBox(height: 24),
-        _buildTechnicalStats(),
-        const SizedBox(height: 24),
-        _buildFeaturesSection(),
-      ],
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          _buildInfoCard(),
+          const SizedBox(height: 24),
+          TrafficGlobe(projectId: widget.project.id),
+          const SizedBox(height: 24),
+          _buildQuickActions(),
+          const SizedBox(height: 24),
+          if (repoUrl != null) _buildGitSection(repoUrl),
+          if (repoUrl != null) const SizedBox(height: 24),
+          _buildTechnicalStats(),
+          const SizedBox(height: 24),
+          _buildFeaturesSection(),
+        ],
+      ),
     );
   }
 
@@ -783,200 +790,212 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   }
 
   Widget _buildDeploymentsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('DEPLOYMENTS', style: Theme.of(context).textTheme.labelSmall),
-            if (_deployments != null)
-              Text(
-                '${_deployments!.length} total',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.onSurfaceVariant,
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('DEPLOYMENTS', style: Theme.of(context).textTheme.labelSmall),
+              if (_deployments != null)
+                Text(
+                  '${_deployments!.length} total',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (_deployments == null || _deployments!.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: const Center(
-              child: Text(
-                'No deployments found',
-                style: TextStyle(color: AppTheme.onSurfaceVariant),
-              ),
-            ),
-          )
-        else
-          ..._deployments!.map((dep) => DeploymentCard(
-            deployment: dep,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DeploymentLogsScreen(deployment: dep),
-                ),
-              );
-            },
-          )),
-      ],
-    );
-  }
-
-  Widget _buildLogsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Text('DEPLOYMENT LOGS', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
-        if (_deployments == null || _deployments!.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: const Center(
-              child: Text(
-                'No deployments to show logs for',
-                style: TextStyle(color: AppTheme.onSurfaceVariant),
-              ),
-            ),
-          )
-        else
-          ..._deployments!.take(5).map((dep) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_deployments == null || _deployments!.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(2),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: dep.state == 'READY' ? AppTheme.success : AppTheme.error,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          dep.url,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          timeago.format(DateTime.fromMillisecondsSinceEpoch(dep.created * 1000)),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DeploymentLogsScreen(deployment: dep),
-                        ),
-                      );
-                    },
-                    child: const Text('VIEW LOGS'),
-                  ),
-                ],
+              child: const Center(
+                child: Text(
+                  'No deployments found',
+                  style: TextStyle(color: AppTheme.onSurfaceVariant),
+                ),
               ),
-            );
-          }),
-      ],
+            )
+          else
+            ..._deployments!.map((dep) => DeploymentCard(
+              deployment: dep,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DeploymentLogsScreen(deployment: dep),
+                  ),
+                );
+              },
+            )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogsTab() {
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text('DEPLOYMENT LOGS', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 16),
+          if (_deployments == null || _deployments!.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: const Center(
+                child: Text(
+                  'No deployments to show logs for',
+                  style: TextStyle(color: AppTheme.onSurfaceVariant),
+                ),
+              ),
+            )
+          else
+            ..._deployments!.take(5).map((dep) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: dep.state == 'READY' ? AppTheme.success : AppTheme.error,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            dep.url,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            timeago.format(DateTime.fromMillisecondsSinceEpoch(dep.created * 1000)),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DeploymentLogsScreen(deployment: dep),
+                          ),
+                        );
+                      },
+                      child: const Text('VIEW LOGS'),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
     );
   }
 
   Widget _buildActivityTab() {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('PROJECT ACTIVITY', style: Theme.of(context).textTheme.labelSmall),
-            if (_deployments != null)
-              Text(
-                '${_deployments!.length} events',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.onSurfaceVariant,
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('PROJECT ACTIVITY', style: Theme.of(context).textTheme.labelSmall),
+              if (_deployments != null)
+                Text(
+                  '${_deployments!.length} events',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        if (_deployments == null || _deployments!.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: const Center(
-              child: Text(
-                'No activity found for this project',
-                style: TextStyle(color: AppTheme.onSurfaceVariant),
-              ),
-            ),
-          )
-        else
-          Column(
-            children: List.generate(_deployments!.length, (index) {
-              final deployment = _deployments![index];
-              final isLast = index == _deployments!.length - 1;
-              final createdDate = DateTime.fromMillisecondsSinceEpoch(deployment.created * 1000);
-              
-              return _buildActivityItem(
-                isLast: isLast,
-                icon: _getIconForState(deployment.state),
-                title: deployment.name,
-                timeAgo: timeago.format(createdDate).toUpperCase(),
-                description: TextSpan(
-                  children: [
-                    const TextSpan(text: 'Deployment to '),
-                    TextSpan(
-                      text: deployment.url,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
-                    ),
-                    TextSpan(text: ' is ${deployment.state.toLowerCase()}.'),
-                  ],
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DeploymentLogsScreen(deployment: deployment),
-                    ),
-                  );
-                },
-              );
-            }),
+            ],
           ),
-      ],
+          const SizedBox(height: 24),
+          if (_deployments == null || _deployments!.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: const Center(
+                child: Text(
+                  'No activity found for this project',
+                  style: TextStyle(color: AppTheme.onSurfaceVariant),
+                ),
+              ),
+            )
+          else
+            Column(
+              children: List.generate(_deployments!.length, (index) {
+                final deployment = _deployments![index];
+                final isLast = index == _deployments!.length - 1;
+                final createdDate = DateTime.fromMillisecondsSinceEpoch(deployment.created * 1000);
+                
+                return _buildActivityItem(
+                  isLast: isLast,
+                  icon: _getIconForState(deployment.state),
+                  title: deployment.name,
+                  timeAgo: timeago.format(createdDate).toUpperCase(),
+                  description: TextSpan(
+                    children: [
+                      const TextSpan(text: 'Deployment to '),
+                      TextSpan(
+                        text: deployment.url,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
+                      ),
+                      TextSpan(text: ' is ${deployment.state.toLowerCase()}.'),
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DeploymentLogsScreen(deployment: deployment),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ),
+        ],
+      ),
     );
   }
 
@@ -1062,82 +1081,86 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     final ssoEnabled = widget.project.ssoProtection != null;
     final passwordProtected = widget.project.passwordProtection != null;
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Text('SECURITY SETTINGS', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: Column(
-            children: [
-              _buildSecurityRow(
-                'Firewall',
-                firewallEnabled ? 'Enabled' : 'Disabled',
-                firewallEnabled ? AppTheme.success : AppTheme.onSurfaceVariant,
-                Icons.shield,
-              ),
-              const Divider(height: 24),
-              _buildSecurityRow(
-                'Attack Mode',
-                attackMode ? 'Enabled' : 'Disabled',
-                attackMode ? AppTheme.error : AppTheme.onSurfaceVariant,
-                Icons.gpp_maybe,
-              ),
-              const Divider(height: 24),
-              _buildSecurityRow(
-                'SSO Protection',
-                ssoEnabled ? 'Enabled' : 'Disabled',
-                ssoEnabled ? AppTheme.primary : AppTheme.onSurfaceVariant,
-                Icons.people,
-              ),
-              const Divider(height: 24),
-              _buildSecurityRow(
-                'Password Protection',
-                passwordProtected ? 'Enabled' : 'Disabled',
-                passwordProtected ? AppTheme.error : AppTheme.onSurfaceVariant,
-                Icons.lock,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.info_outline, size: 16, color: AppTheme.onSurfaceVariant),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Security Note',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Security settings can be configured in the Vercel dashboard. Changes may take a few minutes to propagate.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.onSurfaceVariant,
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text('SECURITY SETTINGS', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Column(
+              children: [
+                _buildSecurityRow(
+                  'Firewall',
+                  firewallEnabled ? 'Enabled' : 'Disabled',
+                  firewallEnabled ? AppTheme.success : AppTheme.onSurfaceVariant,
+                  Icons.shield,
                 ),
-              ),
-            ],
+                const Divider(height: 24),
+                _buildSecurityRow(
+                  'Attack Mode',
+                  attackMode ? 'Enabled' : 'Disabled',
+                  attackMode ? AppTheme.error : AppTheme.onSurfaceVariant,
+                  Icons.gpp_maybe,
+                ),
+                const Divider(height: 24),
+                _buildSecurityRow(
+                  'SSO Protection',
+                  ssoEnabled ? 'Enabled' : 'Disabled',
+                  ssoEnabled ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                  Icons.people,
+                ),
+                const Divider(height: 24),
+                _buildSecurityRow(
+                  'Password Protection',
+                  passwordProtected ? 'Enabled' : 'Disabled',
+                  passwordProtected ? AppTheme.error : AppTheme.onSurfaceVariant,
+                  Icons.lock,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: AppTheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Security Note',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Security settings can be configured in the Vercel dashboard. Changes may take a few minutes to propagate.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1159,78 +1182,82 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   }
 
   Widget _buildEnvVarsTab() {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('ENVIRONMENT VARIABLES', style: Theme.of(context).textTheme.labelSmall),
-            Row(
-              children: [
-                if (_envVars != null)
-                  Text(
-                    '${_envVars!.length} variables',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.onSurfaceVariant,
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('ENVIRONMENT VARIABLES', style: Theme.of(context).textTheme.labelSmall),
+              Row(
+                children: [
+                  if (_envVars != null)
+                    Text(
+                      '${_envVars!.length} variables',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                    ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _isEditingEnvVar ? null : () => _showAddEnvVarDialog(),
+                    icon: const Icon(Icons.add, size: 16, color: Colors.black),
+                    label: const Text('ADD', style: TextStyle(color: Colors.black)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _isEditingEnvVar ? null : () => _showAddEnvVarDialog(),
-                  icon: const Icon(Icons.add, size: 16, color: Colors.black),
-                  label: const Text('ADD', style: TextStyle(color: Colors.black)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_envVars == null || _envVars!.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: const Center(
+                child: Text(
+                  'No environment variables configured',
+                  style: TextStyle(color: AppTheme.onSurfaceVariant),
                 ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (_envVars == null || _envVars!.isEmpty)
+              ),
+            )
+          else
+            ..._envVars!.map((env) => _buildEnvVarCard(env)),
+          const SizedBox(height: 24),
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerLowest,
               borderRadius: BorderRadius.circular(2),
             ),
-            child: const Center(
-              child: Text(
-                'No environment variables configured',
-                style: TextStyle(color: AppTheme.onSurfaceVariant),
-              ),
-            ),
-          )
-        else
-          ..._envVars!.map((env) => _buildEnvVarCard(env)),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, size: 16, color: AppTheme.onSurfaceVariant),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Secret values are hidden by default. Click the eye icon to reveal. Changes require redeployment to take effect.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.onSurfaceVariant,
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: AppTheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Secret values are hidden by default. Click the eye icon to reveal. Changes require redeployment to take effect.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1650,96 +1677,100 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   Widget _buildDomainsTab() {
     final aliases = widget.project.alias ?? [];
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Text('PRODUCTION DOMAINS', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
-        if (_domains == null || _domains!.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: const Center(
-              child: Text(
-                'No domains configured',
-                style: TextStyle(color: AppTheme.onSurfaceVariant),
-              ),
-            ),
-          )
-        else
-          ..._domains!.take(5).map((dom) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.language, color: AppTheme.onSurfaceVariant),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      dom['name'],
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => _copyToClipboard(dom['name']),
-                    child: const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
-                  ),
-                ],
-              ),
-            );
-          }),
-        if (aliases.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text('ALIASES', style: Theme.of(context).textTheme.labelSmall),
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text('PRODUCTION DOMAINS', style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: 16),
-          ...aliases.take(3).map((alias) {
-            final domain = alias['domain'] as String? ?? '';
-            final target = alias['target'] as String? ?? '';
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
+          if (_domains == null || _domains!.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(2),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.language, size: 18, color: AppTheme.onSurfaceVariant),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(domain, style: const TextStyle(fontFamily: 'monospace'))),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Text(
-                      target,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.bold,
+              child: const Center(
+                child: Text(
+                  'No domains configured',
+                  style: TextStyle(color: AppTheme.onSurfaceVariant),
+                ),
+              ),
+            )
+          else
+            ..._domains!.take(5).map((dom) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.language, color: AppTheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        dom['name'],
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primary,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }),
+                    InkWell(
+                      onTap: () => _copyToClipboard(dom['name']),
+                      child: const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          if (aliases.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text('ALIASES', style: Theme.of(context).textTheme.labelSmall),
+            const SizedBox(height: 16),
+            ...aliases.take(3).map((alias) {
+              final domain = alias['domain'] as String? ?? '';
+              final target = alias['target'] as String? ?? '';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.language, size: 18, color: AppTheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(domain, style: const TextStyle(fontFamily: 'monospace'))),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Text(
+                        target,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
         ],
-      ],
+      ),
     );
   }
 

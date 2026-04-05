@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,6 +36,19 @@ class SuperwallService {
   bool _hasActiveSubscription = false;
   bool get hasActiveSubscription => _hasActiveSubscription;
 
+  /// Get current subscription status directly from Superwall (async)
+  Future<bool> getCurrentSubscriptionStatus() async {
+    // Get the latest value from the stream with a timeout
+    try {
+      return await subscriptionStream.first.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => _hasActiveSubscription,
+      );
+    } catch (e) {
+      return _hasActiveSubscription;
+    }
+  }
+
   /// Get the appropriate Superwall API key based on platform
   String _getApiKey() {
     if (Platform.isIOS) {
@@ -60,6 +71,9 @@ class SuperwallService {
     );
   }
 
+  /// Whether Superwall is currently initializing
+  Completer<void>? _initCompleter;
+
   /// Initialize Superwall SDK
   /// Call this in main.dart before runApp()
   Future<void> initialize() async {
@@ -67,6 +81,13 @@ class SuperwallService {
       if (kDebugMode) print('Superwall: Already initialized');
       return;
     }
+
+    if (_initCompleter != null) {
+      if (kDebugMode) print('Superwall: Initialization already in progress, waiting...');
+      return _initCompleter!.future;
+    }
+
+    _initCompleter = Completer<void>();
 
     try {
       final apiKey = _getApiKey();
@@ -79,15 +100,20 @@ class SuperwallService {
       sw.Superwall.shared.setDelegate(_SuperwallDelegateImpl());
 
       _isInitialized = true;
+      _initCompleter!.complete();
       
       if (kDebugMode) {
         print('Superwall: Initialized successfully');
       }
     } catch (e) {
+      _initCompleter!.completeError(e);
+      _initCompleter = null;
       if (kDebugMode) {
         print('Superwall: Initialization error - $e');
       }
       rethrow;
+    } finally {
+      _initCompleter = null;
     }
   }
 

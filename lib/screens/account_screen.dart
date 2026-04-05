@@ -365,6 +365,8 @@ class _AccountScreenState extends State<AccountScreen> {
                     const Divider(height: 24),
                     _buildCopyableInfoRow('Support ID', _supportId, _copySupportId),
                   ],
+                  const Divider(height: 24),
+                  _buildRestorePurchasesButton(),
                 ],
               ),
             ),
@@ -618,6 +620,66 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildRestorePurchasesButton() {
+    return GestureDetector(
+      onTap: () => _restorePurchases(),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Restore Purchases',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.onSurfaceVariant,
+            ),
+          ),
+          Row(
+            children: [
+              const Icon(
+                Icons.restore,
+                size: 18,
+                color: AppTheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Tap to restore',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _restorePurchases() async {
+    try {
+      await SuperwallService().restorePurchases();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Purchases restored successfully'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to restore purchases: $e'),
+            backgroundColor: AppTheme.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   String _getVercelPlan(Map<String, dynamic>? userData) {

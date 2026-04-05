@@ -738,7 +738,7 @@ class VercelApi {
     if (since != null) params['since'] = since.toString();
 
     final response = await http.get(
-      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/request-logs', params.isNotEmpty ? params : null),
+      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/runtime-logs', params.isNotEmpty ? params : null),
       headers: await _getHeaders(),
     );
     final data = await _handleResponse(response);

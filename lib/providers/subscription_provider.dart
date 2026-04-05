@@ -32,6 +32,11 @@ class SubscriptionProvider extends ChangeNotifier {
     _setLoading(true);
     
     try {
+      // Ensure Superwall is initialized before proceeding
+      if (!_superwallService.isInitialized) {
+        await _superwallService.initialize();
+      }
+
       // Listen to subscription status updates from Superwall
       _subscriptionStatusSubscription = _superwallService.subscriptionStream.listen(
         _onSubscriptionStatusUpdate,
@@ -42,8 +47,11 @@ class SubscriptionProvider extends ChangeNotifier {
         },
       );
       
-      // Check initial subscription status
-      _isPro = _superwallService.hasActiveSubscription;
+      // Restore purchases to sync subscription status from store
+      await _superwallService.restorePurchases();
+      
+      // Check initial subscription status (async to get latest)
+      _isPro = await _superwallService.getCurrentSubscriptionStatus();
       notifyListeners();
     } catch (e) {
       _setError('Failed to initialize subscriptions: $e');
@@ -70,8 +78,8 @@ class SubscriptionProvider extends ChangeNotifier {
     _clearError();
     
     try {
-      // Update subscription status from Superwall
-      _isPro = _superwallService.hasActiveSubscription;
+      // Update subscription status from Superwall (async to get latest)
+      _isPro = await _superwallService.getCurrentSubscriptionStatus();
       
       if (kDebugMode) {
         print('SubscriptionProvider: Refreshed - Pro: $_isPro');
