@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/domain.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
+import '../models/deployment_file.dart';
 import '../models/security.dart';
 import 'auth_service.dart';
 
@@ -25,7 +27,9 @@ class VercelApi {
   VercelApi({this.teamId});
 
   Future<Map<String, String>> _getHeaders() async {
+    print('[VercelApi] _getHeaders called - fetching token...');
     final token = await _authService.getToken();
+    print('[VercelApi] token retrieved: ${token != null ? 'present' : 'null'}');
     if (token == null) throw VercelApiException('No access token found', statusCode: 401);
     return {
       'Authorization': 'Bearer $token',
@@ -39,7 +43,11 @@ class VercelApi {
       params['teamId'] = teamId!;
     }
     
-    return Uri.parse('$baseUrl$path').replace(queryParameters: params.isNotEmpty ? params : null);
+    final uri = Uri.parse('$baseUrl$path').replace(queryParameters: params.isNotEmpty ? params : null);
+    if (kDebugMode && path.contains('/files')) {
+      print('VercelApi: Building URI for files: $uri (teamId: $teamId)');
+    }
+    return uri;
   }
 
   /// Truncate ISO 8601 string to millisecond precision (Vercel API compatibility)
@@ -75,10 +83,14 @@ class VercelApi {
         }
       }
       
-      print('Vercel API Error: $message (Status: ${response.statusCode})');
-      print('  → Endpoint: ${response.request?.method} ${response.request?.url}');
-      print('  → Response Body: ${response.body}');
-      print('  → Timestamp: ${DateTime.now().toIso8601String()}');
+      // Don't log 404 "File tree not found" as a scary API error, as it's a known limitation for Git deployments
+      if (response.statusCode != 404 || message != 'File tree not found') {
+        print('Vercel API Error: $message (Status: ${response.statusCode})');
+        print('  → Endpoint: ${response.request?.method} ${response.request?.url}');
+        print('  → Response Body: ${response.body}');
+        print('  → Timestamp: ${DateTime.now().toIso8601String()}');
+      }
+      
       throw VercelApiException(message, statusCode: response.statusCode, code: code);
     }
   }
@@ -93,45 +105,140 @@ class VercelApi {
 
   /// Get all domains for the authenticated user or team
   /// Uses v5/domains endpoint for efficient global domain listing
+  /// Fetches from personal account + all teams to ensure complete domain list
   Future<List<Domain>> getDomains() async {
-    final response = await http.get(
-      _buildUri('/v5/domains'),
-      headers: await _getHeaders(),
+    print('[VercelApi] getDomains called');
+    final allDomains = <Domain>[];
+    final seenDomainIds = <String>{};
+    
+    try {
+      // First, fetch domains from personal account (no teamId)
+      print('[VercelApi] Fetching domains from personal account...');
+      final personalDomains = await _getDomainsForTeam(null);
+      for (final domain in personalDomains) {
+        if (!seenDomainIds.contains(domain.id)) {
+          seenDomainIds.add(domain.id);
+          allDomains.add(domain);
+        }
+      }
+      print('[VercelApi] Personal account domains: ${personalDomains.length}');
+      
+      // Then fetch domains from all teams
+      print('[VercelApi] Fetching teams list...');
+      final teamsResponse = await getTeams();
+      final teams = teamsResponse['teams'] as List<dynamic>? ?? [];
+      print('[VercelApi] Found ${teams.length} teams');
+      
+      for (final team in teams) {
+        final teamId = team['id'] as String?;
+        if (teamId == null) continue;
+        
+        print('[VercelApi] Fetching domains for team: $teamId');
+        try {
+          final teamDomains = await _getDomainsForTeam(teamId);
+          print('[VercelApi] Team $teamId domains: ${teamDomains.length}');
+          for (final domain in teamDomains) {
+            if (!seenDomainIds.contains(domain.id)) {
+              seenDomainIds.add(domain.id);
+              allDomains.add(domain);
+            }
+          }
+        } catch (e) {
+          print('[VercelApi] Error fetching domains for team $teamId: $e');
+          // Continue to next team even if one fails
+        }
+      }
+      
+      print('[VercelApi] Total unique domains found: ${allDomains.length}');
+      return allDomains;
+    } catch (e, stackTrace) {
+      print('[VercelApi] Error in getDomains: $e');
+      print('[VercelApi] Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+  
+  /// Helper to fetch domains for a specific team (null for personal)
+  Future<List<Domain>> _getDomainsForTeam(String? teamId) async {
+    final params = <String, String>{};
+    if (teamId != null) {
+      params['teamId'] = teamId;
+    }
+    
+    final uri = Uri.parse('$baseUrl/v5/domains').replace(
+      queryParameters: params.isNotEmpty ? params : null,
     );
-    final data = await _handleResponse(response);
-    final List domainsJson = data['domains'] as List? ?? [];
-    return domainsJson.map((json) => Domain.fromJson(json)).toList();
+    
+    print('[VercelApi] _getDomainsForTeam(${teamId ?? 'personal'}) - URI: $uri');
+    
+    final headers = await _getHeaders();
+    final response = await http.get(uri, headers: headers);
+    
+    print('[VercelApi] Response status: ${response.statusCode}');
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final List domainsJson = data['domains'] as List? ?? [];
+      return domainsJson.map((json) => Domain.fromJson(json)).toList();
+    }
+    
+    // Handle errors
+    final data = json.decode(response.body);
+    String message = 'Failed to fetch domains';
+    if (data is Map && data.containsKey('error')) {
+      final error = data['error'];
+      if (error is Map) message = error['message'] ?? message;
+    }
+    throw VercelApiException(message, statusCode: response.statusCode);
   }
 
   /// Get DNS records for a specific domain
   /// Uses v5/domains/{domain}/records endpoint
   Future<List<Map<String, dynamic>>> getDomainDnsRecords(String domain) async {
-    final response = await http.get(
-      _buildUri('/v5/domains/$domain/records'),
-      headers: await _getHeaders(),
-    );
-    final data = await _handleResponse(response);
-    final records = data['records'] as List<dynamic>? ?? [];
-    return records.cast<Map<String, dynamic>>();
+    try {
+      final response = await http.get(
+        _buildUri('/v5/domains/$domain/records'),
+        headers: await _getHeaders(),
+      );
+      final data = await _handleResponse(response);
+      final records = data['records'] as List<dynamic>? ?? [];
+      return records.cast<Map<String, dynamic>>();
+    } catch (e, stackTrace) {
+      print('Error in getDomainDnsRecords for domain "$domain": $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   /// Create a new DNS record for a domain
   Future<Map<String, dynamic>> createDnsRecord(String domain, Map<String, dynamic> record) async {
-    final response = await http.post(
-      _buildUri('/v5/domains/$domain/records'),
-      headers: await _getHeaders(),
-      body: json.encode(record),
-    );
-    return await _handleResponse(response);
+    try {
+      final response = await http.post(
+        _buildUri('/v5/domains/$domain/records'),
+        headers: await _getHeaders(),
+        body: json.encode(record),
+      );
+      return await _handleResponse(response);
+    } catch (e, stackTrace) {
+      print('Error in createDnsRecord for domain "$domain": $e');
+      print('Record data: $record');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   /// Delete a DNS record for a domain
   Future<void> deleteDnsRecord(String domain, String recordId) async {
-    final response = await http.delete(
-      _buildUri('/v5/domains/$domain/records/$recordId'),
-      headers: await _getHeaders(),
-    );
-    await _handleResponse(response);
+    try {
+      final response = await http.delete(
+        _buildUri('/v5/domains/$domain/records/$recordId'),
+        headers: await _getHeaders(),
+      );
+      await _handleResponse(response);
+    } catch (e, stackTrace) {
+      print('Error in deleteDnsRecord for domain "$domain", recordId "$recordId": $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> getUser() async {
@@ -244,12 +351,18 @@ class VercelApi {
   }
 
   Future<List<dynamic>> getProjectDomains(String projectId) async {
-    final response = await http.get(
-      _buildUri('/v9/projects/$projectId/domains'),
-      headers: await _getHeaders(),
-    );
-    final data = await _handleResponse(response);
-    return data['domains'] as List<dynamic>? ?? [];
+    try {
+      final response = await http.get(
+        _buildUri('/v9/projects/$projectId/domains'),
+        headers: await _getHeaders(),
+      );
+      final data = await _handleResponse(response);
+      return data['domains'] as List<dynamic>? ?? [];
+    } catch (e, stackTrace) {
+      print('Error in getProjectDomains for projectId "$projectId": $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<List<dynamic>> getDeploymentEvents(String deploymentId) async {
@@ -273,28 +386,46 @@ class VercelApi {
   }
 
   Future<Map<String, dynamic>> addDomain(String projectId, String domainName) async {
-    final response = await http.post(
-      _buildUri('/v9/projects/$projectId/domains'),
-      headers: await _getHeaders(),
-      body: json.encode({'name': domainName}),
-    );
-    return await _handleResponse(response);
+    try {
+      final response = await http.post(
+        _buildUri('/v9/projects/$projectId/domains'),
+        headers: await _getHeaders(),
+        body: json.encode({'name': domainName}),
+      );
+      return await _handleResponse(response);
+    } catch (e, stackTrace) {
+      print('Error in addDomain for projectId "$projectId", domain "$domainName": $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> removeDomain(String projectId, String domain) async {
-    final response = await http.delete(
-      _buildUri('/v9/projects/$projectId/domains/$domain'),
-      headers: await _getHeaders(),
-    );
-    return await _handleResponse(response);
+    try {
+      final response = await http.delete(
+        _buildUri('/v9/projects/$projectId/domains/$domain'),
+        headers: await _getHeaders(),
+      );
+      return await _handleResponse(response);
+    } catch (e, stackTrace) {
+      print('Error in removeDomain for projectId "$projectId", domain "$domain": $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> verifyDomain(String projectId, String domain) async {
-    final response = await http.post(
-      _buildUri('/v9/projects/$projectId/domains/$domain/verify'),
-      headers: await _getHeaders(),
-    );
-    return await _handleResponse(response);
+    try {
+      final response = await http.post(
+        _buildUri('/v9/projects/$projectId/domains/$domain/verify'),
+        headers: await _getHeaders(),
+      );
+      return await _handleResponse(response);
+    } catch (e, stackTrace) {
+      print('Error in verifyDomain for projectId "$projectId", domain "$domain": $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<List<dynamic>> createEnvVars(String projectId, List<Map<String, dynamic>> envVars) async {
@@ -326,6 +457,18 @@ class VercelApi {
       headers: await _getHeaders(),
     );
     await _handleResponse(response);
+  }
+
+  /// Retrieve the decrypted value of an environment variable
+  /// [projectId] - The project ID
+  /// [envVarId] - The environment variable ID
+  Future<String> getDecryptedEnvVar(String projectId, String envVarId) async {
+    final response = await http.get(
+      _buildUri('/v1/projects/$projectId/env/$envVarId', {'decrypt': 'true'}),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return data['value'] as String? ?? '';
   }
 
   Future<Map<String, dynamic>> inviteTeamMember(String teamId, String email, {String role = 'MEMBER'}) async {
@@ -749,11 +892,17 @@ class VercelApi {
   /// Get domain configuration including DNS details
   /// [domain] - The domain name
   Future<Map<String, dynamic>> getDomainConfiguration(String domain) async {
-    final response = await http.get(
-      _buildUri('/v6/domains/$domain'),
-      headers: await _getHeaders(),
-    );
-    return await _handleResponse(response);
+    try {
+      final response = await http.get(
+        _buildUri('/v6/domains/$domain'),
+        headers: await _getHeaders(),
+      );
+      return await _handleResponse(response);
+    } catch (e, stackTrace) {
+      print('Error in getDomainConfiguration for domain "$domain": $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   /// Get deployment-specific domains
@@ -763,13 +912,19 @@ class VercelApi {
     required String projectId,
     required String deploymentId,
   }) async {
-    final response = await http.get(
-      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/domains'),
-      headers: await _getHeaders(),
-    );
-    final data = await _handleResponse(response);
-    final domains = data['domains'] as List<dynamic>? ?? [];
-    return domains.cast<Map<String, dynamic>>();
+    try {
+      final response = await http.get(
+        _buildUri('/v1/projects/$projectId/deployments/$deploymentId/domains'),
+        headers: await _getHeaders(),
+      );
+      final data = await _handleResponse(response);
+      final domains = data['domains'] as List<dynamic>? ?? [];
+      return domains.cast<Map<String, dynamic>>();
+    } catch (e, stackTrace) {
+      print('Error in getDeploymentDomains for projectId "$projectId", deploymentId "$deploymentId": $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   /// Get build logs for a deployment
@@ -786,6 +941,53 @@ class VercelApi {
     final data = await _handleResponse(response);
     final logs = data['logs'] as List<dynamic>? ?? [];
     return logs.cast<Map<String, dynamic>>();
+  }
+
+  /// List deployment files
+  /// [deploymentId] - The deployment ID
+  Future<List<DeploymentFile>> getDeploymentFiles(String deploymentId) async {
+    final params = <String, String>{};
+    if (teamId != null) params['teamId'] = teamId!;
+
+    final response = await http.get(
+      _buildUri('/v6/deployments/$deploymentId/files', params),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final list = data as List<dynamic>? ?? [];
+    return list.map((json) => DeploymentFile.fromJson(json as Map<String, dynamic>)).toList();
+  }
+
+  /// Get deployment file contents
+  /// [deploymentId] - The deployment ID
+  /// [fileId] - The file ID (uid)
+  Future<String> getDeploymentFileContents(String deploymentId, String fileId) async {
+    final params = <String, String>{};
+    if (teamId != null) params['teamId'] = teamId!;
+
+    final response = await http.get(
+      _buildUri('/v8/deployments/$deploymentId/files/$fileId', params),
+      headers: await _getHeaders(),
+    );
+    
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      // The response body contains the file content encoded as base64
+      try {
+        final data = json.decode(response.body);
+        if (data is Map && data.containsKey('content')) {
+          // Decode base64 content
+          final content = data['content'] as String;
+          return utf8.decode(base64.decode(content));
+        }
+        // Fallback: try to decode the entire response as base64
+        return utf8.decode(base64.decode(response.body));
+      } catch (e) {
+        // If decoding fails, return the raw response
+        return response.body;
+      }
+    } else {
+      throw VercelApiException('Failed to get file contents', statusCode: response.statusCode);
+    }
   }
 }
 

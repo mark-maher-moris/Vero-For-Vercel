@@ -96,6 +96,40 @@ class Deployment {
     }
     return '${duration.inSeconds}s';
   }
+
+  bool get isGit => source == 'git' || 
+                   meta?.containsKey('githubCommitSha') == true || 
+                   meta?.containsKey('gitlabCommitSha') == true || 
+                   meta?.containsKey('bitbucketCommitSha') == true;
+
+  String? get repositoryUrl {
+    final githubRepo = meta?['githubCommitRepo'];
+    if (githubRepo != null) {
+      final ref = meta?['githubCommitRef'] ?? 'main';
+      return 'https://github.com/$githubRepo/tree/$ref';
+    }
+    
+    final gitlabRepo = meta?['gitlabCommitRepo'];
+    if (gitlabRepo != null) {
+      final ref = meta?['gitlabCommitRef'] ?? 'main';
+      return 'https://gitlab.com/$gitlabRepo/-/tree/$ref';
+    }
+    
+    final bitbucketRepo = meta?['bitbucketCommitRepo'];
+    if (bitbucketRepo != null) {
+      final ref = meta?['bitbucketCommitRef'] ?? 'main';
+      return 'https://bitbucket.org/$bitbucketRepo/src/$ref';
+    }
+    
+    return null;
+  }
+
+  String? get providerName {
+    if (meta?.containsKey('githubCommitSha') == true) return 'GitHub';
+    if (meta?.containsKey('gitlabCommitSha') == true) return 'GitLab';
+    if (meta?.containsKey('bitbucketCommitSha') == true) return 'Bitbucket';
+    return null;
+  }
 }
 
 class DeploymentCreator {

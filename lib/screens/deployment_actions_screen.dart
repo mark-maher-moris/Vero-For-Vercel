@@ -4,6 +4,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
 import '../providers/app_state.dart';
+import '../screens/deployment_files_screen.dart';
 import '../providers/subscription_provider.dart';
 import '../services/superwall_service.dart';
 
@@ -52,6 +53,8 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
         children: [
           _buildDeploymentInfo(),
           const SizedBox(height: 40),
+          _buildFilesAction(),
+          const SizedBox(height: 24),
           _buildActionsSection(canPromote, canRollback, canCancel, isPro),
           if (_successMessage != null) ...[
             const SizedBox(height: 24),
@@ -129,6 +132,28 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilesAction() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('INSPECTION', style: Theme.of(context).textTheme.labelSmall),
+        const SizedBox(height: 16),
+        _buildActionButton(
+          label: 'View Source Files',
+          description: 'Browse the files included in this deployment',
+          icon: Icons.folder,
+          color: Colors.blue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DeploymentFilesScreen(deployment: widget.deployment),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

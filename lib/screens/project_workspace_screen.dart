@@ -10,11 +10,13 @@ import '../models/deployment.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import '../services/superwall_service.dart';
+import '../models/deployment_file.dart';
 import '../theme/app_theme.dart';
 import '../models/env_var.dart';
 import '../widgets/action_card.dart';
 import '../widgets/deployment_card.dart';
 import '../widgets/traffic_globe.dart';
+import 'file_content_screen.dart';
 import 'deployment_logs_screen.dart';
 
 class ProjectWorkspaceScreen extends StatefulWidget {
@@ -28,7 +30,6 @@ class ProjectWorkspaceScreen extends StatefulWidget {
 
 class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     with SingleTickerProviderStateMixin {
-  final Map<String, bool> _revealedSecrets = {};
   bool _isEditingEnvVar = false;
   late TabController _tabController;
   List<Deployment>? _deployments;
@@ -37,11 +38,14 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   bool _isLoading = true;
   bool _isRedeploying = false;
   String? _errorMessage;
+  late Future<List<DeploymentFile>> _deploymentFilesFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 7, vsync: this);
+    // Initialize with a dummy future that will be replaced in _fetchData
+    _deploymentFilesFuture = Future.value([]);
     // Track project workspace view
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SuperwallService().trackScreenView('project_workspace', additionalProps: {
@@ -86,16 +90,17 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       final deps = await appState.apiService.getDeployments(
         projectId: widget.project.id,
       );
-      final doms = await appState.apiService.getProjectDomains(
-        widget.project.id,
-      );
+      final doms = await appState.apiService.getProjectDomains(widget.project.id);
       final envs = await appState.apiService.getProjectEnvVars(widget.project.id);
-
       if (mounted) {
         setState(() {
           _deployments = deps;
           _domains = doms;
           _envVars = envs;
+          // Initialize the cached future for deployment files (only for non-Git deployments)
+          if (_deployments != null && _deployments!.isNotEmpty && !_deployments!.first.isGit) {
+            _deploymentFilesFuture = appState.apiService.getDeploymentFiles(_deployments!.first.uid);
+          }
           _isLoading = false;
         });
       }
@@ -252,7 +257,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           tabs: [
             const Tab(text: 'OVERVIEW'),
             const Tab(text: 'DEPLOYMENTS'),
-            // Show pro tabs with blur effect for free users
+            // const Tab(text: 'FILES'), // HIDDEN temporarily
             _buildProTab('LOGS', isPro),
             _buildProTab('ACTIVITY', isPro),
             _buildProTab('SECURITY', isPro),
@@ -268,11 +273,10 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               ? _buildErrorView()
               : TabBarView(
                 controller: _tabController,
-                physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _buildOverviewTab(),
                   _buildDeploymentsTab(),
-                  // Pro tabs - show blur overlay for free users
+                  // _buildBlurredTabIfNeeded(_buildFilesTab(), isPro, context), // HIDDEN temporarily
                   _buildBlurredTabIfNeeded(_buildLogsTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildActivityTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildSecurityTab(), isPro, context),
@@ -842,6 +846,242 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     );
   }
 
+  Widget _buildFilesTab() {
+    if (_deployments == null || _deployments!.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _fetchData,
+        color: AppTheme.primary,
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Text('DEPLOYMENT FILES', style: Theme.of(context).textTheme.labelSmall),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: const Center(
+                child: Text(
+                  'No deployments available to view files',
+                  style: TextStyle(color: AppTheme.onSurfaceVariant),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Use the latest deployment
+    final deployment = _deployments!.first;
+
+    // For Git-based deployments, show the repo link directly without calling the API
+    if (deployment.isGit) {
+      final repoUrl = deployment.repositoryUrl;
+      return RefreshIndicator(
+        onRefresh: _fetchData,
+        color: AppTheme.primary,
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Text('DEPLOYMENT FILES', style: Theme.of(context).textTheme.labelSmall),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: AppTheme.onSurfaceVariant,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'File Tree Unavailable',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'The file tree is not available for Git-based deployments via the Vercel API. You can view the source code directly on your Git provider.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppTheme.onSurfaceVariant),
+                  ),
+                  if (repoUrl != null) ...[
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _launchUrl(repoUrl),
+                      icon: const Icon(Icons.open_in_new),
+                      label: Text('View on ${deployment.providerName ?? 'Git'}'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return FutureBuilder<List<DeploymentFile>>(
+      future: _deploymentFilesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+        }
+
+        if (snapshot.hasError) {
+          final error = snapshot.error.toString();
+          final isNotFound = error.contains('File tree not found');
+          final isGitDeployment = deployment.isGit;
+          final repoUrl = deployment.repositoryUrl;
+          
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isNotFound ? Icons.info_outline : Icons.error_outline,
+                    color: isNotFound ? AppTheme.onSurfaceVariant : AppTheme.error,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isNotFound ? 'File Tree Unavailable' : 'Failed to load files',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isNotFound 
+                      ? (isGitDeployment 
+                          ? 'The file tree is not available for Git-based deployments via the Vercel API. You can view the source code directly on your Git provider.'
+                          : 'The file tree is not available for this deployment. This can happen for older deployments or those created via certain integrations.')
+                      : error,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
+                  ),
+                  const SizedBox(height: 24),
+                  if (isNotFound && isGitDeployment && repoUrl != null)
+                    ElevatedButton.icon(
+                      onPressed: () => launchUrl(Uri.parse(repoUrl)),
+                      icon: const Icon(Icons.open_in_new, size: 16, color: Colors.black),
+                      label: Text('VIEW ON ${deployment.providerName?.toUpperCase() ?? 'GIT'}', style: const TextStyle(color: Colors.black)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    )
+                  else if (!isNotFound)
+                    ElevatedButton(onPressed: () => setState(() {}), child: const Text('Retry')),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final files = snapshot.data ?? [];
+        if (files.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.folder_open, color: AppTheme.onSurfaceVariant, size: 48),
+                SizedBox(height: 16),
+                Text('No files found for this deployment'),
+              ],
+            ),
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          itemCount: files.length,
+          separatorBuilder: (context, index) => const Divider(height: 1, indent: 72),
+          itemBuilder: (context, index) {
+            final file = files[index];
+            final isDir = file.type == 'directory';
+            
+            return ListTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDir ? AppTheme.primary.withOpacity(0.1) : AppTheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isDir ? Icons.folder : _getFileIcon(file.name),
+                  color: isDir ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                file.name,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              subtitle: file.mode != null 
+                ? Text('Mode: ${file.mode}', style: const TextStyle(fontSize: 12))
+                : null,
+              trailing: const Icon(Icons.chevron_right, size: 16, color: AppTheme.onSurfaceVariant),
+              onTap: () {
+                if (!isDir && file.uid != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FileContentScreen(
+                        deploymentId: deployment.uid,
+                        fileId: file.uid!,
+                        fileName: file.name,
+                      ),
+                    ),
+                  );
+                }
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  IconData _getFileIcon(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'js':
+      case 'ts':
+      case 'jsx':
+      case 'tsx':
+        return Icons.code;
+      case 'json':
+        return Icons.settings_ethernet;
+      case 'html':
+      case 'css':
+        return Icons.web;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'gif':
+      case 'svg':
+        return Icons.image;
+      case 'md':
+        return Icons.description;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
   Widget _buildLogsTab() {
     return RefreshIndicator(
       onRefresh: _fetchData,
@@ -1264,9 +1504,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
 
   Widget _buildEnvVarCard(dynamic env) {
     final envVar = env is EnvVar ? env : EnvVar.fromJson(env);
-    final isRevealed = _revealedSecrets[envVar.id] ?? false;
-    final hasValue = envVar.value != null && envVar.value!.isNotEmpty;
-    final displayValue = envVar.isSecret && (!isRevealed || !hasValue) ? '••••••••' : (envVar.value ?? '');
+    final displayValue = envVar.isSecret ? '••••••••' : (envVar.value ?? '');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1297,17 +1535,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               ),
               if (envVar.isSecret)
                 IconButton(
-                  icon: Icon(
-                    isRevealed ? Icons.visibility_off : Icons.visibility,
-                    size: 18,
-                    color: AppTheme.onSurfaceVariant,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _revealedSecrets[envVar.id] = !isRevealed;
-                    });
-                  },
-                  tooltip: isRevealed ? 'Hide' : 'Reveal',
+                  icon: const Icon(Icons.visibility, size: 18, color: AppTheme.onSurfaceVariant),
+                  onPressed: _isEditingEnvVar ? null : () => _showDecryptedValueDialog(envVar),
+                  tooltip: 'Reveal',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
@@ -1347,7 +1577,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                     ),
                   ),
                 ),
-                if (displayValue.isNotEmpty && hasValue)
+                if (!envVar.isSecret && displayValue.isNotEmpty)
                   InkWell(
                     onTap: () => _copyToClipboard(envVar.value ?? ''),
                     child: Icon(
@@ -1400,6 +1630,66 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _showDecryptedValueDialog(EnvVar envVar) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        content: Row(
+          children: [
+            CircularProgressIndicator(color: AppTheme.primary),
+            SizedBox(width: 16),
+            Text('Decrypting...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final decryptedValue = await appState.apiService.getDecryptedEnvVar(widget.project.id, envVar.id);
+      if (mounted) {
+        Navigator.pop(context);
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.surfaceContainerLow,
+            title: Text(envVar.key),
+            content: SelectableText(
+              decryptedValue,
+              style: const TextStyle(fontFamily: 'monospace', color: AppTheme.primary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: decryptedValue));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Value copied to clipboard')),
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text('Copy'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to decrypt value: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _showAddEnvVarDialog() async {

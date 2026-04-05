@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/project.dart';
@@ -191,8 +192,9 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
                       return Column(
                         children: envs.map((env) {
                           final isEncrypted = env['type'] == 'secret' || env['type'] == 'encrypted';
+                          final envId = env['id'] ?? '';
                           return _buildEnvVar(
-                            env['id'] ?? '',
+                            envId,
                             env['key'] ?? 'UNKNOWN_KEY',
                             isEncrypted ? '••••••••' : (env['value'] ?? ''),
                             env['target']?.contains('production') ?? false,
@@ -332,6 +334,12 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
             ),
           ),
           const Spacer(),
+          if (isEncrypted)
+            IconButton(
+              icon: const Icon(Icons.visibility, size: 18, color: AppTheme.onSurfaceVariant),
+              onPressed: envId.isNotEmpty ? () => _showDecryptedValueDialog(context, envId, key) : null,
+            ),
+          if (isEncrypted) const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.edit, size: 18, color: AppTheme.onSurfaceVariant),
             onPressed: envId.isNotEmpty ? () => _showEditEnvVarDialog(context, envId, key, value) : null,
@@ -344,6 +352,68 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _showDecryptedValueDialog(BuildContext context, String envId, String key) async {
+    final appState = context.read<AppState>();
+    final project = widget.project ?? appState.selectedProject;
+    if (project == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        backgroundColor: AppTheme.surfaceContainerLow,
+        content: Row(
+          children: [
+            CircularProgressIndicator(color: AppTheme.primary),
+            SizedBox(width: 16),
+            Text('Decrypting...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final decryptedValue = await appState.apiService.getDecryptedEnvVar(project.id, envId);
+      if (context.mounted) {
+        Navigator.pop(context);
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.surfaceContainerLow,
+            title: Text(key),
+            content: SelectableText(
+              decryptedValue,
+              style: const TextStyle(fontFamily: 'monospace', color: AppTheme.primary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: decryptedValue));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Value copied to clipboard')),
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text('Copy'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to decrypt value: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _addEnvVar(BuildContext context) async {

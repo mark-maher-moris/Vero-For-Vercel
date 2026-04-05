@@ -187,46 +187,40 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: InkWell(
-                              onTap: () async {
-                                final uri = Uri.parse('https://$domain');
-                                if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                                }
-                              },
-                              child: Text(domain, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isValid ? AppTheme.success.withValues(alpha: 0.1) : AppTheme.errorContainer.withValues(alpha: 0.1),
-                              border: Border.all(color: isValid ? AppTheme.success.withValues(alpha: 0.2) : AppTheme.error.withValues(alpha: 0.2)),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(isValid ? Icons.check_circle : Icons.error, size: 12, color: isValid ? AppTheme.success : AppTheme.error),
-                                const SizedBox(width: 4),
-                                Text(isValid ? 'Valid' : 'Invalid', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isValid ? AppTheme.success : AppTheme.error, letterSpacing: 1)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                    // Domain name - full width
+                    InkWell(
+                      onTap: () async {
+                        final uri = Uri.parse('https://$domain');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: Text(domain, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
                     ),
+                    const SizedBox(height: 16),
+                    // Status badge and buttons row
                     Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isValid ? AppTheme.success.withValues(alpha: 0.1) : AppTheme.errorContainer.withValues(alpha: 0.1),
+                            border: Border.all(color: isValid ? AppTheme.success.withValues(alpha: 0.2) : AppTheme.error.withValues(alpha: 0.2)),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(isValid ? Icons.check_circle : Icons.error, size: 12, color: isValid ? AppTheme.success : AppTheme.error),
+                              const SizedBox(width: 4),
+                              Text(isValid ? 'Valid' : 'Invalid', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isValid ? AppTheme.success : AppTheme.error, letterSpacing: 1)),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
                         TextButton(
                           style: TextButton.styleFrom(
                             side: BorderSide(color: AppTheme.outlineVariant.withValues(alpha: 0.2)),
@@ -343,6 +337,7 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
   }
 
   Future<void> _addDomain(BuildContext context, AppState appState) async {
+    print('[DomainsDNS] _addDomain called - domain: ${_domainController.text.trim()}');
     final domain = _domainController.text.trim();
     if (domain.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -361,7 +356,9 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await appState.apiService.addDomain(project.id, domain);
+      print('[DomainsDNS] API request: addDomain(projectId: ${project.id}, domain: $domain)');
+      final result = await appState.apiService.addDomain(project.id, domain);
+      print('[DomainsDNS] API response: addDomain result: $result');
       _domainController.clear();
       await _refreshDomains(appState);
       if (mounted) {
@@ -381,8 +378,11 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
   }
 
   Future<void> _verifyDomain(BuildContext context, AppState appState, String domain, String projectId) async {
+    print('[DomainsDNS] _verifyDomain called - domain: $domain, projectId: $projectId');
     try {
-      await appState.apiService.verifyDomain(projectId, domain);
+      print('[DomainsDNS] API request: verifyDomain(projectId: $projectId, domain: $domain)');
+      final result = await appState.apiService.verifyDomain(projectId, domain);
+      print('[DomainsDNS] API response: verifyDomain result: $result');
       await _refreshDomains(appState);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -399,8 +399,11 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
   }
 
   Future<void> _removeDomain(BuildContext context, AppState appState, String domain, String projectId) async {
+    print('[DomainsDNS] _removeDomain called - domain: $domain, projectId: $projectId');
     try {
-      await appState.apiService.removeDomain(projectId, domain);
+      print('[DomainsDNS] API request: removeDomain(projectId: $projectId, domain: $domain)');
+      final result = await appState.apiService.removeDomain(projectId, domain);
+      print('[DomainsDNS] API response: removeDomain result: $result');
       await _refreshDomains(appState);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -479,8 +482,12 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
   }
 
   Future<List<Domain>> _fetchAllDomains(AppState appState) async {
+    print('[DomainsDNS] _fetchAllDomains called');
     // Use the v5/domains endpoint for efficient global domain listing
-    return await appState.apiService.getDomains();
+    print('[DomainsDNS] API request: getDomains()');
+    final result = await appState.apiService.getDomains();
+    print('[DomainsDNS] API response: getDomains returned ${result.length} domains');
+    return result;
   }
 
   Future<void> _refreshDomains(AppState appState) async {

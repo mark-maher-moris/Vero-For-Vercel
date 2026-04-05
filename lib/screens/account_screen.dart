@@ -8,6 +8,7 @@ import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
+import 'onboarding_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -274,8 +275,10 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     ElevatedButton(
                       onPressed: () async {
-                        // Print full status and subscription data
+                        // Print subscription debug data
                         final supportId = await SuperwallService().getUserId();
+                        final entitlements = await SuperwallService().getEntitlements();
+                        final customerInfo = await SuperwallService().getCustomerInfo();
                         print('========== UPGRADE BUTTON CLICKED - DEBUG DATA ==========');
                         print('Subscription Status:');
                         print('  - isPro: ${subscriptionProvider.isPro}');
@@ -288,11 +291,19 @@ class _AccountScreenState extends State<AccountScreen> {
                         print('  - hasActiveSubscription: ${SuperwallService().hasActiveSubscription}');
                         print('  - supportId/userId: $supportId');
                         print('');
-                        print('App State Data:');
-                        print('  - user: ${appState.user}');
-                        print('  - currentTeamId: ${appState.currentTeamId}');
-                        print('  - teams count: ${appState.teams.length}');
-                        print('  - projects count: ${appState.projects.length}');
+                        print('Entitlements:');
+                        print('  - active: ${entitlements.active.isEmpty ? "(none)" : entitlements.active.map((e) => "${e.id} (products: ${e.productIds.join(",")})").join(", ")}');
+                        print('  - inactive: ${entitlements.inactive.isEmpty ? "(none)" : entitlements.inactive.map((e) => e.id).join(", ")}');
+                        print('  - all: ${entitlements.all.map((e) => e.id).join(", ")}');
+                        print('');
+                        print('Subscriptions (Products):');
+                        if (customerInfo.subscriptions.isEmpty) {
+                          print('  (no subscriptions)');
+                        } else {
+                          for (final sub in customerInfo.subscriptions) {
+                            print('  - ${sub.productId}: active=${sub.isActive}, willRenew=${sub.willRenew}, store=${sub.store}');
+                          }
+                        }
                         print('=========================================================');
                         
                         subscriptionProvider.showPaywall();
@@ -381,21 +392,13 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow('Username', username),
-                  const Divider(height: 24),
-                  _buildInfoRow('Current Team', teamName),
-                  const Divider(height: 24),
-                  _buildInfoRow('Projects', '${appState.projects.length}'),
-                  const Divider(height: 24),
-                  _buildInfoRow('Vercel Plan', _getVercelPlan(appState.user)),
-                  if (_supportId.isNotEmpty) ...[
-                    const Divider(height: 24),
-                    _buildCopyableInfoRow('Support ID', _supportId, _copySupportId),
-                  ],
+                  _buildCopyableInfoRow('Support ID', _supportId, _copySupportId),
                   const Divider(height: 24),
                   _buildRestorePurchasesButton(),
-                ],
-              ),
+                  const Divider(height: 24),
+                  _buildReplayOnboardingButton(context),
+                ]
+                )
             ),
 
             const SizedBox(height: 32),
@@ -706,6 +709,53 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         );
       }
+    }
+  }
+
+  Widget _buildReplayOnboardingButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _replayOnboarding(context),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Replay Onboarding',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.onSurfaceVariant,
+            ),
+          ),
+          Row(
+            children: [
+              const Icon(
+                Icons.replay,
+                size: 18,
+                color: AppTheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Debug only',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _replayOnboarding(BuildContext context) async {
+    final appState = context.read<AppState>();
+    await appState.resetOnboarding();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+      );
     }
   }
 

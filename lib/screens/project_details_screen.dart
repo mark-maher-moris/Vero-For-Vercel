@@ -7,6 +7,7 @@ import 'deployment_actions_screen.dart';
 import 'advanced_logs_screen.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
+import '../screens/deployment_files_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/deployment_card.dart';
 import '../widgets/action_card.dart';
@@ -269,6 +270,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
+              Expanded(child: ActionCard(icon: Icons.folder, label: 'Files', onTap: () {
+                if (_deployments != null && _deployments!.isNotEmpty) {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => DeploymentFilesScreen(deployment: _deployments!.first)));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No deployments available.')));
+                }
+              })),
+              const SizedBox(width: 12),
               Expanded(child: ActionCard(icon: Icons.tune, label: 'Advanced Logs', onTap: () {
                 if (_deployments != null && _deployments!.isNotEmpty) {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => AdvancedLogsScreen(deployment: _deployments!.first, projectId: widget.project.id)));

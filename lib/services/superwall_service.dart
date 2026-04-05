@@ -38,13 +38,39 @@ class SuperwallService {
 
   /// Get current subscription status directly from Superwall (async)
   Future<bool> getCurrentSubscriptionStatus() async {
-    // Get the latest value from the stream with a timeout
+    if (!_isInitialized) {
+      if (kDebugMode) print('Superwall: Not initialized, returning cached status: $_hasActiveSubscription');
+      return _hasActiveSubscription;
+    }
+    
     try {
-      return await subscriptionStream.first.timeout(
-        const Duration(seconds: 2),
-        onTimeout: () => _hasActiveSubscription,
-      );
+      // Check entitlements first as it's the most reliable way to check for 'pro' access
+      final entitlements = await getEntitlements();
+      
+      // Be robust: check for 'pro' ID or any active entitlement if 'pro' isn't explicitly named that way
+      final hasProId = entitlements.active.any((e) => e.id.toLowerCase() == 'pro');
+      final hasAnyActive = entitlements.active.isNotEmpty;
+      
+      // For this app, any active entitlement counts as Pro access
+      final isPro = hasProId || hasAnyActive;
+      
+      if (kDebugMode) {
+        print('Superwall: Checking status...');
+        print('  - Entitlements active: ${entitlements.active.map((e) => e.id).toList()}');
+        print('  - Found "pro" ID: $hasProId');
+        print('  - Has any active: $hasAnyActive');
+        print('  - Result isPro: $isPro');
+        print('  - Previous status: $_hasActiveSubscription');
+      }
+      
+      if (isPro != _hasActiveSubscription) {
+        if (kDebugMode) print('Superwall: Status mismatch detected, updating to $isPro');
+        _updateSubscriptionStatus(isPro);
+      }
+      
+      return isPro;
     } catch (e) {
+      if (kDebugMode) print('Superwall: Error checking subscription status: $e');
       return _hasActiveSubscription;
     }
   }
@@ -164,51 +190,38 @@ class SuperwallService {
   /// 
   /// [placement] - The placement identifier configured in Superwall dashboard
   /// [params] - Optional parameters to pass to the paywall
-  /// [skipIfOnboardingIncomplete] - If true, skips showing paywall if onboarding is not complete
-  Future<void> registerPlacement(String placement, {Map<String, dynamic>? params, bool skipIfOnboardingIncomplete = true}) async {
+  Future<void> registerPlacement(String placement, {Map<String, dynamic>? params}) async {
     if (!_isInitialized) {
       if (kDebugMode) print('Superwall: Not initialized, skipping placement $placement');
       return;
-    }
-
-    // Check if onboarding is complete before showing paywall
-    if (skipIfOnboardingIncomplete) {
-      final prefs = await SharedPreferences.getInstance();
-      final hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
-      if (!hasCompletedOnboarding) {
-        if (kDebugMode) print('Superwall: Skipping placement $placement - onboarding not complete');
-        return;
-      }
     }
     
     try {
       // Convert dynamic map to Object map if params provided
       final objectParams = params?.map((key, value) => MapEntry(key, value as Object));
+      
+      if (kDebugMode) print('Superwall: Registering placement $placement');
+      
       await sw.Superwall.shared.registerPlacement(placement, params: objectParams);
-      if (kDebugMode) print('Superwall: Registered placement $placement');
+      
+      if (kDebugMode) print('Superwall: Successfully registered placement $placement');
     } catch (e) {
       if (kDebugMode) print('Superwall: Register placement error - $e');
     }
   }
 
   /// Present a paywall manually
-  Future<void> presentPaywall({bool skipIfOnboardingIncomplete = true}) async {
-    if (!_isInitialized) return;
-
-    // Check if onboarding is complete before showing paywall
-    if (skipIfOnboardingIncomplete) {
-      final prefs = await SharedPreferences.getInstance();
-      final hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
-      if (!hasCompletedOnboarding) {
-        if (kDebugMode) print('Superwall: Skipping manual paywall - onboarding not complete');
-        return;
-      }
+  Future<void> presentPaywall() async {
+    if (!_isInitialized) {
+      if (kDebugMode) print('Superwall: Not initialized, cannot present manual paywall');
+      return;
     }
     
     try {
+      if (kDebugMode) print('Superwall: Presenting manual paywall');
       // Register a generic placement to trigger paywall presentation
       await sw.Superwall.shared.registerPlacement('manual_paywall');
-      if (kDebugMode) print('Superwall: Presented manual paywall');
+      if (kDebugMode) print('Superwall: Successfully triggered manual paywall');
     } catch (e) {
       if (kDebugMode) print('Superwall: Present paywall error - $e');
     }
@@ -342,6 +355,30 @@ class SuperwallService {
     }
   }
 
+  /// Get user entitlements from Superwall
+  Future<sw.Entitlements> getEntitlements() async {
+    if (!_isInitialized) return sw.Entitlements(active: {}, inactive: {}, all: {}, web: {});
+    try {
+      return await sw.Superwall.shared.getEntitlements();
+    } catch (e) {
+      if (kDebugMode) print('Superwall: Get entitlements error - $e');
+      return sw.Entitlements(active: {}, inactive: {}, all: {}, web: {});
+    }
+  }
+
+  /// Get customer info from Superwall (contains subscriptions with product data)
+  Future<sw.CustomerInfo> getCustomerInfo() async {
+    if (!_isInitialized) {
+      return sw.CustomerInfo(subscriptions: [], nonSubscriptions: [], entitlements: [], userId: '');
+    }
+    try {
+      return await sw.Superwall.shared.getCustomerInfo();
+    } catch (e) {
+      if (kDebugMode) print('Superwall: Get customer info error - $e');
+      return sw.CustomerInfo(subscriptions: [], nonSubscriptions: [], entitlements: [], userId: '');
+    }
+  }
+
   /// Dispose of resources
   void dispose() {
     _subscriptionController.close();
@@ -423,10 +460,10 @@ class _SuperwallDelegateImpl extends sw.SuperwallDelegate {
   @override
   void subscriptionStatusDidChange(sw.SubscriptionStatus status) {
     if (kDebugMode) {
-      print('Superwall: Subscription status changed to $status');
+      print('Superwall: Subscription status changed to $status (isActive: ${status.isActive})');
     }
     
-    // Update internal subscription status based on Superwall's status
-    SuperwallService()._updateSubscriptionStatus(status.isActive);
+    // Check entitlements whenever status changes to ensure 'pro' is correctly identified
+    SuperwallService().getCurrentSubscriptionStatus();
   }
 }

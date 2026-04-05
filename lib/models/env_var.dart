@@ -55,7 +55,7 @@ class EnvVar {
     };
   }
 
-  bool get isSecret => type == 'secret' || (encrypted ?? false);
+  bool get isSecret => type == 'secret' || type == 'encrypted' || (encrypted ?? false);
 
   String get displayValue => isSecret ? '••••••••' : (value ?? '');
 }

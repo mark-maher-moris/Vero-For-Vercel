@@ -6,6 +6,7 @@ import 'package:in_app_review/in_app_review.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../services/superwall_service.dart';
+import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -134,11 +135,30 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       'total_pages_viewed': _currentPage + 1,
     });
     
-    // Register Superwall placement after onboarding (explicitly allow showing)
-    await SuperwallService().registerPlacement('after_onboarding', skipIfOnboardingIncomplete: false);
+    // Check if user is already subscribed before showing paywall
+    final isSubscribed = await SuperwallService().getCurrentSubscriptionStatus();
+    
+    if (isSubscribed) {
+      // User already subscribed, skip paywall and complete onboarding
+      if (mounted) {
+        await context.read<AppState>().markOnboardingComplete();
+        // Explicitly navigate to login screen and remove onboarding from stack
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+      return;
+    }
+    
+    // Register Superwall placement for non-subscribed users
+    await SuperwallService().registerPlacement('after_onboarding');
     
     if (mounted) {
       await context.read<AppState>().markOnboardingComplete();
+      // Navigate to login screen after paywall is dismissed
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
     }
   }
 
