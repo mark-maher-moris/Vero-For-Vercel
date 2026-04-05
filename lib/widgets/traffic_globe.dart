@@ -25,17 +25,6 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
   final List<Map<String, dynamic>> _recentVisitors = [];
   bool _isLive = false;
   String? _activeDeploymentId;
-  final List<String> _debugLogs = [];
-
-  void _log(String msg) {
-    debugPrint('TrafficGlobe: $msg');
-    if (mounted) {
-      setState(() {
-        _debugLogs.insert(0, '[${DateTime.now().toString().split('.').first}] $msg');
-        if (_debugLogs.length > 10) _debugLogs.removeLast();
-      });
-    }
-  }
 
   @override
   void initState() {
@@ -67,48 +56,35 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
   Future<void> _fetchTrafficData() async {
     if (!mounted) return;
     
-    _log('Fetching for project: ${widget.projectId}');
-    
     final appState = Provider.of<AppState>(context, listen: false);
     
     try {
       if (_activeDeploymentId == null) {
-        _log('Fetching deployments...');
         final deployments = await appState.apiService.getDeployments(projectId: widget.projectId);
-        _log('Found ${deployments.length} deployments');
         
         // Find the latest live (READY) deployment
         final liveDeployments = deployments.where((d) => d.state == 'READY').toList();
-        _log('${liveDeployments.length} are READY');
         
         if (liveDeployments.isNotEmpty) {
           liveDeployments.sort((a, b) => b.created.compareTo(a.created));
           _activeDeploymentId = liveDeployments.first.uid;
-          _log('Using deployment: ${_activeDeploymentId!.substring(0, 8)}...');
         } else if (deployments.isNotEmpty) {
           deployments.sort((a, b) => b.created.compareTo(a.created));
           _activeDeploymentId = deployments.first.uid;
-          _log('No READY, using latest: ${deployments.first.state}');
-        } else {
-          _log('NO DEPLOYMENTS!');
         }
       }
 
       if (_activeDeploymentId == null) {
-        _log('ERROR: No deployment ID');
         return;
       }
 
-      _log('Fetching logs...');
       final logs = await appState.apiService.getDeploymentRequestLogs(
         projectId: widget.projectId,
         deploymentId: _activeDeploymentId!,
         limit: 20,
       );
-      _log('Got ${logs.length} logs');
 
       if (logs.isNotEmpty) {
-        _log('First log keys: ${(logs.first['proxyHeaders'] ?? logs.first['headers'] ?? {}).keys.toList()}');
         bool foundAnyGeo = false;
         for (var log in logs) {
           final headers = log['proxyHeaders'] ?? log['headers'] ?? {};
@@ -138,12 +114,8 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
             _isLive = foundAnyGeo;
           });
         }
-        _log('Processing done: ${foundAnyGeo ? "GEO FOUND" : "NO GEO"}, visitors: ${_recentVisitors.length}');
-      } else {
-        _log('NO LOGS FROM API');
       }
     } catch (e) {
-      _log('ERROR: $e');
       if (mounted) {
         setState(() => _isLive = false);
       }

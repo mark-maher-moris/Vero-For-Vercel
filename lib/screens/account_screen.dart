@@ -273,7 +273,30 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: () => subscriptionProvider.showPaywall(),
+                      onPressed: () async {
+                        // Print full status and subscription data
+                        final supportId = await SuperwallService().getUserId();
+                        print('========== UPGRADE BUTTON CLICKED - DEBUG DATA ==========');
+                        print('Subscription Status:');
+                        print('  - isPro: ${subscriptionProvider.isPro}');
+                        print('  - hasActiveSubscription: ${subscriptionProvider.hasActiveSubscription}');
+                        print('  - isLoading: ${subscriptionProvider.isLoading}');
+                        print('  - errorMessage: ${subscriptionProvider.errorMessage}');
+                        print('');
+                        print('Superwall Service Data:');
+                        print('  - isInitialized: ${SuperwallService().isInitialized}');
+                        print('  - hasActiveSubscription: ${SuperwallService().hasActiveSubscription}');
+                        print('  - supportId/userId: $supportId');
+                        print('');
+                        print('App State Data:');
+                        print('  - user: ${appState.user}');
+                        print('  - currentTeamId: ${appState.currentTeamId}');
+                        print('  - teams count: ${appState.teams.length}');
+                        print('  - projects count: ${appState.projects.length}');
+                        print('=========================================================');
+                        
+                        subscriptionProvider.showPaywall();
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         foregroundColor: AppTheme.onPrimary,
