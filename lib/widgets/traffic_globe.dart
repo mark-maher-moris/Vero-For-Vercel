@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_earth_globe/flutter_earth_globe.dart';
-import 'package:flutter_earth_globe/flutter_earth_globe_controller.dart';
-import 'package:flutter_earth_globe/point.dart';
-import 'package:flutter_earth_globe/globe_coordinates.dart';
+import 'package:flutter_globe_3d/flutter_globe_3d.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 
@@ -23,7 +20,7 @@ class TrafficGlobe extends StatefulWidget {
 }
 
 class _TrafficGlobeState extends State<TrafficGlobe> {
-  late FlutterEarthGlobeController _controller;
+  late final EarthController _controller;
   Timer? _pollingTimer;
   final List<Map<String, dynamic>> _recentVisitors = [];
   bool _isLive = false;
@@ -44,11 +41,22 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
   void initState() {
     super.initState();
     _activeDeploymentId = widget.deploymentId;
-    _controller = FlutterEarthGlobeController(
-      rotationSpeed: 0.05,
-      isRotating: true,
-    );
+    _controller = EarthController();
+    // Configure for interactive use - MUST be done before Earth3D is built
+    _controller.enableAutoRotate = false;
+    _controller.rotateSpeed = 0.0; // Extra safeguard
+    _controller.minZoom = 0.3;
+    _controller.maxZoom = 5.0;
+    _controller.lockZoom = false;
+    _controller.lockNorthSouth = false;
     _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
   }
 
   void _startPolling() {
@@ -150,26 +158,23 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
         _recentVisitors.insert(0, visitor);
         if (_recentVisitors.length > 10) _recentVisitors.removeLast();
 
-        _controller.addPoint(
-          Point(
+        _controller.addNode(
+          EarthNode(
             id: visitor['id'],
-            coordinates: GlobeCoordinates(visitor['lat'], visitor['lng']),
-            label: visitor['city'],
-            isLabelVisible: true,
-            style: const PointStyle(
-              color: AppTheme.primary,
-              size: 6,
+            latitude: visitor['lat'],
+            longitude: visitor['lng'],
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: AppTheme.primary,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
         );
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _pollingTimer?.cancel();
-    super.dispose();
   }
 
   @override
@@ -183,8 +188,8 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
       height: 400,
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(4),
+        color: Colors.lightBlueAccent,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.surfaceContainerHigh),
       ),
       child: ClipRRect(
@@ -194,18 +199,32 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
             // Blue background circle for globe
             Center(
               child: Container(
-                width: 260,
-                height: 260,
+                width: 500,
+                height: 500,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF1A237E),
+             
                   shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(Icons.public, size: 240, color: Colors.white70),
                 ),
               ),
             ),
             // The globe
-            FlutterEarthGlobe(
-              controller: _controller,
-              radius: 130,
+            ColorFiltered(
+              colorFilter: const ColorFilter.matrix([
+                1.8, 0, 0, 0, 0,
+                0, 1.8, 0, 0, 0,
+                0, 0, 1.8, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              child: Earth3D(
+                controller: _controller,
+                texture: const NetworkImage(
+                  'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg',
+                ),
+                initialScale: 4.0
+              ),
             ),
             Positioned(
               top: 16,
@@ -246,7 +265,7 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
                               '${v['city']}, ${v['country']}',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: AppTheme.onSurface,
+                                color: AppTheme.surface,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

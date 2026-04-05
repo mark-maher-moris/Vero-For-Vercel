@@ -268,6 +268,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               ? _buildErrorView()
               : TabBarView(
                 controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _buildOverviewTab(),
                   _buildDeploymentsTab(),

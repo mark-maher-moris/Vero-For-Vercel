@@ -4,6 +4,8 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
 import '../providers/app_state.dart';
+import '../providers/subscription_provider.dart';
+import '../services/superwall_service.dart';
 
 class DeploymentActionsScreen extends StatefulWidget {
   final Deployment deployment;
@@ -26,6 +28,9 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final subscription = context.watch<SubscriptionProvider>();
+    final isPro = subscription.isPro;
+    
     final isProduction = widget.deployment.state == 'READY' && widget.deployment.target == 'production';
     final canPromote = widget.deployment.state == 'READY' && widget.deployment.target != 'production';
     final canRollback = isProduction;
@@ -47,7 +52,7 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
         children: [
           _buildDeploymentInfo(),
           const SizedBox(height: 40),
-          _buildActionsSection(canPromote, canRollback, canCancel),
+          _buildActionsSection(canPromote, canRollback, canCancel, isPro),
           if (_successMessage != null) ...[
             const SizedBox(height: 24),
             _buildSuccessMessage(),
@@ -127,7 +132,7 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
     );
   }
 
-  Widget _buildActionsSection(bool canPromote, bool canRollback, bool canCancel) {
+  Widget _buildActionsSection(bool canPromote, bool canRollback, bool canCancel, bool isPro) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -139,7 +144,8 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
             description: 'Make this deployment the live production version',
             icon: Icons.arrow_upward,
             color: AppTheme.primary,
-            onTap: _isLoading ? null : _promoteDeployment,
+            onTap: _isLoading ? null : (isPro ? _promoteDeployment : () => SuperwallService().presentPaywall()),
+            isLocked: !isPro,
           ),
           const SizedBox(height: 12),
         ],
@@ -149,7 +155,8 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
             description: 'Revert to the previous production deployment',
             icon: Icons.history,
             color: Colors.orange,
-            onTap: _isLoading ? null : _rollbackDeployment,
+            onTap: _isLoading ? null : (isPro ? _rollbackDeployment : () => SuperwallService().presentPaywall()),
+            isLocked: !isPro,
           ),
           const SizedBox(height: 12),
         ],
@@ -191,6 +198,7 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
     required IconData icon,
     required Color color,
     required VoidCallback? onTap,
+    bool isLocked = false,
   }) {
     return Material(
       color: Colors.transparent,
@@ -200,7 +208,7 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLow,
-            border: Border.all(color: color.withOpacity(0.2)),
+            border: Border.all(color: isLocked ? AppTheme.outlineVariant.withOpacity(0.2) : color.withOpacity(0.2)),
             borderRadius: BorderRadius.circular(2),
           ),
           child: Row(
@@ -209,17 +217,25 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: isLocked ? AppTheme.surfaceContainerHigh : color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(2),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(isLocked ? Icons.lock : icon, color: isLocked ? AppTheme.onSurfaceVariant : color, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.onSurface)),
+                    Row(
+                      children: [
+                        Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isLocked ? AppTheme.onSurfaceVariant : AppTheme.onSurface)),
+                        if (isLocked) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.star, color: Colors.amber, size: 14),
+                        ],
+                      ],
+                    ),
                     const SizedBox(height: 4),
                     Text(description, style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
                   ],
@@ -228,7 +244,7 @@ class _DeploymentActionsScreenState extends State<DeploymentActionsScreen> {
               if (_isLoading)
                 const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2))
               else
-                Icon(Icons.arrow_forward, color: color, size: 20),
+                Icon(isLocked ? Icons.arrow_forward_ios : Icons.arrow_forward, color: isLocked ? AppTheme.onSurfaceVariant.withOpacity(0.5) : color, size: isLocked ? 14 : 20),
             ],
           ),
         ),

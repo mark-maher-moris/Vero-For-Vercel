@@ -304,14 +304,18 @@ class _AccountScreenState extends State<AccountScreen> {
                   icon: Icons.people,
                   title: 'Team',
                   subtitle: 'Members & Access',
-                  onTap: () => _navigateTo(context, const TeamAccessScreen()),
+                  onTap: isPro 
+                    ? () => _navigateTo(context, const TeamAccessScreen())
+                    : () => subscriptionProvider.showPaywall(),
                 ),
                 _buildActionCard(
                   context,
                   icon: Icons.language,
                   title: 'Domains',
                   subtitle: 'DNS & SSL',
-                  onTap: () => _navigateTo(context, const DomainsDnsScreen()),
+                  onTap: isPro
+                    ? () => _navigateTo(context, const DomainsDnsScreen())
+                    : () => subscriptionProvider.showPaywall(),
                 ),
                 _buildActionCard(
                   context,

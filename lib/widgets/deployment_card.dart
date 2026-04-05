@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/deployment.dart';
 import '../theme/app_theme.dart';
 import '../screens/deployment_logs_screen.dart';
+import '../providers/subscription_provider.dart';
+import '../services/superwall_service.dart';
 
 class DeploymentCard extends StatelessWidget {
   final Deployment deployment;
@@ -222,21 +225,38 @@ class DeploymentCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: onLogsTap ?? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DeploymentLogsScreen(deployment: deployment),
+                  Consumer<SubscriptionProvider>(
+                    builder: (context, subscription, _) {
+                      final isPro = subscription.isPro;
+                      return TextButton(
+                        onPressed: onLogsTap ?? () {
+                          if (isPro) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DeploymentLogsScreen(deployment: deployment),
+                              ),
+                            );
+                          } else {
+                            SuperwallService().presentPaywall();
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Logs',
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            decoration: isPro ? null : TextDecoration.lineThrough,
+                          ),
                         ),
                       );
                     },
-                    style: TextButton.styleFrom(
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text('Logs', style: TextStyle(color: AppTheme.primary, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
