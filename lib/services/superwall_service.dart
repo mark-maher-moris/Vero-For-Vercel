@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:superwallkit_flutter/superwallkit_flutter.dart' as sw;
 
 /// Superwall Service - Manages paywall presentation, in-app purchases, and analytics tracking

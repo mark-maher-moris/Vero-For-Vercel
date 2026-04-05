@@ -71,7 +71,17 @@ class _LoginScreenState extends State<LoginScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            context.read<AppState>().resetOnboarding();
+            final navigator = Navigator.of(context);
+            final canPop = navigator.canPop();
+            
+            if (canPop) {
+              // Pop first to avoid race condition with Consumer rebuild
+              navigator.pop();
+              // Then reset onboarding state after navigation
+              context.read<AppState>().resetOnboarding();
+            } else {
+              context.read<AppState>().resetOnboarding();
+            }
           },
         ),
         backgroundColor: Colors.transparent,
@@ -228,32 +238,43 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
               ),
               const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () async {
-                  final uri = Uri.parse('https://github.com/mark-maher-moris/Vero-For-Vercel');
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.code,
-                      color: AppTheme.onSurfaceVariant,
-                      size: 16,
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: GestureDetector(
+                  onTap: () async {
+                    final uri = Uri.parse('https://github.com/mark-maher-moris/Vero-For-Vercel');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.code,
+                          color: AppTheme.primary,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Review the app code',
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppTheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Review the app code',
-                      style: TextStyle(
-                        color: AppTheme.onSurfaceVariant,
-                        fontSize: 12,
-                        decoration: TextDecoration.underline,
-                        decorationColor: AppTheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

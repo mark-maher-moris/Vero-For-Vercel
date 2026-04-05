@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/superwall_service.dart';
 import '../models/project.dart';
+import 'subscription_provider.dart';
 
 class AppState extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -143,7 +145,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout({SubscriptionProvider? subscriptionProvider}) async {
     // Track logout before resetting
     await _superwallService.trackUserAction('logout', context: 'app_state');
     
@@ -152,6 +154,15 @@ class AppState extends ChangeNotifier {
       await _superwallService.reset();
     } catch (e) {
       if (kDebugMode) print('Superwall logout error: $e');
+    }
+    
+    // Reset subscription state if provider is available
+    if (subscriptionProvider != null) {
+      try {
+        await subscriptionProvider.onUserLogout();
+      } catch (e) {
+        if (kDebugMode) print('SubscriptionProvider logout error: $e');
+      }
     }
     
     await _authService.deleteToken();

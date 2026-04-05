@@ -629,29 +629,6 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppTheme.onSurfaceVariant,
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primary,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildRestorePurchasesButton() {
     return GestureDetector(
       onTap: () => _restorePurchases(),
@@ -759,17 +736,6 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
-  String _getVercelPlan(Map<String, dynamic>? userData) {
-    if (userData == null) return 'Unknown';
-    // Plan can be nested under 'user' key or directly in the response
-    final user = userData['user'] as Map<String, dynamic>?;
-    final plan = user?['plan'] ?? userData['plan'];
-    if (plan is String) {
-      return plan.isEmpty ? 'Hobby' : plan;
-    }
-    return 'Hobby';
-  }
-
   void _showLogoutDialog(BuildContext context, AppState appState) {
     showDialog(
       context: context,
@@ -788,7 +754,8 @@ class _AccountScreenState extends State<AccountScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              appState.logout();
+              final subscriptionProvider = context.read<SubscriptionProvider>();
+              appState.logout(subscriptionProvider: subscriptionProvider);
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Sign Out'),
