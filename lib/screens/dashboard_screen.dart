@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -49,11 +50,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted) {
         setState(() {
           _usageData = usage;
-          _isLoadingUsage = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingUsage = false);
+      // Silently ignore usage errors - may not be available for OAuth tokens
+      if (kDebugMode) print('Could not fetch usage data: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingUsage = false);
+      }
     }
   }
 

@@ -39,7 +39,7 @@ class AuthService {
     return token != null && token.isNotEmpty;
   }
 
-  Future<void> loginWithVercel() async {
+  Future<Map<String, dynamic>> loginWithVercel() async {
     final codeVerifier = _generateCodeVerifier();
     final codeChallenge = _generateCodeChallenge(codeVerifier);
     final state = _generateRandomString(16);
@@ -51,7 +51,7 @@ class AuthService {
       'code_challenge': codeChallenge,
       'code_challenge_method': 'S256',
       'response_type': 'code',
-      'scope': 'openid email profile offline_access',
+      'scope': 'openid email profile offline_access user',
     });
 
     try {
@@ -69,7 +69,7 @@ class AuthService {
       }
 
       if (code != null) {
-        await _exchangeCodeForToken(code, codeVerifier);
+        return await _exchangeCodeForToken(code, codeVerifier);
       } else {
         throw Exception('No authorization code returned');
       }
@@ -78,7 +78,7 @@ class AuthService {
     }
   }
 
-  Future<void> _exchangeCodeForToken(String code, String codeVerifier) async {
+  Future<Map<String, dynamic>> _exchangeCodeForToken(String code, String codeVerifier) async {
     final response = await http.post(
       Uri.parse('https://api.vercel.com/login/oauth/token'),
       body: {
@@ -93,10 +93,13 @@ class AuthService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
+      print('📦 OAuth token response keys: ${data.keys.toList()}');
+      print('📦 Full token response: $data');
       await saveToken(
         data['access_token'],
         refreshToken: data['refresh_token'],
       );
+      return data; // Return the full response for user info extraction
     } else {
       final error = json.decode(response.body);
       throw Exception(
