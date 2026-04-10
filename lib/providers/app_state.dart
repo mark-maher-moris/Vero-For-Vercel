@@ -109,11 +109,6 @@ class AppState extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      // Validate token before saving
-      final isValid = await _authService.validateToken(token);
-      if (!isValid) {
-        throw Exception('Invalid token. Please check your token and try again.');
-      }
       await _authService.saveToken(token);
       _isAuthenticated = true;
       await fetchInitialData();
@@ -139,6 +134,44 @@ class AppState extends ChangeNotifier {
       }
     } catch (e) {
       _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loginWithOAuth() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _authService.loginWithVercel();
+      _isAuthenticated = true;
+      await fetchInitialData();
+      
+      // Sync login with Superwall using user ID
+      if (_user != null && _user!['id'] != null) {
+        final userId = _user!['id'].toString();
+        await _superwallService.identify(userId);
+        
+        // Set user attributes for analytics segmentation
+        await _superwallService.setUserAttributes({
+          'user_id': userId,
+          'username': _user!['username'] ?? '',
+          'email': _user!['email'] ?? '',
+          'plan': _user!['plan'] ?? 'free',
+          'project_count': _projects.length,
+          'team_count': _teams.length,
+          'has_pro': _user!['plan'] == 'pro',
+        });
+        
+        // Track successful OAuth login
+        await _superwallService.trackUserAction('oauth_login_success', context: 'app_state');
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      await logout();
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
