@@ -18,5 +18,5 @@ export default function handler(req, res) {
   console.log('Redirecting to mobile app:', mobileRedirect);
 
   res.setHeader('Location', mobileRedirect);
-  return res.status(302).send();
+  return res.status(302).send(); 
 }
