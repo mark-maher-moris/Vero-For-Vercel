@@ -946,15 +946,32 @@ class VercelApi {
   /// List deployment files
   /// [deploymentId] - The deployment ID
   Future<List<DeploymentFile>> getDeploymentFiles(String deploymentId) async {
+    print('[VercelApi] getDeploymentFiles called');
+    print('[VercelApi]   deploymentId: $deploymentId');
+    print('[VercelApi]   teamId: $teamId');
+    
     final params = <String, String>{};
     if (teamId != null) params['teamId'] = teamId!;
 
+    final uri = _buildUri('/v6/deployments/$deploymentId/files', params);
+    print('[VercelApi]   Request URL: $uri');
+
     final response = await http.get(
-      _buildUri('/v6/deployments/$deploymentId/files', params),
+      uri,
       headers: await _getHeaders(),
     );
+    
+    print('[VercelApi]   Response status: ${response.statusCode}');
+    print('[VercelApi]   Response body length: ${response.body.length}');
+    if (response.statusCode != 200) {
+      print('[VercelApi]   Response body: ${response.body}');
+    }
+    
     final data = await _handleResponse(response);
     final list = data as List<dynamic>? ?? [];
+    print('[VercelApi]   Files count: ${list.length}');
+    print('[VercelApi] getDeploymentFiles completed');
+    
     return list.map((json) => DeploymentFile.fromJson(json as Map<String, dynamic>)).toList();
   }
 
@@ -962,30 +979,46 @@ class VercelApi {
   /// [deploymentId] - The deployment ID
   /// [fileId] - The file ID (uid)
   Future<String> getDeploymentFileContents(String deploymentId, String fileId) async {
+    print('[VercelApi] getDeploymentFileContents called');
+    print('[VercelApi]   deploymentId: $deploymentId');
+    print('[VercelApi]   fileId: $fileId');
+    print('[VercelApi]   teamId: $teamId');
+    
     final params = <String, String>{};
     if (teamId != null) params['teamId'] = teamId!;
 
+    final uri = _buildUri('/v8/deployments/$deploymentId/files/$fileId', params);
+    print('[VercelApi]   Request URL: $uri');
+
     final response = await http.get(
-      _buildUri('/v8/deployments/$deploymentId/files/$fileId', params),
+      uri,
       headers: await _getHeaders(),
     );
+    
+    print('[VercelApi]   Response status: ${response.statusCode}');
+    print('[VercelApi]   Response body length: ${response.body.length}');
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
       // The response body contains the file content encoded as base64
       try {
         final data = json.decode(response.body);
+        print('[VercelApi]   Response parsed as JSON');
         if (data is Map && data.containsKey('content')) {
           // Decode base64 content
           final content = data['content'] as String;
+          print('[VercelApi]   Found content field, decoding base64');
           return utf8.decode(base64.decode(content));
         }
         // Fallback: try to decode the entire response as base64
+        print('[VercelApi]   No content field, trying base64 decode of entire body');
         return utf8.decode(base64.decode(response.body));
       } catch (e) {
         // If decoding fails, return the raw response
+        print('[VercelApi]   Decoding failed, returning raw response: $e');
         return response.body;
       }
     } else {
+      print('[VercelApi]   Error response body: ${response.body}');
       throw VercelApiException('Failed to get file contents', statusCode: response.statusCode);
     }
   }

@@ -11,6 +11,7 @@ import '../screens/deployment_files_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/deployment_card.dart';
 import '../widgets/action_card.dart';
+import '../widgets/project_logo_widget.dart';
 import 'settings_env_vars_screen.dart';
 
 import 'package:provider/provider.dart';
@@ -70,8 +71,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(!url.startsWith('http') ? 'https://\$url' : url);
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
     }
+  }
+
+  Widget _buildLogoWidget() {
+    return ProjectLogoWidget(
+      project: widget.project,
+      size: 32,
+    );
   }
 
   @override
@@ -86,18 +97,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         ),
         title: Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.surfaceContainerHigh,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(6.0),
-                child: Image.asset('assets/logo.png', fit: BoxFit.contain),
-              ),
-            ),
+            _buildLogoWidget(),
             const SizedBox(width: 12),
             Expanded(child: Text(widget.project.name, style: Theme.of(context).textTheme.titleSmall)),
           ],
@@ -327,6 +327,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           const SizedBox(height: 16),
           ...domainsToShow.map((dom) {
             final domainName = dom['name'] as String? ?? '';
+            final verified = dom['verified'] == true;
+            final redirect = dom['redirect'] as String?;
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(16),
@@ -335,25 +337,64 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 border: const Border(bottom: BorderSide(color: AppTheme.primary, width: 2)),
                 borderRadius: BorderRadius.circular(2),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.language, color: AppTheme.onSurfaceVariant),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () async {
-                        final uri = Uri.parse('https://$domainName');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Text(domainName, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                  Row(
+                    children: [
+                      const Icon(Icons.language, color: AppTheme.onSurfaceVariant),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final uri = Uri.parse('https://$domainName');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          child: Text(domainName, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                        ),
+                      ),
+                      if (verified)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: const Text(
+                            'VERIFIED',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => _copyDomain(domainName),
+                        child: const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
+                      ),
+                    ],
+                  ),
+                  if (redirect != null && redirect.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.arrow_forward, size: 14, color: AppTheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Redirects to: $redirect',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.onSurfaceVariant,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  InkWell(
-                    onTap: () => _copyDomain(domainName),
-                    child: const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
-                  ),
+                  ],
                 ],
               ),
             );

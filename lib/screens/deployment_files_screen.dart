@@ -9,10 +9,14 @@ import 'file_content_screen.dart';
 
 class DeploymentFilesScreen extends StatefulWidget {
   final Deployment deployment;
+  final List<DeploymentFile>? initialFiles;
+  final String? directoryName;
 
   const DeploymentFilesScreen({
     super.key,
     required this.deployment,
+    this.initialFiles,
+    this.directoryName,
   });
 
   @override
@@ -27,7 +31,12 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchFiles();
+    if (widget.initialFiles != null) {
+      _files = _organizeFiles(List.from(widget.initialFiles!));
+      _isLoading = false;
+    } else {
+      _fetchFiles();
+    }
   }
 
   Future<void> _fetchFiles() async {
@@ -49,14 +58,8 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
     } catch (e) {
       if (mounted) {
         String errorMessage = e.toString();
-        bool isGitDeployment = widget.deployment.source == 'git' || widget.deployment.meta?.containsKey('githubCommitSha') == true;
-        
         if (errorMessage.contains('File tree not found')) {
-          if (isGitDeployment) {
-            errorMessage = 'The file tree is not available for Git-based deployments via the Vercel API. You can view the source code directly on your Git provider.';
-          } else {
-            errorMessage = 'The file tree is not available for this deployment. This can happen for older deployments or those created via certain integrations.';
-          }
+          errorMessage = 'File tree not available for this deployment.';
         }
         setState(() {
           _error = errorMessage;
@@ -87,8 +90,8 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Deployment Files', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Text(widget.deployment.name, style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
+            Text(widget.directoryName ?? 'Deployment Files', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(widget.deployment.name, style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
           ],
         ),
         actions: [
@@ -199,7 +202,18 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
             : null,
           trailing: const Icon(Icons.chevron_right, size: 16, color: AppTheme.onSurfaceVariant),
           onTap: () {
-            if (!isDir && file.uid != null) {
+            if (isDir && file.children != null && file.children!.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DeploymentFilesScreen(
+                    deployment: widget.deployment,
+                    initialFiles: file.children,
+                    directoryName: file.name,
+                  ),
+                ),
+              );
+            } else if (!isDir && file.uid != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(

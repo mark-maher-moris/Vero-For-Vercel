@@ -36,6 +36,7 @@ class Project {
   final Map<String, dynamic>? oidcTokenConfig;
   final String? serverlessFunctionRegion;
   final bool? serverlessFunctionZeroConfigFailover;
+  String? _cachedLogoUrl;
 
   Project({
     required this.id,
@@ -128,7 +129,7 @@ class Project {
 
   List<String> get allUrls {
     final urls = <String>{}; // Use Set to avoid duplicates
-    
+
     // Add production URL from targets
     if (targets != null && targets!.containsKey('production')) {
       final prod = targets!['production'];
@@ -150,7 +151,7 @@ class Project {
         }
       }
     }
-    
+
     // Add preview URL from targets
     if (targets != null && targets!.containsKey('preview')) {
       final preview = targets!['preview'];
@@ -158,7 +159,7 @@ class Project {
         urls.add(preview['url'] as String);
       }
     }
-    
+
     // Add latest deployment URL
     if (latestDeployments != null && latestDeployments!.isNotEmpty) {
       final latest = latestDeployments!.first;
@@ -167,8 +168,50 @@ class Project {
         urls.add(url);
       }
     }
-    
+
     return urls.toList();
+  }
+
+  List<String> get logoUrls {
+    final urls = <String>[];
+
+    // Return cached URL first if available
+    if (_cachedLogoUrl != null && _cachedLogoUrl!.isNotEmpty) {
+      urls.add(_cachedLogoUrl!);
+      return urls;
+    }
+
+    String? baseUrl;
+
+    // Get the first available URL from allUrls (includes actual deployment URLs)
+    if (allUrls.isNotEmpty) {
+      final firstUrl = allUrls.first;
+      baseUrl = firstUrl.startsWith('http') ? firstUrl : 'https://$firstUrl';
+    }
+
+    // Fallback to default Vercel URL
+    baseUrl ??= 'https://${name}.vercel.app';
+
+    // Try common logo paths in order of likelihood
+    urls.addAll([
+      '$baseUrl/favicon.ico',
+      '$baseUrl/favicon.png',
+      '$baseUrl/logo.png',
+      '$baseUrl/logo.svg',
+      '$baseUrl/icon.png',
+      '$baseUrl/assets/logo.png',
+      '$baseUrl/public/logo.png',
+      '$baseUrl/img/logo.png',
+      '$baseUrl/images/logo.png',
+      '$baseUrl/_next/image?url=%2Flogo.png&w=128&q=75', // Next.js optimized image
+      '$baseUrl/_next/static/media/logo.png', // Next.js static assets
+    ]);
+
+    return urls;
+  }
+
+  void setCachedLogoUrl(String url) {
+    _cachedLogoUrl = url;
   }
 }
 

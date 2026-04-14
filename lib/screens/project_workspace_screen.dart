@@ -15,8 +15,10 @@ import '../theme/app_theme.dart';
 import '../models/env_var.dart';
 import '../widgets/action_card.dart';
 import '../widgets/deployment_card.dart';
+import '../widgets/project_logo_widget.dart';
 import '../widgets/traffic_globe.dart';
 import 'file_content_screen.dart';
+import 'deployment_files_screen.dart';
 import 'deployment_logs_screen.dart';
 
 class ProjectWorkspaceScreen extends StatefulWidget {
@@ -43,7 +45,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
     // Initialize with a dummy future that will be replaced in _fetchData
     _deploymentFilesFuture = Future.value([]);
     // Track project workspace view
@@ -61,7 +63,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
-      final tabNames = ['overview', 'deployments', 'logs', 'activity', 'security', 'env_vars', 'domains'];
+      final tabNames = ['overview', 'deployments', 'files', 'logs', 'activity', 'security', 'env_vars', 'domains'];
       SuperwallService().trackUserAction('switch_tab', 
         context: 'project_workspace',
         properties: {
@@ -97,9 +99,13 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           _deployments = deps;
           _domains = doms;
           _envVars = envs;
-          // Initialize the cached future for deployment files (only for non-Git deployments)
-          if (_deployments != null && _deployments!.isNotEmpty && !_deployments!.first.isGit) {
-            _deploymentFilesFuture = appState.apiService.getDeploymentFiles(_deployments!.first.uid);
+          // Initialize the cached future for deployment files
+          if (_deployments != null && _deployments!.isNotEmpty) {
+            _deploymentFilesFuture = appState.apiService.getDeploymentFiles(_deployments!.first.uid)
+              .catchError((error) {
+                print('[ProjectWorkspace] Error fetching deployment files: $error');
+                throw error; // Re-throw to let FutureBuilder handle it
+              });
           }
           _isLoading = false;
         });
@@ -117,7 +123,10 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(!url.startsWith('http') ? 'https://$url' : url);
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
     }
   }
 
@@ -170,13 +179,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         ),
         title: Row(
           children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                color: AppTheme.success,
-                shape: BoxShape.circle,
-              ),
+            ProjectLogoWidget(
+              project: widget.project,
+              size: 28,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -211,7 +216,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           isScrollable: true,
           onTap: (index) {
             // Track tab tap attempt
-            final tabNames = ['overview', 'deployments', 'logs', 'activity', 'security', 'env_vars', 'domains'];
+            final tabNames = ['overview', 'deployments', 'files', 'logs', 'activity', 'security', 'env_vars', 'domains'];
             SuperwallService().trackUserAction('tab_tapped', 
               context: 'project_workspace',
               properties: {
@@ -257,7 +262,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           tabs: [
             const Tab(text: 'OVERVIEW'),
             const Tab(text: 'DEPLOYMENTS'),
-            // const Tab(text: 'FILES'), // HIDDEN temporarily
+            _buildProTab('FILES', isPro),
             _buildProTab('LOGS', isPro),
             _buildProTab('ACTIVITY', isPro),
             _buildProTab('SECURITY', isPro),
@@ -276,7 +281,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                 children: [
                   _buildOverviewTab(),
                   _buildDeploymentsTab(),
-                  // _buildBlurredTabIfNeeded(_buildFilesTab(), isPro, context), // HIDDEN temporarily
+                  _buildBlurredTabIfNeeded(_buildFilesTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildLogsTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildActivityTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildSecurityTab(), isPro, context),
@@ -425,6 +430,8 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         children: [
           _buildInfoCard(),
           const SizedBox(height: 24),
+          _buildProjectStatusSection(),
+          const SizedBox(height: 24),
           TrafficGlobe(projectId: widget.project.id),
           const SizedBox(height: 24),
           _buildQuickActions(),
@@ -432,6 +439,8 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           if (repoUrl != null) _buildGitSection(repoUrl),
           if (repoUrl != null) const SizedBox(height: 24),
           _buildTechnicalStats(),
+          const SizedBox(height: 24),
+          _buildSecurityFeaturesSection(),
           const SizedBox(height: 24),
           _buildFeaturesSection(),
         ],
@@ -514,6 +523,67 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectStatusSection() {
+    final isLive = widget.project.live == true;
+    final isPaused = widget.project.paused == true;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('PROJECT STATUS', style: Theme.of(context).textTheme.labelSmall),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: Row(
+            children: [
+              _buildStatusBadge(
+                isLive ? Icons.check_circle : Icons.radio_button_unchecked,
+                isLive ? 'Live' : 'Offline',
+                isLive ? AppTheme.success : AppTheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 16),
+              if (isPaused)
+                _buildStatusBadge(
+                  Icons.pause_circle,
+                  'Paused',
+                  AppTheme.error,
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusBadge(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -737,6 +807,74 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     );
   }
 
+  Widget _buildSecurityFeaturesSection() {
+    final security = widget.project.security;
+    if (security == null) return const SizedBox.shrink();
+
+    final features = <Widget>[];
+
+    final firewallEnabled = security['firewallEnabled'] as bool?;
+    final attackModeEnabled = security['attackModeEnabled'] as bool?;
+    final pageIntegrityEnabled = security['pageIntegrityEnabled'] as bool?;
+
+    if (firewallEnabled == true) {
+      features.add(_buildSecurityFeatureItem(Icons.shield, 'Firewall', 'Enabled'));
+    }
+    if (attackModeEnabled == true) {
+      features.add(_buildSecurityFeatureItem(Icons.security, 'Attack Mode', 'Enabled'));
+    }
+    if (pageIntegrityEnabled == true) {
+      features.add(_buildSecurityFeatureItem(Icons.verified_user, 'Page Integrity', 'Enabled'));
+    }
+
+    if (features.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('SECURITY FEATURES', style: Theme.of(context).textTheme.labelSmall),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: Column(children: features),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSecurityFeatureItem(IconData icon, String name, String status) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppTheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(child: Text(name)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: AppTheme.success.withOpacity(0.3), width: 1),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.success,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFeaturesSection() {
     final features = <Widget>[];
 
@@ -877,62 +1015,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     // Use the latest deployment
     final deployment = _deployments!.first;
 
-    // For Git-based deployments, show the repo link directly without calling the API
-    if (deployment.isGit) {
-      final repoUrl = deployment.repositoryUrl;
-      return RefreshIndicator(
-        onRefresh: _fetchData,
-        color: AppTheme.primary,
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            Text('DEPLOYMENT FILES', style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.info_outline,
-                    color: AppTheme.onSurfaceVariant,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'File Tree Unavailable',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'The file tree is not available for Git-based deployments via the Vercel API. You can view the source code directly on your Git provider.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.onSurfaceVariant),
-                  ),
-                  if (repoUrl != null) ...[
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () => _launchUrl(repoUrl),
-                      icon: const Icon(Icons.open_in_new),
-                      label: Text('View on ${deployment.providerName ?? 'Git'}'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return FutureBuilder<List<DeploymentFile>>(
       future: _deploymentFilesFuture,
       builder: (context, snapshot) {
@@ -943,8 +1025,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         if (snapshot.hasError) {
           final error = snapshot.error.toString();
           final isNotFound = error.contains('File tree not found');
-          final isGitDeployment = deployment.isGit;
-          final repoUrl = deployment.repositoryUrl;
           
           return Center(
             child: Padding(
@@ -964,26 +1044,12 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    isNotFound 
-                      ? (isGitDeployment 
-                          ? 'The file tree is not available for Git-based deployments via the Vercel API. You can view the source code directly on your Git provider.'
-                          : 'The file tree is not available for this deployment. This can happen for older deployments or those created via certain integrations.')
-                      : error,
+                    isNotFound ? 'File tree not available for this deployment.' : error,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
                   ),
                   const SizedBox(height: 24),
-                  if (isNotFound && isGitDeployment && repoUrl != null)
-                    ElevatedButton.icon(
-                      onPressed: () => launchUrl(Uri.parse(repoUrl)),
-                      icon: const Icon(Icons.open_in_new, size: 16, color: Colors.black),
-                      label: Text('VIEW ON ${deployment.providerName?.toUpperCase() ?? 'GIT'}', style: const TextStyle(color: Colors.black)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                    )
-                  else if (!isNotFound)
+                  if (!isNotFound)
                     ElevatedButton(onPressed: () => setState(() {}), child: const Text('Retry')),
                 ],
               ),
@@ -1036,7 +1102,18 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                 : null,
               trailing: const Icon(Icons.chevron_right, size: 16, color: AppTheme.onSurfaceVariant),
               onTap: () {
-                if (!isDir && file.uid != null) {
+                if (isDir && file.children != null && file.children!.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DeploymentFilesScreen(
+                        deployment: deployment,
+                        initialFiles: file.children,
+                        directoryName: file.name,
+                      ),
+                    ),
+                  );
+                } else if (!isDir && file.uid != null) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1992,6 +2069,8 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             )
           else
             ..._domains!.take(5).map((dom) {
+              final verified = dom['verified'] == true;
+              final redirect = dom['redirect'] as String?;
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(16),
@@ -1999,24 +2078,63 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   color: AppTheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(2),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.language, color: AppTheme.onSurfaceVariant),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        dom['name'],
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primary,
+                    Row(
+                      children: [
+                        const Icon(Icons.language, color: AppTheme.onSurfaceVariant),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            dom['name'],
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary,
+                            ),
+                          ),
                         ),
+                        if (verified)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: const Text(
+                              'VERIFIED',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => _copyToClipboard(dom['name']),
+                          child: const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
+                        ),
+                      ],
+                    ),
+                    if (redirect != null && redirect.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.arrow_forward, size: 14, color: AppTheme.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Redirects to: $redirect',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.onSurfaceVariant,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    InkWell(
-                      onTap: () => _copyToClipboard(dom['name']),
-                      child: const Icon(Icons.content_copy, color: AppTheme.onSurfaceVariant, size: 16),
-                    ),
+                    ],
                   ],
                 ),
               );

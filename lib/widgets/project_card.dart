@@ -6,8 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/project.dart';
 import '../theme/app_theme.dart';
 import '../screens/project_workspace_screen.dart';
+import 'project_logo_widget.dart';
 
-class ProjectCard extends StatelessWidget {
+class ProjectCard extends StatefulWidget {
   final Project project;
   final bool isBlurred;
   final VoidCallback? onSubscribeTap;
@@ -21,45 +22,17 @@ class ProjectCard extends StatelessWidget {
     this.onProjectTap,
   });
 
-  String get _frameworkIcon {
-    switch (project.framework?.toLowerCase()) {
-      case 'nextjs':
-        return '▲';
-      case 'astro':
-        return '🚀';
-      case 'remix':
-      case 'react-router':
-        return '⚛';
-      case 'svelte':
-      case 'sveltekit':
-        return '🔥';
-      case 'vue':
-      case 'nuxtjs':
-        return '🟢';
-      case 'angular':
-        return '🅰';
-      case 'gatsby':
-        return 'G';
-      case 'hugo':
-        return 'H';
-      case 'jekyll':
-        return '📄';
-      case 'express':
-      case 'fastify':
-      case 'nestjs':
-      case 'koa':
-        return '🟢';
-      default:
-        return '⚡';
-    }
-  }
+  @override
+  State<ProjectCard> createState() => _ProjectCardState();
+}
 
+class _ProjectCardState extends State<ProjectCard> {
   String get _branchName {
-    if (project.link != null && project.link!['productionBranch'] != null) {
-      return project.link!['productionBranch'] as String;
+    if (widget.project.link != null && widget.project.link!['productionBranch'] != null) {
+      return widget.project.link!['productionBranch'] as String;
     }
-    if (project.latestDeployments != null && project.latestDeployments!.isNotEmpty) {
-      final target = project.latestDeployments!.first['target'] as String?;
+    if (widget.project.latestDeployments != null && widget.project.latestDeployments!.isNotEmpty) {
+      final target = widget.project.latestDeployments!.first['target'] as String?;
       if (target != null) return target;
     }
     return 'main';
@@ -67,22 +40,22 @@ class ProjectCard extends StatelessWidget {
 
   List<Widget> _buildStatusIndicators() {
     final indicators = <Widget>[];
-    
-    if (project.analytics != null && project.analytics!['enabledAt'] != null) {
+
+    if (widget.project.analytics != null && widget.project.analytics!['enabledAt'] != null) {
       indicators.add(_buildIndicator(Icons.analytics, 'Analytics', AppTheme.primary));
     }
-    if (project.webAnalytics != null && project.webAnalytics!['enabledAt'] != null) {
+    if (widget.project.webAnalytics != null && widget.project.webAnalytics!['enabledAt'] != null) {
       indicators.add(_buildIndicator(Icons.speed, 'Web Analytics', AppTheme.primary));
     }
-    if (project.passwordProtection != null) {
+    if (widget.project.passwordProtection != null) {
       indicators.add(_buildIndicator(Icons.lock, 'Protected', AppTheme.error));
     }
-    if (project.security?['firewallEnabled'] == true) {
+    if (widget.project.security?['firewallEnabled'] == true) {
       indicators.add(_buildIndicator(Icons.shield, 'Firewall', AppTheme.success));
     }
-    
-    return indicators.isEmpty 
-        ? [const SizedBox.shrink()] 
+
+    return indicators.isEmpty
+        ? [const SizedBox.shrink()]
         : indicators;
   }
 
@@ -97,9 +70,9 @@ class ProjectCard extends StatelessWidget {
   }
 
   List<Widget> _buildUrlRows() {
-    final urls = project.allUrls;
+    final urls = widget.project.allUrls;
     if (urls.isEmpty) {
-      final defaultUrl = '${project.name}.vercel.app';
+      final defaultUrl = '${widget.project.name}.vercel.app';
       return [
         InkWell(
           onTap: () async {
@@ -161,9 +134,9 @@ class ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     bool isSuccess = true;
     String statusStr = 'Production';
-    
-    if (project.latestDeployments != null && project.latestDeployments!.isNotEmpty) {
-      final latest = project.latestDeployments!.first;
+
+    if (widget.project.latestDeployments != null && widget.project.latestDeployments!.isNotEmpty) {
+      final latest = widget.project.latestDeployments!.first;
       if (latest['readyState'] == 'ERROR') {
         isSuccess = false;
         statusStr = 'Failed';
@@ -173,14 +146,14 @@ class ProjectCard extends StatelessWidget {
     }
 
     Widget cardContent = GestureDetector(
-      onTap: isBlurred
-          ? onSubscribeTap
+      onTap: widget.isBlurred
+          ? widget.onSubscribeTap
           : () {
-              onProjectTap?.call();
+              widget.onProjectTap?.call();
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ProjectWorkspaceScreen(project: project),
+                  builder: (context) => ProjectWorkspaceScreen(project: widget.project),
                 ),
               );
             },
@@ -215,7 +188,7 @@ class ProjectCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            project.name,
+                            widget.project.name,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -235,20 +208,10 @@ class ProjectCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Text(
-                      _frameworkIcon,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primary,
-                      ),
-                    ),
+                  ProjectLogoWidget(
+                    project: widget.project,
+                    size: 40,
+                    shape: BoxShape.rectangle,
                   ),
                 ],
               ),
@@ -268,7 +231,7 @@ class ProjectCard extends StatelessWidget {
                         Text(_branchName, style: Theme.of(context).textTheme.bodyMedium),
                         const Spacer(),
                         Text(
-                          timeago.format(project.updatedAt, locale: 'en_short'),
+                          timeago.format(widget.project.updatedAt, locale: 'en_short'),
                           style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
                         ),
                       ],
@@ -287,7 +250,7 @@ class ProjectCard extends StatelessWidget {
       ),
     );
 
-    if (isBlurred) {
+    if (widget.isBlurred) {
       return Stack(
         children: [
           cardContent,
@@ -329,7 +292,7 @@ class ProjectCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
-                          onPressed: onSubscribeTap,
+                          onPressed: widget.onSubscribeTap,
                           icon: const Icon(Icons.star, size: 16),
                           label: const Text('Upgrade to Pro'),
                           style: ElevatedButton.styleFrom(
