@@ -7,6 +7,7 @@ import 'deployment_actions_screen.dart';
 import 'advanced_logs_screen.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
+import '../models/cron_job.dart';
 import '../screens/deployment_files_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/deployment_card.dart';
@@ -134,6 +135,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 _buildSecuritySection(),
                 _buildEnvVarsSection(),
                 _buildAliasesSection(),
+                _buildCronsSection(),
                 _buildFeaturesSection(),
                 _buildTechnicalStats(),
               ],
@@ -766,6 +768,160 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           const SizedBox(width: 12),
           Expanded(child: Text(name)),
           Text(status, style: TextStyle(fontSize: 12, color: AppTheme.success, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCronsSection() {
+    final crons = widget.project.crons;
+    if (crons == null || crons.definitions.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('CRON JOBS', style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: crons.isEnabled ? AppTheme.success.withOpacity(0.1) : AppTheme.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  crons.isEnabled ? 'ENABLED' : 'DISABLED',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: crons.isEnabled ? AppTheme.success : AppTheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ...crons.definitions.map((cron) => _buildCronItem(cron)),
+                if (crons.updatedAt != null) ...[
+                  const Divider(height: 24),
+                  Row(
+                    children: [
+                      Icon(Icons.update, size: 14, color: AppTheme.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Updated ${timeago.format(crons.updatedAt!)}',
+                        style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCronItem(CronJob cron) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.schedule, size: 16, color: AppTheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  cron.path,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  cron.displaySchedule,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _copyToClipboard(cron.schedule),
+                child: Text(
+                  cron.schedule,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.onSurfaceVariant,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.language, size: 12, color: AppTheme.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  cron.host,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.onSurfaceVariant,
+                    fontFamily: 'monospace',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _launchUrl(cron.fullUrl),
+                child: const Icon(
+                  Icons.open_in_new,
+                  size: 14,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

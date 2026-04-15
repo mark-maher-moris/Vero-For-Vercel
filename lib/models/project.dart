@@ -1,3 +1,5 @@
+import 'cron_job.dart';
+
 class Project {
   final String id;
   final String name;
@@ -36,6 +38,7 @@ class Project {
   final Map<String, dynamic>? oidcTokenConfig;
   final String? serverlessFunctionRegion;
   final bool? serverlessFunctionZeroConfigFailover;
+  final ProjectCrons? crons;
   String? _cachedLogoUrl;
 
   Project({
@@ -76,6 +79,7 @@ class Project {
     this.oidcTokenConfig,
     this.serverlessFunctionRegion,
     this.serverlessFunctionZeroConfigFailover,
+    this.crons,
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
@@ -117,6 +121,9 @@ class Project {
       oidcTokenConfig: json['oidcTokenConfig'] as Map<String, dynamic>?,
       serverlessFunctionRegion: json['serverlessFunctionRegion'] as String?,
       serverlessFunctionZeroConfigFailover: json['serverlessFunctionZeroConfigFailover'] as bool?,
+      crons: json['crons'] != null
+          ? ProjectCrons.fromJson(json['crons'] as Map<String, dynamic>)
+          : null,
     );
   }
 

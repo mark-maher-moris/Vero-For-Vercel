@@ -394,6 +394,8 @@ class _AccountScreenState extends State<AccountScreen> {
                   const SizedBox(height: 16),
                   _buildCopyableInfoRow('Support ID', _supportId, _copySupportId),
                   const Divider(height: 24),
+                  _buildChangeTokenButton(context),
+                  const Divider(height: 24),
                   _buildRestorePurchasesButton(),
                   const Divider(height: 24),
                   _buildReplayOnboardingButton(context),
@@ -733,6 +735,187 @@ class _AccountScreenState extends State<AccountScreen> {
         context,
         MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );
+    }
+  }
+
+  Widget _buildChangeTokenButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showChangeTokenDialog(context),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Change API Token',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.onSurfaceVariant,
+            ),
+          ),
+          Row(
+            children: [
+              const Icon(
+                Icons.vpn_key,
+                size: 18,
+                color: AppTheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Update token',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangeTokenDialog(BuildContext context) {
+    final TextEditingController tokenController = TextEditingController();
+    bool isLoading = false;
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.surfaceContainerLow,
+            title: const Text(
+              'Change API Token',
+              style: TextStyle(color: AppTheme.primary),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Enter your new Vercel API token:',
+                  style: TextStyle(color: AppTheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: tokenController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    hintText: 'vercel_api_token_...',
+                    hintStyle: TextStyle(
+                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    ),
+                    filled: true,
+                    fillColor: AppTheme.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(2),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorText: errorMessage,
+                  ),
+                  style: const TextStyle(color: AppTheme.primary),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => _launchVercelTokens(context),
+                  child: Text(
+                    'Get your token from Vercel →',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.primary.withValues(alpha: 0.8),
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        final token = tokenController.text.trim();
+                        if (token.isEmpty) {
+                          setDialogState(() {
+                            errorMessage = 'Please enter a token';
+                          });
+                          return;
+                        }
+
+                        setDialogState(() {
+                          isLoading = true;
+                          errorMessage = null;
+                        });
+
+                        final appState = context.read<AppState>();
+                        try {
+                          await appState.login(token);
+
+                          if (appState.errorMessage != null) {
+                            setDialogState(() {
+                              isLoading = false;
+                              errorMessage = appState.errorMessage;
+                            });
+                          } else {
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('API token updated successfully'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          setDialogState(() {
+                            isLoading = false;
+                            errorMessage = 'Invalid token. Please check and try again.';
+                          });
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: AppTheme.onPrimary,
+                ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.onPrimary),
+                        ),
+                      )
+                    : const Text('Update Token'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _launchVercelTokens(BuildContext context) async {
+    final uri = Uri.parse('https://vercel.com/account/tokens');
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not launch $uri');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open Vercel link'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     }
   }
 

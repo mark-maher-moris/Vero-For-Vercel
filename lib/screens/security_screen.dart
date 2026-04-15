@@ -17,6 +17,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
   AttackModeStatus? _attackModeStatus;
   FirewallConfig? _firewallConfig;
   List<ManagedRuleset>? _managedRulesets;
+  List<ActiveAttack>? _activeAttacks;
   bool _isLoading = false;
   String? _error;
   late TabController _tabController;
@@ -24,7 +25,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -48,6 +49,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
         api.getAttackModeStatus(_selectedProject!.id),
         api.getFirewallConfig(_selectedProject!.id),
         api.getManagedRulesets(_selectedProject!.id),
+        api.getActiveAttacks(projectId: _selectedProject!.id),
       ]);
 
       if (mounted) {
@@ -55,6 +57,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
           _attackModeStatus = results[0] as AttackModeStatus;
           _firewallConfig = results[1] as FirewallConfig;
           _managedRulesets = results[2] as List<ManagedRuleset>;
+          _activeAttacks = results[3] as List<ActiveAttack>;
           _isLoading = false;
         });
       }
@@ -249,6 +252,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                   Tab(icon: Icon(Icons.shield_outlined), text: 'Overview'),
                   Tab(icon: Icon(Icons.security_outlined), text: 'Firewall'),
                   Tab(icon: Icon(Icons.rule_outlined), text: 'WAF Rules'),
+                  Tab(icon: Icon(Icons.warning_amber_rounded), text: 'Attacks'),
                 ],
               )
             : null,
@@ -267,6 +271,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                         _buildOverviewTab(),
                         _buildFirewallTab(),
                         _buildWafTab(),
+                        _buildAttacksTab(),
                       ],
                     ),
     );
@@ -470,6 +475,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
     final ruleCount = _firewallConfig?.rules.length ?? 0;
     final blockedIps = _firewallConfig?.ips.length ?? 0;
     final managedRules = _managedRulesets?.length ?? 0;
+    final activeAttackCount = _activeAttacks?.where((a) => a.isOngoing).length ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -507,6 +513,12 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                 value: managedRules.toString(),
                 label: 'WAF Rules',
                 color: Colors.green,
+              ),
+              _buildStatItem(
+                icon: Icons.warning_amber_rounded,
+                value: activeAttackCount.toString(),
+                label: 'Active Attacks',
+                color: activeAttackCount > 0 ? Colors.orange : Colors.grey,
               ),
             ],
           ),
@@ -1246,6 +1258,293 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
       return '${diff.inHours}h ${diff.inMinutes % 60}m';
     } else {
       return '${diff.inDays}d ${diff.inHours % 24}h';
+    }
+  }
+
+  Widget _buildAttacksTab() {
+    final attacks = _activeAttacks ?? [];
+    final ongoingAttacks = attacks.where((a) => a.isOngoing).toList();
+    final pastAttacks = attacks.where((a) => !a.isOngoing).toList();
+
+    return RefreshIndicator(
+      onRefresh: _loadSecurityData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          // Summary Card
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: ongoingAttacks.isNotEmpty
+                  ? Colors.red.withOpacity(0.05)
+                  : Colors.green.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: ongoingAttacks.isNotEmpty
+                    ? Colors.red.withOpacity(0.2)
+                    : Colors.green.withOpacity(0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: ongoingAttacks.isNotEmpty
+                            ? Colors.red.withOpacity(0.1)
+                            : Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Icon(
+                        ongoingAttacks.isNotEmpty
+                            ? Icons.warning_rounded
+                            : Icons.check_circle_outline,
+                        color: ongoingAttacks.isNotEmpty ? Colors.redAccent : Colors.green,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ongoingAttacks.isNotEmpty
+                                ? '${ongoingAttacks.length} Active Attack${ongoingAttacks.length > 1 ? 's' : ''}'
+                                : 'No Active Attacks',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            ongoingAttacks.isNotEmpty
+                                ? 'Your project is currently under attack'
+                                : 'Your project is protected and safe',
+                            style: TextStyle(
+                              color: AppTheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (ongoingAttacks.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.redAccent, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Vercel is automatically mitigating these attacks. No action required.',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Ongoing Attacks
+          if (ongoingAttacks.isNotEmpty) ...[
+            Text(
+              'ONGOING ATTACKS',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...ongoingAttacks.map((attack) => _buildAttackCard(attack)),
+            const SizedBox(height: 24),
+          ],
+
+          // Past Attacks
+          if (pastAttacks.isNotEmpty) ...[
+            Text(
+              'RECENT ATTACKS',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...pastAttacks.take(5).map((attack) => _buildAttackCard(attack)),
+          ],
+
+          // No attacks at all
+          if (attacks.isEmpty)
+            _buildEmptyListState(
+              icon: Icons.shield_outlined,
+              title: 'No Attack History',
+              subtitle: 'No DDoS attacks have been detected for this project',
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttackCard(ActiveAttack attack) {
+    final isOngoing = attack.isOngoing;
+    final statusColor = isOngoing ? Colors.redAccent : Colors.green;
+    final duration = attack.duration;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Icon(
+                  isOngoing ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                  color: statusColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      attack.attackType.toUpperCase(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Started ${_formatDuration(duration)} ago',
+                      style: TextStyle(
+                        color: AppTheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isOngoing ? 'ONGOING' : 'MITIGATED',
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (attack.requestsPerSecond != null || attack.targetHosts != null) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (attack.requestsPerSecond != null)
+                  Expanded(
+                    child: _buildAttackMetric(
+                      icon: Icons.speed_outlined,
+                      value: '${attack.requestsPerSecond}',
+                      label: 'req/sec',
+                      color: Colors.blue,
+                    ),
+                  ),
+                if (attack.targetHosts != null && attack.targetHosts!.isNotEmpty)
+                  Expanded(
+                    flex: 2,
+                    child: _buildAttackMetric(
+                      icon: Icons.dns_outlined,
+                      value: attack.targetHosts!.length.toString(),
+                      label: 'targets: ${attack.targetHosts!.take(2).join(', ')}${attack.targetHosts!.length > 2 ? '...' : ''}',
+                      color: AppTheme.primary,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttackMetric({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: color.withOpacity(0.7), size: 18),
+        const SizedBox(width: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: AppTheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    if (duration.inDays > 0) {
+      return '${duration.inDays}d ${duration.inHours % 24}h';
+    } else if (duration.inHours > 0) {
+      return '${duration.inHours}h ${duration.inMinutes % 60}m';
+    } else {
+      return '${duration.inMinutes}m';
     }
   }
 }

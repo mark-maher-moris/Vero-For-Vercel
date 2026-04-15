@@ -160,3 +160,59 @@ class ManagedRuleset {
     };
   }
 }
+
+/// Represents an active attack (DDoS) detected on a project
+class ActiveAttack {
+  final String id;
+  final String projectId;
+  final DateTime startedAt;
+  final DateTime? endedAt;
+  final String attackType;
+  final String mitigationStatus;
+  final int? requestsPerSecond;
+  final List<String>? targetHosts;
+  final Map<String, dynamic>? metadata;
+
+  ActiveAttack({
+    required this.id,
+    required this.projectId,
+    required this.startedAt,
+    this.endedAt,
+    required this.attackType,
+    required this.mitigationStatus,
+    this.requestsPerSecond,
+    this.targetHosts,
+    this.metadata,
+  });
+
+  factory ActiveAttack.fromJson(Map<String, dynamic> json) {
+    return ActiveAttack(
+      id: json['id'] ?? '',
+      projectId: json['projectId'] ?? '',
+      startedAt: json['startedAt'] != null
+          ? DateTime.tryParse(json['startedAt'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      endedAt: json['endedAt'] != null
+          ? DateTime.tryParse(json['endedAt'].toString())
+          : null,
+      attackType: json['attackType'] ?? 'unknown',
+      mitigationStatus: json['mitigationStatus'] ?? 'unknown',
+      requestsPerSecond: json['requestsPerSecond'] != null
+          ? int.tryParse(json['requestsPerSecond'].toString())
+          : null,
+      targetHosts: json['targetHosts'] != null
+          ? (json['targetHosts'] as List<dynamic>).map((h) => h.toString()).toList()
+          : null,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  /// Whether the attack is still ongoing
+  bool get isOngoing => endedAt == null;
+
+  /// Duration of the attack so far
+  Duration get duration {
+    final end = endedAt ?? DateTime.now();
+    return end.difference(startedAt);
+  }
+}

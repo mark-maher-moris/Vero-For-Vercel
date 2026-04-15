@@ -8,6 +8,7 @@ import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'widgets/auth_error_handler.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,26 +37,28 @@ class VeroApp extends StatelessWidget {
       title: 'Vero For Vercel',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
-      home: Consumer<AppState>(
-        builder: (context, appState, child) {
-          if (appState.isLoading) {
-            return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(
-                  color: AppTheme.primary,
+      home: AuthErrorHandler(
+        child: Consumer<AppState>(
+          builder: (context, appState, child) {
+            if (appState.isLoading) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(
+                    color: AppTheme.primary,
+                  ),
                 ),
-              ),
-            );
-          }
-          if (appState.isAuthenticated) {
-            return const MainScreen();
-          }
-          // Show onboarding first, then login
-          if (!appState.hasCompletedOnboarding) {
-            return const OnboardingScreen();
-          }
-          return const LoginScreen();
-        },
+              );
+            }
+            if (appState.isAuthenticated) {
+              return const MainScreen();
+            }
+            // Show onboarding first, then login
+            if (!appState.hasCompletedOnboarding) {
+              return const OnboardingScreen();
+            }
+            return const LoginScreen();
+          },
+        ),
       ),
     );
   }

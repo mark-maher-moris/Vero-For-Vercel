@@ -42,6 +42,11 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   String? _errorMessage;
   late Future<List<DeploymentFile>> _deploymentFilesFuture;
 
+  // Live deployment logs
+  List<dynamic>? _liveLogs;
+  bool _isLoadingLiveLogs = false;
+  String? _liveLogsError;
+
   @override
   void initState() {
     super.initState();
@@ -56,7 +61,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         'framework': widget.project.framework,
       });
     });
-    // Listen to tab changes for analytics
+    // Listen to tab changes for analytics and lazy-load logs
     _tabController.addListener(_onTabChanged);
     _fetchData();
   }
@@ -64,7 +69,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
       final tabNames = ['overview', 'deployments', 'files', 'logs', 'activity', 'security', 'env_vars', 'domains'];
-      SuperwallService().trackUserAction('switch_tab', 
+      SuperwallService().trackUserAction('switch_tab',
         context: 'project_workspace',
         properties: {
           'tab_name': tabNames[_tabController.index],
@@ -72,6 +77,51 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         }
       );
     }
+    // Lazy load live logs when switching to logs tab
+    if (_tabController.index == 3 && !_tabController.indexIsChanging) {
+      _fetchLiveDeploymentLogs();
+    }
+  }
+
+  Future<void> _fetchLiveDeploymentLogs() async {
+    final liveDeployment = _getLatestLiveDeployment();
+    if (liveDeployment == null) return;
+
+    setState(() {
+      _isLoadingLiveLogs = true;
+      _liveLogsError = null;
+    });
+
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final logs = await appState.apiService.getDeploymentEvents(liveDeployment.uid);
+
+      if (mounted) {
+        setState(() {
+          _liveLogs = logs;
+          _isLoadingLiveLogs = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _liveLogsError = e.toString();
+          _isLoadingLiveLogs = false;
+        });
+      }
+    }
+  }
+
+  Deployment? _getLatestLiveDeployment() {
+    if (_deployments == null || _deployments!.isEmpty) return null;
+
+    // Find the latest READY deployment (live)
+    final readyDeployments = _deployments!.where((d) => d.state == 'READY').toList();
+    if (readyDeployments.isEmpty) return null;
+
+    // Sort by created date descending and return the first
+    readyDeployments.sort((a, b) => b.created.compareTo(a.created));
+    return readyDeployments.first;
   }
 
   @override
@@ -1160,85 +1210,244 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   }
 
   Widget _buildLogsTab() {
+    final liveDeployment = _getLatestLiveDeployment();
+
     return RefreshIndicator(
-      onRefresh: _fetchData,
+      onRefresh: _fetchLiveDeploymentLogs,
       color: AppTheme.primary,
-      child: ListView(
-        padding: const EdgeInsets.all(24),
+      child: Column(
         children: [
-          Text('DEPLOYMENT LOGS', style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: 16),
-          if (_deployments == null || _deployments!.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: const Center(
-                child: Text(
-                  'No deployments to show logs for',
-                  style: TextStyle(color: AppTheme.onSurfaceVariant),
-                ),
-              ),
-            )
-          else
-            ..._deployments!.take(5).map((dep) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Row(
+          // Header with live deployment info
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest,
+              border: Border(bottom: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.1))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
                   children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: dep.state == 'READY' ? AppTheme.success : AppTheme.error,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            dep.url,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'monospace',
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            timeago.format(DateTime.fromMillisecondsSinceEpoch(dep.created * 1000)),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DeploymentLogsScreen(deployment: dep),
-                          ),
-                        );
-                      },
-                      child: const Text('VIEW LOGS'),
+                    const Icon(Icons.terminal, size: 16, color: AppTheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Text(
+                      'LIVE DEPLOYMENT LOGS',
+                      style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ],
                 ),
-              );
-            }),
+                if (liveDeployment != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppTheme.success.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.success,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          liveDeployment.name,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.success,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Logs content
+          Expanded(
+            child: _buildLiveLogsContent(liveDeployment),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveLogsContent(Deployment? liveDeployment) {
+    if (liveDeployment == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.info_outline, color: AppTheme.onSurfaceVariant, size: 48),
+            const SizedBox(height: 16),
+            const Text(
+              'No live deployment found',
+              style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Deploy your project to see live logs here.',
+              style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_isLoadingLiveLogs) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppTheme.primary),
+      );
+    }
+
+    if (_liveLogsError != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to load logs',
+              style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _liveLogsError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _fetchLiveDeploymentLogs,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_liveLogs == null || _liveLogs!.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.terminal, color: AppTheme.onSurfaceVariant, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'No logs available for ${liveDeployment.name}',
+              style: const TextStyle(color: AppTheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Log display with terminal styling
+    return Container(
+      color: const Color(0xFF000000),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _liveLogs!.length,
+        itemBuilder: (context, index) {
+          final log = _liveLogs![index];
+          final text = _extractLogText(log);
+          final date = _extractLogDate(log);
+          final timeStr = date != null
+              ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first
+              : '';
+          final type = _extractLogType(log);
+          final isErrorLog = type == 'stderr' || text.toString().toLowerCase().contains('error');
+          final level = isErrorLog ? 'ERROR' : 'INFO';
+
+          return _buildLogLine(timeStr, level, text.toString());
+        },
+      ),
+    );
+  }
+
+  String _extractLogText(dynamic log) {
+    if (log is Map<String, dynamic>) {
+      return log['text']?.toString() ??
+          log['message']?.toString() ??
+          log['payload']?.toString() ??
+          log.toString();
+    }
+    return log.toString();
+  }
+
+  int? _extractLogDate(dynamic log) {
+    if (log is Map<String, dynamic>) {
+      final date = log['date'];
+      if (date is int) return date;
+      if (date is String) {
+        try {
+          return DateTime.parse(date).millisecondsSinceEpoch;
+        } catch (_) {}
+      }
+    }
+    return null;
+  }
+
+  String _extractLogType(dynamic log) {
+    if (log is Map<String, dynamic>) {
+      return log['type']?.toString() ?? '';
+    }
+    return '';
+  }
+
+  Widget _buildLogLine(String timeStr, String level, String message) {
+    Color levelColor;
+    switch (level) {
+      case 'ERROR':
+        levelColor = AppTheme.error;
+        break;
+      case 'WARN':
+        levelColor = const Color(0xFFF5A623);
+        break;
+      default:
+        levelColor = AppTheme.primary;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(
+              timeStr,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFF666666)),
+            ),
+          ),
+          SizedBox(
+            width: 45,
+            child: Text(
+              level,
+              style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: levelColor, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12,
+                color: level == 'ERROR' ? AppTheme.error : const Color(0xFFE0E0E0),
+              ),
+            ),
+          ),
         ],
       ),
     );

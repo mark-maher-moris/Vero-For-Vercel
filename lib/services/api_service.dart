@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +8,29 @@ import '../models/deployment.dart';
 import '../models/deployment_file.dart';
 import '../models/security.dart';
 import 'auth_service.dart';
+
+/// Stream controller for broadcasting authentication errors (401/403)
+/// This allows the app to globally handle token expiration/invalidation
+final StreamController<AuthErrorEvent> _authErrorController = StreamController<AuthErrorEvent>.broadcast();
+
+/// Public stream for listening to authentication errors
+Stream<AuthErrorEvent> get authErrorStream => _authErrorController.stream;
+
+/// Event class for authentication errors
+class AuthErrorEvent {
+  final int statusCode;
+  final String message;
+  final DateTime timestamp;
+
+  AuthErrorEvent({
+    required this.statusCode,
+    required this.message,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+
+  bool get isUnauthorized => statusCode == 401;
+  bool get isForbidden => statusCode == 403;
+}
 
 class VercelApiException implements Exception {
   final String message;
@@ -72,7 +96,7 @@ class VercelApi {
     } else {
       String message = 'An unexpected error occurred';
       String? code;
-      
+
       if (data is Map && data.containsKey('error')) {
         final error = data['error'];
         if (error is Map) {
@@ -82,7 +106,24 @@ class VercelApi {
           message = error;
         }
       }
-      
+
+      // Check for authentication errors (401/403) and broadcast them
+      // Per Vercel API docs: auth errors have status 401/403 OR error code 'forbidden'/'unauthorized'
+      final isAuthError = response.statusCode == 401 ||
+                          response.statusCode == 403 ||
+                          code == 'forbidden' ||
+                          code == 'unauthorized';
+      if (isAuthError) {
+        final authError = AuthErrorEvent(
+          statusCode: response.statusCode,
+          message: message,
+        );
+        _authErrorController.add(authError);
+        if (kDebugMode) {
+          print('[VercelApi] Authentication error broadcast: ${response.statusCode} (code: $code) - $message');
+        }
+      }
+
       // Don't log 404 "File tree not found" as a scary API error, as it's a known limitation for Git deployments
       if (response.statusCode != 404 || message != 'File tree not found') {
         print('Vercel API Error: $message (Status: ${response.statusCode})');
@@ -90,7 +131,7 @@ class VercelApi {
         print('  → Response Body: ${response.body}');
         print('  → Timestamp: ${DateTime.now().toIso8601String()}');
       }
-      
+
       throw VercelApiException(message, statusCode: response.statusCode, code: code);
     }
   }
@@ -765,6 +806,31 @@ class VercelApi {
       body: json.encode(body),
     );
     await _handleResponse(response);
+  }
+
+  /// Get active attack data for a project
+  /// Returns a list of ongoing or recent DDoS attacks
+  /// [projectId] - The project ID to check for active attacks
+  /// [limit] - Maximum number of attacks to return (default: 100)
+  /// [since] - Only return attacks started after this timestamp
+  Future<List<ActiveAttack>> getActiveAttacks({
+    required String projectId,
+    int? limit,
+    DateTime? since,
+  }) async {
+    final params = <String, String>{
+      'projectId': projectId,
+    };
+    if (limit != null) params['limit'] = limit.toString();
+    if (since != null) params['since'] = since.toIso8601String();
+
+    final response = await http.get(
+      _buildUri('/v1/security/attacks', params),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final List attacks = data['attacks'] as List? ?? [];
+    return attacks.map((a) => ActiveAttack.fromJson(a as Map<String, dynamic>)).toList();
   }
 
   // ==================== DEPLOYMENT ACTIONS ====================

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
 import '../providers/app_state.dart';
+import '../widgets/request_log_item.dart';
 
 class AdvancedLogsScreen extends StatefulWidget {
   final Deployment deployment;
@@ -231,17 +232,27 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
       }).toList();
     }
 
+    // Use styled request log items for request logs tab
+    final isRequestLogs = logs == _requestLogs;
+
     return RefreshIndicator(
       onRefresh: _fetchLogs,
       color: AppTheme.primary,
       child: Container(
-        color: const Color(0xFF000000),
+        color: isRequestLogs ? AppTheme.surface : const Color(0xFF000000),
         child: ListView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
+          padding: isRequestLogs ? EdgeInsets.zero : const EdgeInsets.all(24),
           itemCount: filteredLogs.length,
           itemBuilder: (context, index) {
             final log = filteredLogs[index];
+            
+            // Use RequestLogItem for request logs
+            if (isRequestLogs) {
+              return RequestLogItem(log: log);
+            }
+            
+            // Use standard log line for other log types
             final message = log['message'] ?? log['text'] ?? log.toString();
             final timestamp = log['timestamp'] ?? log['date'];
             final level = message.toString().toLowerCase().contains('error') ? 'ERROR' : 'INFO';
