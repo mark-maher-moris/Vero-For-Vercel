@@ -16,8 +16,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
-  String? _error;
   final _tokenController = TextEditingController();
+  bool _hasToken = false;
 
   @override
   void initState() {
@@ -26,10 +26,25 @@ class _LoginScreenState extends State<LoginScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SuperwallService().trackScreenView('login');
     });
+    _tokenController.addListener(_onTokenChanged);
+  }
+
+  void _onTokenChanged() {
+    setState(() {
+      _hasToken = _tokenController.text.isNotEmpty;
+    });
+  }
+
+  Future<void> _pasteToken() async {
+    final clipboardData = await Clipboard.getData('text/plain');
+    if (clipboardData?.text != null) {
+      _tokenController.text = clipboardData!.text!;
+    }
   }
 
   @override
   void dispose() {
+    _tokenController.removeListener(_onTokenChanged);
     _tokenController.dispose();
     super.dispose();
   }
@@ -37,13 +52,15 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleTokenLogin() async {
     final token = _tokenController.text.trim();
     if (token.isEmpty) {
-      setState(() => _error = 'Please enter a token');
+      _showErrorDialog(
+        error: 'Please enter a token',
+        location: 'Empty token input',
+      );
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _error = null;
     });
 
     // Track login attempt
@@ -55,12 +72,140 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         // Track login error
         SuperwallService().trackError('login_failed', e.toString());
-        setState(() {
-          _error = 'Invalid token: $e';
-        });
+        _showErrorDialog(
+          error: e.toString(),
+        location: 'Token authentication failed',
+      );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showErrorDialog({required String error, required String location}) {
+    final fullErrorDetails = '''Error: $error
+Location: Login Screen - $location
+Time: ${DateTime.now().toIso8601String()}
+App: VERO For Vercel''';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.error_outline, color: AppTheme.error),
+              const SizedBox(width: 8),
+              const Text('Authentication Error'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'We encountered an issue while connecting to your Vercel account:',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorContainer.withOpacity(0.1),
+                    border: Border.all(color: AppTheme.error.withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    fullErrorDetails,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: AppTheme.error,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Tap and hold the error above to copy it, or use the Copy button below.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: fullErrorDetails));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Error details copied to clipboard'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.copy, size: 18),
+              label: const Text('Copy'),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                _sendErrorEmail(fullErrorDetails);
+              },
+              icon: const Icon(Icons.email, size: 18),
+              label: const Text('Email Support'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: AppTheme.onPrimary,
+              ),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _sendErrorEmail(String errorDetails) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'hi@buildagon.com',
+      queryParameters: {
+        'subject': 'VERO App - Authentication Error Report',
+        'body': "Hello VERO Support Team,\n\nI encountered an error while trying to connect my Vercel account. Here are the details:\n\n$errorDetails\n\nPlease assist me with resolving this issue.\n\nThank you!",
+      },
+    );
+
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open email app. Please copy the error and email us at hi@buildagon.com'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening email: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -110,21 +255,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 64),
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorContainer.withOpacity(0.1),
-                    border: Border.all(color: AppTheme.error.withOpacity(0.5)),
-                  ),
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: AppTheme.error),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 32),
-              ],
               TextField(
                 controller: _tokenController,
                 decoration: InputDecoration(
@@ -134,13 +264,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.zero,
                   ),
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () => _tokenController.clear(),
+                    icon: Icon(_hasToken ? Icons.clear : Icons.content_paste),
+                    onPressed: _hasToken
+                        ? () => _tokenController.clear()
+                        : _pasteToken,
                   ),
                 ),
                 obscureText: true,
                 maxLines: 1,
                 enabled: !_isLoading,
+                readOnly: _hasToken,
               ),
               const SizedBox(height: 12),
               Row(
@@ -279,7 +412,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Enter your Vercel Personal Access Token to manage deployments, domains, and more.',
+                "Your Vercel token doesn't leave your device. It is stored locally only.",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.onSurfaceVariant,
                     ),

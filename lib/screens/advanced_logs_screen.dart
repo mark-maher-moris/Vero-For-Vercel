@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' show FontFeature;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/deployment.dart';
+import '../models/log.dart';
 import '../providers/app_state.dart';
-import '../widgets/request_log_item.dart';
+import 'log_detail_screen.dart';
 
 class AdvancedLogsScreen extends StatefulWidget {
   final Deployment deployment;
@@ -22,20 +24,33 @@ class AdvancedLogsScreen extends StatefulWidget {
 
 class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<Map<String, dynamic>>? _runtimeLogs;
-  List<Map<String, dynamic>>? _functionLogs;
-  List<Map<String, dynamic>>? _requestLogs;
-  List<Map<String, dynamic>>? _buildLogs;
+  List<Log>? _logs;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _errorMessage;
   String _filter = 'all';
+  
+  // Pagination state
+  int _currentPage = 0;
+  bool _hasMoreRows = false;
+  bool _isPaginatedView = true; // Toggle between old tab view and new paginated view
+  
+  // Filter state (Revcel-style)
+  Map<String, List<String>> _selectedFilters = {};
+  Map<String, List<LogFilterValue>> _availableFilters = {};
+  bool _isLoadingFilters = false;
+  
+  // Date range
+  DateTime _startDate = DateTime.now().subtract(const Duration(hours: 1));
+  DateTime _endDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_onTabChanged);
-    _fetchLogs();
+    _fetchLogs(useNewApi: true);
+    _fetchAvailableFilters();
   }
 
   @override
@@ -45,58 +60,162 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
   }
 
   void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
-      _fetchLogs();
+    if (_tabController.indexIsChanging && !_isPaginatedView) {
+      _fetchLogs(useNewApi: false);
     }
   }
 
-  Future<void> _fetchLogs() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _fetchLogs({bool useNewApi = true, bool loadMore = false}) async {
+    if (loadMore) {
+      setState(() => _isLoadingMore = true);
+    } else {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        if (!loadMore) {
+          _currentPage = 0;
+          _logs = null;
+        }
+      });
+    }
 
     try {
       final appState = context.read<AppState>();
-      final currentIndex = _tabController.index;
+      
+      if (useNewApi) {
+        // Use Revcel-style /logs/request-logs endpoint
+        // Get ownerId from team or user
+        final ownerId = appState.currentTeamId ?? appState.user?['id']?.toString();
+        if (ownerId == null) {
+          throw Exception('No owner ID available. Please check your account settings.');
+        }
+        
+        final result = await appState.apiService.getProjectLogs(
+          projectId: widget.projectId,
+          ownerId: ownerId,
+          deploymentId: widget.deployment.uid,
+          startDate: _startDate.millisecondsSinceEpoch.toString(),
+          endDate: _endDate.millisecondsSinceEpoch.toString(),
+          page: loadMore ? _currentPage + 1 : 0,
+          attributes: _selectedFilters.isNotEmpty ? _selectedFilters : null,
+        );
 
-      if (currentIndex == 0) {
-        _runtimeLogs = await appState.apiService.getDeploymentRuntimeLogs(
-          projectId: widget.projectId,
-          deploymentId: widget.deployment.uid,
-          limit: 100,
-        );
-      } else if (currentIndex == 1) {
-        _functionLogs = await appState.apiService.getDeploymentFunctionLogs(
-          projectId: widget.projectId,
-          deploymentId: widget.deployment.uid,
-          limit: 100,
-        );
-      } else if (currentIndex == 2) {
-        _requestLogs = await appState.apiService.getDeploymentRequestLogs(
-          projectId: widget.projectId,
-          deploymentId: widget.deployment.uid,
-          limit: 100,
-        );
-      } else if (currentIndex == 3) {
-        _buildLogs = await appState.apiService.getDeploymentBuildLogs(
-          projectId: widget.projectId,
-          deploymentId: widget.deployment.uid,
-        );
-      }
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            if (loadMore && _logs != null) {
+              _logs!.addAll(result.logs);
+              _currentPage++;
+            } else {
+              _logs = result.logs;
+              _currentPage = 0;
+            }
+            _hasMoreRows = result.hasMoreRows;
+            _isLoading = false;
+            _isLoadingMore = false;
+          });
+        }
+      } else {
+        // Legacy tab-based fetching (kept for backward compatibility)
+        await _fetchLegacyLogs(appState);
       }
     } catch (e) {
+      print('[AdvancedLogs] Error fetching logs: $e');
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
+    }
+  }
+
+  Future<void> _fetchLegacyLogs(dynamic appState) async {
+    // Legacy implementation for non-paginated view
+    final currentIndex = _tabController.index;
+    
+    // Get ownerId from team or user
+    final ownerId = appState.currentTeamId ?? appState.user?['id']?.toString();
+    if (ownerId == null) {
+      throw Exception('No owner ID available. Please check your account settings.');
+    }
+    
+    if (currentIndex == 0) {
+      final result = await appState.apiService.getProjectLogs(
+        projectId: widget.projectId,
+        ownerId: ownerId,
+        deploymentId: widget.deployment.uid,
+        startDate: _startDate.millisecondsSinceEpoch.toString(),
+        endDate: _endDate.millisecondsSinceEpoch.toString(),
+      );
+      _logs = result.logs;
+    } else if (currentIndex == 3) {
+      // Build logs - create minimal Log objects from build events
+      final buildLogs = await appState.apiService.getDeploymentBuildLogs(
+        projectId: widget.projectId,
+        deploymentId: widget.deployment.uid,
+      );
+      _logs = buildLogs.map((json) => Log.fromJson({
+        'requestId': json['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        'timestamp': json['date'] ?? DateTime.now().toIso8601String(),
+        'requestMethod': 'BUILD',
+        'statusCode': json['type'] == 'error' ? 500 : 200,
+        'domain': widget.deployment.url,
+        'requestPath': json['text']?.toString() ?? '',
+        'logs': [{
+          'message': json['text']?.toString() ?? '',
+          'level': json['type'] == 'error' ? 'error' : 'info',
+          'timestamp': json['date'] ?? DateTime.now().toIso8601String(),
+          'source': 'build',
+        }],
+        'events': [],
+        'branch': '',
+        'deploymentId': widget.deployment.uid,
+        'deploymentDomain': widget.deployment.url,
+        'environment': 'production',
+        'route': '',
+        'clientUserAgent': '',
+        'clientRegion': '',
+        'requestSearchParams': {},
+        'cache': '',
+        'requestTags': [],
+      })).toList();
+    }
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchAvailableFilters() async {
+    setState(() => _isLoadingFilters = true);
+    
+    try {
+      final appState = context.read<AppState>();
+      final filters = await appState.apiService.getProjectLogsFilters(
+        projectId: widget.projectId,
+        attributes: ['host', 'method', 'statusCode', 'source'],
+        startDate: _startDate.millisecondsSinceEpoch.toString(),
+        endDate: _endDate.millisecondsSinceEpoch.toString(),
+      );
+      
+      if (mounted) {
+        setState(() {
+          _availableFilters = filters;
+          _isLoadingFilters = false;
+        });
+      }
+    } catch (e) {
+      print('[AdvancedLogs] Error fetching filters: $e');
+      if (mounted) {
+        setState(() => _isLoadingFilters = false);
+      }
+    }
+  }
+
+  Future<void> _loadMoreLogs() async {
+    if (_hasMoreRows && !_isLoadingMore) {
+      await _fetchLogs(useNewApi: true, loadMore: true);
     }
   }
 
@@ -138,6 +257,15 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
                 const SizedBox(width: 8),
                 _buildFilterChip('Errors', _filter == 'errors', () => setState(() => _filter = 'errors')),
                 const Spacer(),
+                if (_availableFilters.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.filter_list, size: 16, color: AppTheme.onSurfaceVariant),
+                    onPressed: _showFilterDialog,
+                    tooltip: 'Advanced filters',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.download, size: 16, color: AppTheme.onSurfaceVariant),
                   onPressed: _downloadLogs,
@@ -149,29 +277,31 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildLogView(_runtimeLogs),
-                _buildLogView(_functionLogs),
-                _buildLogView(_requestLogs),
-                _buildLogView(_buildLogs),
-              ],
-            ),
+            child: _isPaginatedView 
+              ? _buildPaginatedLogView()
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildLogView(),
+                    _buildLogView(),
+                    _buildLogView(),
+                    _buildLogView(),
+                  ],
+                ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLogView(List<Map<String, dynamic>>? logs) {
-    if (_isLoading) {
+  Widget _buildPaginatedLogView() {
+    if (_isLoading && _logs == null) {
       return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
     }
 
     if (_errorMessage != null) {
       return RefreshIndicator(
-        onRefresh: _fetchLogs,
+        onRefresh: () => _fetchLogs(useNewApi: true),
         color: AppTheme.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -187,8 +317,8 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
                   const SizedBox(height: 8),
                   Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12)),
                   const SizedBox(height: 24),
-                  ElevatedButton(onPressed: _fetchLogs, child: const Text('Retry')),
-                  const SizedBox(height: 100), // Extra space for pull-to-refresh
+                  ElevatedButton(onPressed: () => _fetchLogs(useNewApi: true), child: const Text('Retry')),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -197,9 +327,9 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
       );
     }
 
-    if (logs == null || logs.isEmpty) {
+    if (_logs == null || _logs!.isEmpty) {
       return RefreshIndicator(
-        onRefresh: _fetchLogs,
+        onRefresh: () => _fetchLogs(useNewApi: true),
         color: AppTheme.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -210,7 +340,7 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text('No logs available', style: TextStyle(color: AppTheme.onSurfaceVariant)),
-                  const SizedBox(height: 100), // Extra space for pull-to-refresh
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -219,99 +349,203 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
       );
     }
 
-    List<Map<String, dynamic>> filteredLogs = logs;
+    // Apply client-side filtering based on console log levels
+    List<Log> filteredLogs = _logs!;
     if (_filter == 'errors') {
-      filteredLogs = logs.where((log) {
-        final text = log['message'] ?? log['text'] ?? log.toString();
-        return text.toString().toLowerCase().contains('error');
-      }).toList();
+      filteredLogs = _logs!.where((log) => 
+        log.logs.any((l) => l.level.toLowerCase() == 'error') || log.statusCode >= 500
+      ).toList();
     } else if (_filter == 'info') {
-      filteredLogs = logs.where((log) {
-        final text = log['message'] ?? log['text'] ?? log.toString();
-        return !text.toString().toLowerCase().contains('error');
-      }).toList();
+      filteredLogs = _logs!.where((log) => 
+        log.logs.every((l) => l.level.toLowerCase() != 'error') && log.statusCode < 500
+      ).toList();
     }
 
-    // Use styled request log items for request logs tab
-    final isRequestLogs = logs == _requestLogs;
-
     return RefreshIndicator(
-      onRefresh: _fetchLogs,
+      onRefresh: () => _fetchLogs(useNewApi: true),
       color: AppTheme.primary,
-      child: Container(
-        color: isRequestLogs ? AppTheme.surface : const Color(0xFF000000),
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: isRequestLogs ? EdgeInsets.zero : const EdgeInsets.all(24),
-          itemCount: filteredLogs.length,
-          itemBuilder: (context, index) {
-            final log = filteredLogs[index];
-            
-            // Use RequestLogItem for request logs
-            if (isRequestLogs) {
-              return RequestLogItem(log: log);
-            }
-            
-            // Use standard log line for other log types
-            final message = log['message'] ?? log['text'] ?? log.toString();
-            final timestamp = log['timestamp'] ?? log['date'];
-            final level = message.toString().toLowerCase().contains('error') ? 'ERROR' : 'INFO';
-
-            return _buildLogLine(timestamp, level, message.toString());
-          },
-        ),
+      child: Column(
+        children: [
+          // Table header
+          _buildTableHeader(),
+          Expanded(
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: filteredLogs.length,
+              itemBuilder: (context, index) {
+                final log = filteredLogs[index];
+                return _buildLogListRow(log, index % 2 == 0);
+              },
+            ),
+          ),
+          if (_hasMoreRows)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: ElevatedButton(
+                onPressed: _isLoadingMore ? null : _loadMoreLogs,
+                child: _isLoadingMore
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Load More'),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildLogLine(dynamic timestamp, String level, String message) {
-    Color levelColor;
-    switch (level) {
-      case 'ERROR':
-        levelColor = AppTheme.error;
-        break;
-      case 'WARN':
-        levelColor = const Color(0xFFF5A623);
-        break;
-      default:
-        levelColor = AppTheme.primary;
-    }
-
-    String timeStr = '';
-    if (timestamp is int) {
-      timeStr = DateTime.fromMillisecondsSinceEpoch(timestamp).toString().split(' ').last.split('.').first;
-    } else if (timestamp is String) {
-      timeStr = timestamp.split('T').last.split('.').first;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+  /// Build minimal header matching competitor's clean design
+  Widget _buildTableHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLow,
+        border: Border(
+          bottom: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.3)),
+        ),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Timestamp column
           SizedBox(
             width: 70,
             child: Text(
-              timeStr,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 13, color: Color(0xFF666666)),
+              'Time',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.onSurfaceVariant,
+              ),
             ),
           ),
-          SizedBox(
-            width: 45,
-            child: Text(
-              level,
-              style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: levelColor, fontWeight: FontWeight.bold),
-            ),
-          ),
+          const SizedBox(width: 8),
+          // Request info column
           Expanded(
             child: Text(
-              message,
-              style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: level == 'ERROR' ? AppTheme.error : AppTheme.onSurface),
+              'Request',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Build log list row matching competitor design
+  /// Shows timestamp and a combined method+path+status message
+  Widget _buildLogListRow(Log log, bool isEven) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LogDetailScreen(
+              log: log,
+              projectId: widget.projectId,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        color: isEven ? AppTheme.surfaceContainerLow.withOpacity(0.3) : AppTheme.surface,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Timestamp (matching competitor's HH:mm:ss format)
+            SizedBox(
+              width: 70,
+              child: Text(
+                log.formattedTime,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  color: AppTheme.onSurfaceVariant,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Method badge + Path + Status (combined like competitor)
+            Expanded(
+              child: Row(
+                children: [
+                  // Method badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getMethodColor(log.requestMethod).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      log.requestMethod,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _getMethodColor(log.requestMethod),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Path
+                  Expanded(
+                    child: Text(
+                      log.requestPath,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Status code with color
+                  Text(
+                    log.statusCode.toString(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Log.getStatusColor(log.statusCode),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getMethodColor(String method) {
+    switch (method.toUpperCase()) {
+      case 'GET':
+        return const Color(0xFF22C55E); // Green
+      case 'POST':
+        return const Color(0xFF3B82F6); // Blue
+      case 'PUT':
+        return const Color(0xFFF59E0B); // Orange
+      case 'DELETE':
+        return const Color(0xFFEF4444); // Red
+      case 'PATCH':
+        return const Color(0xFF8B5CF6); // Purple
+      default:
+        return AppTheme.onSurfaceVariant;
+    }
+  }
+
+  Widget _buildLogView() {
+    // Legacy tab-based view - just show the paginated view for now
+    return _buildPaginatedLogView();
   }
 
   Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
@@ -337,35 +571,16 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
   }
 
   Future<void> _downloadLogs() async {
-    List<Map<String, dynamic>>? logsToDownload;
-    String logType = 'logs';
-
-    if (_tabController.index == 0) {
-      logsToDownload = _runtimeLogs;
-      logType = 'runtime-logs';
-    } else if (_tabController.index == 1) {
-      logsToDownload = _functionLogs;
-      logType = 'function-logs';
-    } else if (_tabController.index == 2) {
-      logsToDownload = _requestLogs;
-      logType = 'request-logs';
-    } else if (_tabController.index == 3) {
-      logsToDownload = _buildLogs;
-      logType = 'build-logs';
-    }
-
-    if (logsToDownload == null || logsToDownload.isEmpty) return;
+    if (_logs == null || _logs!.isEmpty) return;
 
     try {
       final buffer = StringBuffer();
-      buffer.writeln('=== $logType for ${widget.deployment.name} ===');
+      buffer.writeln('=== Request Logs for ${widget.deployment.name} ===');
       buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
       buffer.writeln('');
 
-      for (final log in logsToDownload) {
-        final message = log['message'] ?? log['text'] ?? log.toString();
-        final timestamp = log['timestamp'] ?? log['date'];
-        buffer.writeln('[$timestamp] $message');
+      for (final log in _logs!) {
+        buffer.writeln('[${log.timestamp}] ${log.displayMessage}');
       }
 
       await Clipboard.setData(ClipboardData(text: buffer.toString()));
@@ -381,5 +596,114 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
         );
       }
     }
+  }
+
+  void _showFilterDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Filter Logs',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      if (_isLoadingFilters)
+                        const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (_availableFilters.isEmpty)
+                    const Text('No filters available'),
+                  ..._availableFilters.entries.map((entry) {
+                    final attributeName = entry.key;
+                    final values = entry.value;
+                    final selectedValues = _selectedFilters[attributeName] ?? [];
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          attributeName.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: values.map((filterValue) {
+                            final isSelected = selectedValues.contains(filterValue.attributeValue);
+                            return FilterChip(
+                              label: Text('${filterValue.attributeValue} (${filterValue.total})'),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setModalState(() {
+                                  setState(() {
+                                    if (selected) {
+                                      _selectedFilters[attributeName] = [...selectedValues, filterValue.attributeValue];
+                                    } else {
+                                      _selectedFilters[attributeName] = selectedValues.where((v) => v != filterValue.attributeValue).toList();
+                                    }
+                                    if (_selectedFilters[attributeName]!.isEmpty) {
+                                      _selectedFilters.remove(attributeName);
+                                    }
+                                  });
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setModalState(() {
+                            setState(() => _selectedFilters.clear());
+                          });
+                          _fetchLogs(useNewApi: true);
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Clear'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          _fetchLogs(useNewApi: true);
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

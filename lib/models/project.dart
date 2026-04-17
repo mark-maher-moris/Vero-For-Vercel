@@ -41,6 +41,9 @@ class Project {
   final ProjectCrons? crons;
   String? _cachedLogoUrl;
 
+  /// Static cache of URLs known to return 401 (shared across all Project instances)
+  static final Set<String> _known401Urls = {};
+
   Project({
     required this.id,
     required this.name,
@@ -179,13 +182,46 @@ class Project {
     return urls.toList();
   }
 
+  bool get _isProtected {
+    // Check password protection
+    if (passwordProtection != null && passwordProtection!['password'] != null) {
+      return true;
+    }
+    // Check SSO protection
+    if (ssoProtection != null && ssoProtection!['ssoRequired'] == true) {
+      return true;
+    }
+    // Check security field for Vercel Authentication (deployment protection)
+    if (security != null && security!['deploymentProtection'] != null) {
+      final protection = security!['deploymentProtection'];
+      if (protection == 'enabled' || protection == true) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Mark a URL as returning 401 (shared across all projects)
+  static void markUrlAs401(String url) {
+    _known401Urls.add(url);
+  }
+
   List<String> get logoUrls {
     final urls = <String>[];
 
-    // Return cached URL first if available
-    if (_cachedLogoUrl != null && _cachedLogoUrl!.isNotEmpty) {
-      urls.add(_cachedLogoUrl!);
+    // Skip logo fetching for protected projects (avoids 401 errors)
+    if (_isProtected) {
       return urls;
+    }
+
+    // Return cached URL first if available (but only if not known 401)
+    if (_cachedLogoUrl != null && _cachedLogoUrl!.isNotEmpty) {
+      if (!_known401Urls.contains(_cachedLogoUrl)) {
+        urls.add(_cachedLogoUrl!);
+        return urls;
+      }
+      // Cached URL is 401, clear it and continue
+      _cachedLogoUrl = null;
     }
 
     String? baseUrl;
@@ -214,7 +250,8 @@ class Project {
       '$baseUrl/_next/static/media/logo.png', // Next.js static assets
     ]);
 
-    return urls;
+    // Filter out URLs known to return 401
+    return urls.where((url) => !_known401Urls.contains(url)).toList();
   }
 
   void setCachedLogoUrl(String url) {

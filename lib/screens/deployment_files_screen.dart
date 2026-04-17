@@ -7,16 +7,14 @@ import '../models/deployment_file.dart';
 import '../providers/app_state.dart';
 import 'file_content_screen.dart';
 
+/// Deployment files screen with expandable file tree
+/// Matches the competitor's DeploymentFileTree component design
 class DeploymentFilesScreen extends StatefulWidget {
   final Deployment deployment;
-  final List<DeploymentFile>? initialFiles;
-  final String? directoryName;
 
   const DeploymentFilesScreen({
     super.key,
     required this.deployment,
-    this.initialFiles,
-    this.directoryName,
   });
 
   @override
@@ -31,12 +29,7 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialFiles != null) {
-      _files = _organizeFiles(List.from(widget.initialFiles!));
-      _isLoading = false;
-    } else {
-      _fetchFiles();
-    }
+    _fetchFiles();
   }
 
   Future<void> _fetchFiles() async {
@@ -47,11 +40,20 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
 
     try {
       final appState = context.read<AppState>();
-      final files = await appState.apiService.getDeploymentFiles(widget.deployment.uid);
+      // Use the file-tree endpoint like the competitor app
+      // Extract hostname from deployment URL
+      final deploymentUrl = widget.deployment.url;
+      print('[DeploymentFiles] Fetching file tree for: $deploymentUrl');
+      
+      final files = await appState.apiService.getDeploymentFileTree(
+        deploymentUrl: deploymentUrl,
+        base: 'src', // Fetch source files
+      );
       
       if (mounted) {
         setState(() {
-          _files = _organizeFiles(files);
+          // Use files as-is - lazy loading will fetch children when folders are clicked
+          _files = files;
           _isLoading = false;
         });
       }
@@ -69,13 +71,6 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
     }
   }
 
-  List<DeploymentFile> _organizeFiles(List<DeploymentFile> files) {
-    // Vercel returns files in a flat list with full paths.
-    // For now, we'll just sort them alphabetically.
-    files.sort((a, b) => a.name.compareTo(b.name));
-    return files;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,7 +85,7 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.directoryName ?? 'Deployment Files', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Deployment Files', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             Text(widget.deployment.name, style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant)),
           ],
         ),
@@ -103,6 +98,52 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
       ),
       body: _buildBody(),
     );
+  }
+
+  /// Expand/collapse a folder - with lazy loading like competitor
+  Future<void> _toggleFolder(DeploymentFile folder, String path) async {
+    final isExpanded = folder.isExpanded ?? false;
+    
+    // If expanding and no children loaded yet, fetch them
+    if (!isExpanded && (folder.children == null || folder.children!.isEmpty) && !folder.hasLoadedChildren) {
+      setState(() {
+        folder.isLoading = true;
+      });
+      
+      try {
+        final appState = context.read<AppState>();
+        final basePath = path.isEmpty ? 'src/${folder.name}' : 'src/$path/${folder.name}';
+        
+        print('[DeploymentFiles] Lazy loading folder: $basePath');
+        
+        final children = await appState.apiService.getDeploymentFileTree(
+          deploymentUrl: widget.deployment.url,
+          base: basePath,
+        );
+        
+        if (mounted) {
+          setState(() {
+            folder.children = children;
+            folder.hasLoadedChildren = true;
+            folder.isLoading = false;
+            folder.isExpanded = true;
+          });
+        }
+      } catch (e) {
+        print('[DeploymentFiles] Error loading folder contents: $e');
+        if (mounted) {
+          setState(() {
+            folder.isLoading = false;
+            folder.isExpanded = false;
+          });
+        }
+      }
+    } else {
+      // Just toggle expansion
+      setState(() {
+        folder.isExpanded = !isExpanded;
+      });
+    }
   }
 
   Widget _buildBody() {
@@ -164,70 +205,118 @@ class _DeploymentFilesScreenState extends State<DeploymentFilesScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.folder_open, color: AppTheme.onSurfaceVariant, size: 48),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text('No files found for this deployment'),
           ],
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: _files!.length,
-      separatorBuilder: (context, index) => const Divider(height: 1, indent: 72),
       itemBuilder: (context, index) {
         final file = _files![index];
-        final isDir = file.type == 'directory';
-        
-        return ListTile(
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isDir ? AppTheme.primary.withOpacity(0.1) : AppTheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              isDir ? Icons.folder : _getFileIcon(file.name),
-              color: isDir ? AppTheme.primary : AppTheme.onSurfaceVariant,
-              size: 20,
-            ),
-          ),
-          title: Text(
-            file.name,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-          subtitle: file.mode != null 
-            ? Text('Mode: ${file.mode}', style: const TextStyle(fontSize: 12))
-            : null,
-          trailing: const Icon(Icons.chevron_right, size: 16, color: AppTheme.onSurfaceVariant),
+        return _buildFileTreeItem(
+          file: file,
+          level: 0,
+          path: '',
+        );
+      },
+    );
+  }
+
+  /// Build a file tree item with recursive children support
+  /// Matches the competitor's FileTreeAsset component
+  Widget _buildFileTreeItem({
+    required DeploymentFile file,
+    required int level,
+    required String path,
+  }) {
+    final isDir = file.type == 'directory';
+    final fullPath = path.isEmpty ? file.name : '$path/${file.name}';
+    final indentSize = 20.0 * level;
+    final isExpanded = file.isExpanded ?? false;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // File/folder row
+        InkWell(
           onTap: () {
-            if (isDir && file.children != null && file.children!.isNotEmpty) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DeploymentFilesScreen(
-                    deployment: widget.deployment,
-                    initialFiles: file.children,
-                    directoryName: file.name,
-                  ),
-                ),
-              );
-            } else if (!isDir && file.uid != null) {
+            if (isDir) {
+              _toggleFolder(file, path);
+            } else if (file.uid != null || file.link != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => FileContentScreen(
                     deploymentId: widget.deployment.uid,
-                    fileId: file.uid!,
-                    fileName: file.name,
+                    fileId: file.uid ?? file.link ?? '',
+                    fileName: fullPath,
+                    fileUrl: file.link, // Pass the link for file-tree API files
                   ),
                 ),
               );
             }
           },
-        );
-      },
+          child: Container(
+            padding: EdgeInsets.only(
+              left: 16 + indentSize,
+              right: 16,
+              top: 8,
+              bottom: 8,
+            ),
+            child: Row(
+              children: [
+                // Loading indicator or icon
+                if (file.isLoading)
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  )
+                else
+                  Icon(
+                    isDir
+                        ? (isExpanded ? Icons.folder_open_outlined : Icons.folder_outlined)
+                        : Icons.insert_drive_file_outlined,
+                    size: 20,
+                    color: isDir ? AppTheme.onSurfaceVariant : AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                const SizedBox(width: 12),
+                // File name
+                Expanded(
+                  child: Text(
+                    file.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'monospace',
+                      color: AppTheme.onSurface,
+                      fontWeight: isDir ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        // Expanded children
+        if (isDir && isExpanded && file.children != null)
+          Column(
+            children: file.children!.map((child) {
+              return _buildFileTreeItem(
+                file: child,
+                level: level + 1,
+                path: fullPath,
+              );
+            }).toList(),
+          ),
+      ],
     );
   }
 

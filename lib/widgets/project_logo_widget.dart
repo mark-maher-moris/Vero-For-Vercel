@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/project.dart';
+import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 
 class ProjectLogoWidget extends StatefulWidget {
@@ -19,8 +21,26 @@ class ProjectLogoWidget extends StatefulWidget {
 }
 
 class _ProjectLogoWidgetState extends State<ProjectLogoWidget> {
-  int _currentLogoIndex = 0;
-  bool _allLogosFailed = false;
+  Future<String?>? _faviconFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Defer favicon fetch until first build when context is available
+  }
+
+  @override
+  void didUpdateWidget(ProjectLogoWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.project.id != widget.project.id) {
+      _faviconFuture = null; // Reset to fetch new project's favicon
+    }
+  }
+
+  Future<String?> _fetchFavicon(BuildContext context) async {
+    final appState = context.read<AppState>();
+    return await appState.getCachedFavicon(widget.project.id);
+  }
 
   String get _frameworkIcon {
     switch (widget.project.framework?.toLowerCase()) {
@@ -57,7 +77,8 @@ class _ProjectLogoWidgetState extends State<ProjectLogoWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final logoUrls = widget.project.logoUrls;
+    // Initialize favicon future on first build if not already set
+    _faviconFuture ??= _fetchFavicon(context);
 
     return Container(
       width: widget.size,
@@ -70,57 +91,38 @@ class _ProjectLogoWidgetState extends State<ProjectLogoWidget> {
         borderRadius: widget.shape == BoxShape.circle
             ? BorderRadius.circular(widget.size / 2)
             : BorderRadius.circular(4),
-        child: !_allLogosFailed && logoUrls.isNotEmpty && _currentLogoIndex < logoUrls.length
-            ? Image.network(
-                logoUrls[_currentLogoIndex],
-                width: widget.size,
-                height: widget.size,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  // If using cached URL and it fails, reset and try all URLs
-                  if (logoUrls.length == 1 && _currentLogoIndex == 0) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      setState(() {
-                        // Clear cached URL and start fresh
-                        widget.project.setCachedLogoUrl('');
-                        _currentLogoIndex = 0;
-                      });
-                    });
-                    return _buildFallback();
-                  }
+        child: FutureBuilder<String?>(
+          future: _faviconFuture,
+          builder: (context, snapshot) {
+            // Loading state
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildLoadingIndicator();
+            }
 
-                  // Try next URL on error
-                  if (_currentLogoIndex < logoUrls.length - 1) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      setState(() {
-                        _currentLogoIndex++;
-                      });
-                    });
-                    // Show loading while trying next
-                    return _buildLoadingIndicator();
-                  } else {
-                    // All URLs failed, show fallback
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      setState(() {
-                        _allLogosFailed = true;
-                      });
-                    });
-                    return _buildFallback();
-                  }
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) {
-                    // Image loaded successfully - cache the URL
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      final currentUrl = logoUrls[_currentLogoIndex];
-                      widget.project.setCachedLogoUrl(currentUrl);
-                    });
-                    return child;
-                  }
-                  return _buildLoadingIndicator();
-                },
-              )
-            : _buildFallback(),
+            // Error or no favicon found - show fallback
+            if (snapshot.hasError || snapshot.data == null) {
+              return _buildFallback();
+            }
+
+            // Try to load the favicon image
+            final faviconUrl = snapshot.data!;
+            return Image.network(
+              faviconUrl,
+              width: widget.size,
+              height: widget.size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildFallback();
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  return child;
+                }
+                return _buildLoadingIndicator();
+              },
+            );
+          },
+        ),
       ),
     );
   }

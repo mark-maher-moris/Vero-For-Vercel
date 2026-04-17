@@ -7,6 +7,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
+import '../models/log.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import '../services/superwall_service.dart';
@@ -18,7 +19,6 @@ import '../widgets/deployment_card.dart';
 import '../widgets/project_logo_widget.dart';
 import '../widgets/traffic_globe.dart';
 import 'file_content_screen.dart';
-import 'deployment_files_screen.dart';
 import 'deployment_logs_screen.dart';
 
 class ProjectWorkspaceScreen extends StatefulWidget {
@@ -39,13 +39,15 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   List<dynamic>? _envVars;
   bool _isLoading = true;
   bool _isRedeploying = false;
+  bool _isFetchingData = false;
   String? _errorMessage;
   late Future<List<DeploymentFile>> _deploymentFilesFuture;
 
-  // Live deployment logs
-  List<dynamic>? _liveLogs;
+  // Live deployment logs (request logs like competitor)
+  List<Log>? _liveLogs;
   bool _isLoadingLiveLogs = false;
   String? _liveLogsError;
+  String _logsFilter = 'all';
 
   @override
   void initState() {
@@ -68,7 +70,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
-      final tabNames = ['overview', 'deployments', 'files', 'logs', 'activity', 'security', 'env_vars', 'domains'];
+      final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'security', 'env_vars', 'domains'];
       SuperwallService().trackUserAction('switch_tab',
         context: 'project_workspace',
         properties: {
@@ -78,14 +80,19 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       );
     }
     // Lazy load live logs when switching to logs tab
-    if (_tabController.index == 3 && !_tabController.indexIsChanging) {
+    if (_tabController.index == 1 && !_tabController.indexIsChanging) {
       _fetchLiveDeploymentLogs();
     }
   }
 
   Future<void> _fetchLiveDeploymentLogs() async {
+    print('[ProjectWorkspace] _fetchLiveDeploymentLogs called');
     final liveDeployment = _getLatestLiveDeployment();
-    if (liveDeployment == null) return;
+    print('[ProjectWorkspace] Live deployment: ${liveDeployment?.uid} (state: ${liveDeployment?.state})');
+    if (liveDeployment == null) {
+      print('[ProjectWorkspace] No live deployment found');
+      return;
+    }
 
     setState(() {
       _isLoadingLiveLogs = true;
@@ -94,15 +101,30 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
 
     try {
       final appState = Provider.of<AppState>(context, listen: false);
-      final logs = await appState.apiService.getDeploymentEvents(liveDeployment.uid);
+      // Use getProjectLogs (request-logs endpoint) like the competitor app - this works reliably
+      print('[ProjectWorkspace] Fetching request logs for deployment: ${liveDeployment.uid}');
+      // Get ownerId from team or user
+      final ownerId = appState.currentTeamId ?? appState.user?['id']?.toString();
+      if (ownerId == null) {
+        throw Exception('No owner ID available. Please check your account settings.');
+      }
+      
+      final result = await appState.apiService.getProjectLogs(
+        projectId: widget.project.id,
+        ownerId: ownerId,
+        deploymentId: liveDeployment.uid,
+      );
+      print('[ProjectWorkspace] Request logs received: ${result.logs.length} entries');
 
       if (mounted) {
         setState(() {
-          _liveLogs = logs;
+          // Store full Log objects for competitor-style display
+          _liveLogs = result.logs;
           _isLoadingLiveLogs = false;
         });
       }
     } catch (e) {
+      print('[ProjectWorkspace] Error fetching request logs: $e');
       if (mounted) {
         setState(() {
           _liveLogsError = e.toString();
@@ -132,6 +154,13 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   }
 
   Future<void> _fetchData() async {
+    if (_isFetchingData) {
+      print('[ProjectWorkspace] _fetchData already in progress, skipping');
+      return;
+    }
+    _isFetchingData = true;
+    print('[ProjectWorkspace] _fetchData started');
+
     final appState = Provider.of<AppState>(context, listen: false);
     setState(() {
       _isLoading = true;
@@ -144,29 +173,43 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       );
       final doms = await appState.apiService.getProjectDomains(widget.project.id);
       final envs = await appState.apiService.getProjectEnvVars(widget.project.id);
+      
+      // Initialize and await the deployment files future
+      // Use file-tree endpoint like competitor (works for all deployment types)
+      if (deps.isNotEmpty) {
+        final deployment = deps.first;
+        _deploymentFilesFuture = appState.apiService.getDeploymentFileTree(
+          deploymentUrl: deployment.url,
+          base: 'src',
+        ).catchError((error) {
+          print('[ProjectWorkspace] Error fetching deployment files: $error');
+          // Return empty list for Git deployments or other errors
+          return <DeploymentFile>[];
+        });
+        // Wait for files to load before completing _fetchData
+        await _deploymentFilesFuture;
+      }
+      
       if (mounted) {
         setState(() {
           _deployments = deps;
           _domains = doms;
           _envVars = envs;
-          // Initialize the cached future for deployment files
-          if (_deployments != null && _deployments!.isNotEmpty) {
-            _deploymentFilesFuture = appState.apiService.getDeploymentFiles(_deployments!.first.uid)
-              .catchError((error) {
-                print('[ProjectWorkspace] Error fetching deployment files: $error');
-                throw error; // Re-throw to let FutureBuilder handle it
-              });
-          }
           _isLoading = false;
         });
       }
+      print('[ProjectWorkspace] _fetchData completed successfully');
     } catch (e) {
+      print('[ProjectWorkspace] _fetchData error: $e');
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
         });
       }
+    } finally {
+      _isFetchingData = false;
+      print('[ProjectWorkspace] _fetchData finished (isLoading: $_isLoading)');
     }
   }
 
@@ -266,17 +309,17 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           isScrollable: true,
           onTap: (index) {
             // Track tab tap attempt
-            final tabNames = ['overview', 'deployments', 'files', 'logs', 'activity', 'security', 'env_vars', 'domains'];
+            final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'security', 'env_vars', 'domains'];
             SuperwallService().trackUserAction('tab_tapped', 
               context: 'project_workspace',
               properties: {
                 'tab_name': tabNames[index],
-                'is_pro_tab': index > 1,
+                'is_pro_tab': index > 2,
                 'is_pro_user': isPro,
               }
             );
             // If free user tries to access pro tabs, show paywall and reset to first tab
-            if (!isPro && index > 1) {
+            if (!isPro && index > 2) {
               SuperwallService().trackSubscriptionEvent('paywall_triggered', properties: {
                 'trigger': 'pro_tab_access',
                 'tab_name': tabNames[index],
@@ -311,9 +354,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           ),
           tabs: [
             const Tab(text: 'OVERVIEW'),
+            const Tab(text: 'LOGS'),
             const Tab(text: 'DEPLOYMENTS'),
             _buildProTab('FILES', isPro),
-            _buildProTab('LOGS', isPro),
             _buildProTab('ACTIVITY', isPro),
             _buildProTab('SECURITY', isPro),
             _buildProTab('ENV VARS', isPro),
@@ -330,9 +373,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                 controller: _tabController,
                 children: [
                   _buildOverviewTab(),
+                  _buildLogsTab(),
                   _buildDeploymentsTab(),
                   _buildBlurredTabIfNeeded(_buildFilesTab(), isPro, context),
-                  _buildBlurredTabIfNeeded(_buildLogsTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildActivityTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildSecurityTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildEnvVarsTab(), isPro, context),
@@ -670,9 +713,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               child: ActionCard(
                 icon: Icons.terminal,
                 label: 'Logs',
-                onTap: isPro
-                    ? () => _tabController.animateTo(2)
-                    : () => _showPaywall(context),
+                onTap: () => _tabController.animateTo(1),
               ),
             ),
             const SizedBox(width: 12),
@@ -1034,6 +1075,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     );
   }
 
+  // Track expanded folders for lazy loading
+  final Set<String> _expandedFolders = {};
+
   Widget _buildFilesTab() {
     if (_deployments == null || _deployments!.isEmpty) {
       return RefreshIndicator(
@@ -1068,6 +1112,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     return FutureBuilder<List<DeploymentFile>>(
       future: _deploymentFilesFuture,
       builder: (context, snapshot) {
+        print('[ProjectWorkspace] Files FutureBuilder: connectionState=${snapshot.connectionState}, hasData=${snapshot.hasData}, hasError=${snapshot.hasError}, dataLength=${snapshot.data?.length}');
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
         }
@@ -1121,66 +1166,169 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+        // Build file tree with lazy loading support
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: files.length,
-          separatorBuilder: (context, index) => const Divider(height: 1, indent: 72),
           itemBuilder: (context, index) {
             final file = files[index];
-            final isDir = file.type == 'directory';
-            
-            return ListTile(
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDir ? AppTheme.primary.withOpacity(0.1) : AppTheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  isDir ? Icons.folder : _getFileIcon(file.name),
-                  color: isDir ? AppTheme.primary : AppTheme.onSurfaceVariant,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                file.name,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              subtitle: file.mode != null 
-                ? Text('Mode: ${file.mode}', style: const TextStyle(fontSize: 12))
-                : null,
-              trailing: const Icon(Icons.chevron_right, size: 16, color: AppTheme.onSurfaceVariant),
-              onTap: () {
-                if (isDir && file.children != null && file.children!.isNotEmpty) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DeploymentFilesScreen(
-                        deployment: deployment,
-                        initialFiles: file.children,
-                        directoryName: file.name,
-                      ),
-                    ),
-                  );
-                } else if (!isDir && file.uid != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => FileContentScreen(
-                        deploymentId: deployment.uid,
-                        fileId: file.uid!,
-                        fileName: file.name,
-                      ),
-                    ),
-                  );
-                }
-              },
+            return _buildFileTreeItem(
+              file: file,
+              deployment: deployment,
+              level: 0,
+              path: '',
             );
           },
         );
       },
     );
+  }
+
+  /// Build a file tree item with recursive children support and lazy loading
+  /// Matches the competitor's FileTreeAsset component
+  Widget _buildFileTreeItem({
+    required DeploymentFile file,
+    required Deployment deployment,
+    required int level,
+    required String path,
+  }) {
+    final isDir = file.type == 'directory';
+    final fullPath = path.isEmpty ? file.name : '$path/${file.name}';
+    final indentSize = 20.0 * level;
+    final isExpanded = _expandedFolders.contains(fullPath);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // File/folder row
+        InkWell(
+          onTap: () {
+            if (isDir) {
+              _toggleFolder(file, deployment, fullPath);
+            } else if (file.uid != null || file.link != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FileContentScreen(
+                    deploymentId: deployment.uid,
+                    fileId: file.uid ?? file.link ?? '',
+                    fileName: fullPath,
+                    fileUrl: file.link,
+                  ),
+                ),
+              );
+            }
+          },
+          child: Container(
+            padding: EdgeInsets.only(
+              left: 16 + indentSize,
+              right: 16,
+              top: 8,
+              bottom: 8,
+            ),
+            child: Row(
+              children: [
+                // Loading indicator or icon
+                if (file.isLoading)
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  )
+                else
+                  Icon(
+                    isDir
+                        ? (isExpanded ? Icons.folder_open_outlined : Icons.folder_outlined)
+                        : _getFileIcon(file.name),
+                    size: 20,
+                    color: isDir ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                  ),
+                const SizedBox(width: 12),
+                // File name
+                Expanded(
+                  child: Text(
+                    file.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: isDir ? null : 'monospace',
+                      color: AppTheme.onSurface,
+                      fontWeight: isDir ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+                if (!isDir)
+                  const Icon(Icons.chevron_right, size: 16, color: AppTheme.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+        
+        // Expanded children (lazy loaded)
+        if (isDir && isExpanded && file.children != null)
+          Column(
+            children: file.children!.map((child) {
+              return _buildFileTreeItem(
+                file: child,
+                deployment: deployment,
+                level: level + 1,
+                path: fullPath,
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
+  /// Expand/collapse a folder - with lazy loading like competitor
+  Future<void> _toggleFolder(DeploymentFile folder, Deployment deployment, String fullPath) async {
+    final isExpanded = _expandedFolders.contains(fullPath);
+    
+    // If expanding and no children loaded yet, fetch them
+    if (!isExpanded && (folder.children == null || folder.children!.isEmpty) && !folder.hasLoadedChildren) {
+      setState(() {
+        folder.isLoading = true;
+      });
+      
+      try {
+        final appState = context.read<AppState>();
+        final basePath = 'src/$fullPath';
+        
+        print('[ProjectWorkspace] Lazy loading folder: $basePath');
+        
+        final children = await appState.apiService.getDeploymentFileTree(
+          deploymentUrl: deployment.url,
+          base: basePath,
+        );
+        
+        if (mounted) {
+          setState(() {
+            folder.children = children;
+            folder.hasLoadedChildren = true;
+            folder.isLoading = false;
+            _expandedFolders.add(fullPath);
+          });
+        }
+      } catch (e) {
+        print('[ProjectWorkspace] Error loading folder contents: $e');
+        if (mounted) {
+          setState(() {
+            folder.isLoading = false;
+          });
+        }
+      }
+    } else {
+      // Just toggle expansion
+      setState(() {
+        if (isExpanded) {
+          _expandedFolders.remove(fullPath);
+        } else {
+          _expandedFolders.add(fullPath);
+        }
+      });
+    }
   }
 
   IconData _getFileIcon(String fileName) {
@@ -1217,58 +1365,77 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       color: AppTheme.primary,
       child: Column(
         children: [
-          // Header with live deployment info
+          // Header with live deployment info and filters
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
               color: AppTheme.surfaceContainerLowest,
               border: Border(bottom: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.1))),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.terminal, size: 16, color: AppTheme.onSurfaceVariant),
-                    const SizedBox(width: 8),
-                    Text(
-                      'LIVE DEPLOYMENT LOGS',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
-                ),
-                if (liveDeployment != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.success.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: AppTheme.success.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    Row(
                       children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: AppTheme.success,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
+                        const Icon(Icons.terminal, size: 16, color: AppTheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
                         Text(
-                          liveDeployment.name,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.success,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
+                          'RUNTIME LOGS',
+                          style: Theme.of(context).textTheme.labelSmall,
                         ),
                       ],
                     ),
+                    if (liveDeployment != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.success.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: AppTheme.success.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: AppTheme.success,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              liveDeployment.name,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.success,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Filter chips on separate row
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildLogFilterChip('All', _logsFilter == 'all', () => setState(() => _logsFilter = 'all')),
+                      const SizedBox(width: 8),
+                      _buildLogFilterChip('Info', _logsFilter == 'info', () => setState(() => _logsFilter = 'info')),
+                      const SizedBox(width: 8),
+                      _buildLogFilterChip('Errors', _logsFilter == 'errors', () => setState(() => _logsFilter = 'errors')),
+                    ],
                   ),
+                ),
               ],
             ),
           ),
@@ -1353,102 +1520,538 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       );
     }
 
-    // Log display with terminal styling
-    return Container(
-      color: const Color(0xFF000000),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _liveLogs!.length,
-        itemBuilder: (context, index) {
-          final log = _liveLogs![index];
-          final text = _extractLogText(log);
-          final date = _extractLogDate(log);
-          final timeStr = date != null
-              ? DateTime.fromMillisecondsSinceEpoch(date).toString().split(' ').last.split('.').first
-              : '';
-          final type = _extractLogType(log);
-          final isErrorLog = type == 'stderr' || text.toString().toLowerCase().contains('error');
-          final level = isErrorLog ? 'ERROR' : 'INFO';
+    // Apply filter to request logs
+    List<Log> filteredLogs = _liveLogs!;
+    if (_logsFilter == 'errors') {
+      filteredLogs = _liveLogs!.where((log) {
+        return log.logs.any((l) => l.level.toLowerCase() == 'error') || log.statusCode >= 500;
+      }).toList();
+    } else if (_logsFilter == 'info') {
+      filteredLogs = _liveLogs!.where((log) {
+        return log.logs.every((l) => l.level.toLowerCase() != 'error') && log.statusCode < 500;
+      }).toList();
+    }
 
-          return _buildLogLine(timeStr, level, text.toString());
-        },
+    if (filteredLogs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.filter_list, color: AppTheme.onSurfaceVariant, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'No ${_logsFilter} logs found',
+              style: const TextStyle(color: AppTheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Competitor-style request logs list
+    return Column(
+      children: [
+        // Minimal header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainerLow,
+            border: Border(
+              bottom: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.3)),
+            ),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 70,
+                child: Text(
+                  'Time',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Request',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Log list
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filteredLogs.length,
+            itemBuilder: (context, index) {
+              final log = filteredLogs[index];
+              return _buildRequestLogRow(log, index % 2 == 0);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build request log row matching competitor design
+  Widget _buildRequestLogRow(Log log, bool isEven) {
+    return InkWell(
+      onTap: () => _showLogDetailsBottomSheet(log),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: isEven ? AppTheme.surfaceContainerLow.withOpacity(0.3) : AppTheme.surface,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Timestamp
+            SizedBox(
+              width: 70,
+              child: Text(
+                log.formattedTime,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  color: AppTheme.onSurfaceVariant,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Method badge + Path + Status
+            Expanded(
+              child: Row(
+                children: [
+                  // Method badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getMethodColor(log.requestMethod).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      log.requestMethod,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _getMethodColor(log.requestMethod),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Path
+                  Expanded(
+                    child: Text(
+                      log.requestPath.isNotEmpty ? log.requestPath : '/',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Status code with color
+                  Text(
+                    log.statusCode.toString(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Log.getStatusColor(log.statusCode),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  String _extractLogText(dynamic log) {
-    if (log is Map<String, dynamic>) {
-      return log['text']?.toString() ??
-          log['message']?.toString() ??
-          log['payload']?.toString() ??
-          log.toString();
-    }
-    return log.toString();
-  }
-
-  int? _extractLogDate(dynamic log) {
-    if (log is Map<String, dynamic>) {
-      final date = log['date'];
-      if (date is int) return date;
-      if (date is String) {
-        try {
-          return DateTime.parse(date).millisecondsSinceEpoch;
-        } catch (_) {}
-      }
-    }
-    return null;
-  }
-
-  String _extractLogType(dynamic log) {
-    if (log is Map<String, dynamic>) {
-      return log['type']?.toString() ?? '';
-    }
-    return '';
-  }
-
-  Widget _buildLogLine(String timeStr, String level, String message) {
-    Color levelColor;
-    switch (level) {
-      case 'ERROR':
-        levelColor = AppTheme.error;
-        break;
-      case 'WARN':
-        levelColor = const Color(0xFFF5A623);
-        break;
+  Color _getMethodColor(String method) {
+    switch (method.toUpperCase()) {
+      case 'GET':
+        return const Color(0xFF22C55E); // Green
+      case 'POST':
+        return const Color(0xFF3B82F6); // Blue
+      case 'PUT':
+        return const Color(0xFFF59E0B); // Orange
+      case 'DELETE':
+        return const Color(0xFFEF4444); // Red
+      case 'PATCH':
+        return const Color(0xFF8B5CF6); // Purple
       default:
-        levelColor = AppTheme.primary;
+        return AppTheme.onSurfaceVariant;
+    }
+  }
+
+  /// Show log details in a bottom sheet (like competitor app)
+  void _showLogDetailsBottomSheet(Log log) {
+    // Check subscription - show paywall if not subscribed
+    final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
+    if (!subscription.isPro) {
+      SuperwallService().trackSubscriptionEvent('paywall_triggered', properties: {
+        'trigger': 'log_details_access',
+      });
+      _showPaywall(context);
+      return;
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.3)),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getMethodColor(log.requestMethod).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          log.requestMethod,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _getMethodColor(log.requestMethod),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          log.requestPath,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        log.statusCode.toString(),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Log.getStatusColor(log.statusCode),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Scrollable content
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      const SizedBox(height: 16),
+                      // Info rows
+                      _buildBottomSheetInfoRow('Timestamp', Icons.access_time, log.formattedTime),
+                      _buildBottomSheetInfoRow('Domain', Icons.language, log.domain),
+                      _buildBottomSheetInfoRow('Route', Icons.route, log.route.isNotEmpty ? log.route : 'N/A'),
+                      _buildBottomSheetInfoRow('Cache', Icons.save, log.cache.isNotEmpty ? log.cache : 'N/A'),
+                      _buildBottomSheetInfoRow('Environment', Icons.cloud, _capitalizeFirst(log.environment)),
+                      if (log.memoryUsed != null)
+                        _buildBottomSheetInfoRow('Memory', Icons.memory, log.memoryUsed!),
+                      if (log.duration != null)
+                        _buildBottomSheetInfoRow('Duration', Icons.timer, log.duration!),
+                      _buildBottomSheetInfoRow('Region', Icons.map, log.regionLabel ?? log.clientRegion),
+                      if (log.clientUserAgent.isNotEmpty)
+                        _buildBottomSheetInfoRow('Agent', Icons.person, log.clientUserAgent.length > 40
+                            ? '${log.clientUserAgent.substring(0, 40)}...'
+                            : log.clientUserAgent),
+                      const SizedBox(height: 24),
+                      // Console logs section
+                      if (log.logs.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.3)),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.terminal, size: 18, color: AppTheme.onSurfaceVariant),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Console Logs (${log.logs.length})',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ...log.logs.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final logLine = entry.value;
+                          return _buildConsoleLogLine(logLine, index);
+                        }),
+                      ],
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomSheetInfoRow(String label, IconData icon, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.2)),
+        ),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 70,
-            child: Text(
-              timeStr,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFF666666)),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: Icon(icon, size: 18, color: AppTheme.onSurfaceVariant),
           ),
-          SizedBox(
-            width: 45,
-            child: Text(
-              level,
-              style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: levelColor, fontWeight: FontWeight.bold),
-            ),
-          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              message,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.onSurfaceVariant,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConsoleLogLine(LogLine logLine, int index) {
+    final hour = logLine.timestamp.hour.toString().padLeft(2, '0');
+    final minute = logLine.timestamp.minute.toString().padLeft(2, '0');
+    final second = logLine.timestamp.second.toString().padLeft(2, '0');
+    final timeStr = '$hour:$minute:$second';
+
+    final level = logLine.level.toLowerCase();
+    final levelColor = _getLogLevelColor(level);
+    final levelBgColor = levelColor.withOpacity(0.1);
+    final levelIcon = _getLogLevelIcon(level);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with level badge and timestamp
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: levelBgColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+            ),
+            child: Row(
+              children: [
+                Icon(levelIcon, size: 12, color: levelColor),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: levelColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    level.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: levelColor,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  timeStr,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.onSurfaceVariant.withOpacity(0.7),
+                    fontFamily: 'monospace',
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Log message
+          Container(
+            padding: const EdgeInsets.all(12),
+            child: SelectableText(
+              logLine.message,
               style: TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: _getLogMessageColor(level),
                 fontFamily: 'monospace',
-                fontSize: 12,
-                color: level == 'ERROR' ? AppTheme.error : const Color(0xFFE0E0E0),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Color _getLogLevelColor(String level) {
+    switch (level) {
+      case 'error':
+        return const Color(0xFFEF4444); // Red
+      case 'warn':
+      case 'warning':
+        return const Color(0xFFF59E0B); // Orange/Yellow
+      case 'debug':
+        return const Color(0xFF8B5CF6); // Purple
+      case 'info':
+      default:
+        return const Color(0xFF3B82F6); // Blue
+    }
+  }
+
+  Color _getLogMessageColor(String level) {
+    switch (level) {
+      case 'error':
+        return const Color(0xFFEF4444);
+      case 'warn':
+      case 'warning':
+        return const Color(0xFFF59E0B);
+      case 'debug':
+        return const Color(0xFFA78BFA);
+      case 'info':
+      default:
+        return AppTheme.onSurface;
+    }
+  }
+
+  IconData _getLogLevelIcon(String level) {
+    switch (level) {
+      case 'error':
+        return Icons.error_outline;
+      case 'warn':
+      case 'warning':
+        return Icons.warning_amber_outlined;
+      case 'debug':
+        return Icons.bug_report_outlined;
+      case 'info':
+      default:
+        return Icons.info_outline;
+    }
+  }
+
+  String _capitalizeFirst(String value) {
+    if (value.isEmpty) return value;
+    return value[0].toUpperCase() + value.substring(1);
+  }
+
+  Widget _buildLogFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary.withOpacity(0.1) : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? AppTheme.primary.withOpacity(0.5) : AppTheme.outlineVariant.withOpacity(0.3),
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
+          ),
+        ),
       ),
     );
   }

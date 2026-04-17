@@ -353,6 +353,13 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 _buildActionCard(
                   context,
+                  icon: Icons.vpn_key,
+                  title: 'API Token',
+                  subtitle: 'Change token',
+                  onTap: () => _showChangeTokenDialog(context),
+                ),
+                _buildActionCard(
+                  context,
                   icon: Icons.link_off,
                   title: 'Disconnect',
                   subtitle: 'Unlink Vercel',
@@ -394,8 +401,6 @@ class _AccountScreenState extends State<AccountScreen> {
                   const SizedBox(height: 16),
                   _buildCopyableInfoRow('Support ID', _supportId, _copySupportId),
                   const Divider(height: 24),
-                  _buildChangeTokenButton(context),
-                  const Divider(height: 24),
                   _buildRestorePurchasesButton(),
                   const Divider(height: 24),
                   _buildReplayOnboardingButton(context),
@@ -404,73 +409,6 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
 
             const SizedBox(height: 32),
-
-            // Open Source Section
-            GestureDetector(
-              onTap: () => _launchGitHub(context),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'OPEN SOURCE',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.onSurfaceVariant,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.code,
-                          color: AppTheme.primary,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'View on GitHub',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Contribute or report issues',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppTheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.open_in_new,
-                          color: AppTheme.onSurfaceVariant,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
 
             // Contact Us Section
             GestureDetector(
@@ -540,24 +478,6 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
       ),
     );
-  }
-
-  void _launchGitHub(BuildContext context) async {
-    final uri = Uri.parse('https://github.com/mark-maher-moris/Vero-For-Vercel');
-    try {
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw Exception('Could not launch $uri');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open GitHub link'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
-      }
-    }
   }
 
   void _launchEmail(BuildContext context) async {
@@ -736,42 +656,6 @@ class _AccountScreenState extends State<AccountScreen> {
         MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );
     }
-  }
-
-  Widget _buildChangeTokenButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showChangeTokenDialog(context),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Change API Token',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.onSurfaceVariant,
-            ),
-          ),
-          Row(
-            children: [
-              const Icon(
-                Icons.vpn_key,
-                size: 18,
-                color: AppTheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Update token',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primary.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
   void _showChangeTokenDialog(BuildContext context) {
@@ -966,7 +850,8 @@ class _AccountScreenState extends State<AccountScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              appState.disconnectFromVercel();
+              final subscriptionProvider = context.read<SubscriptionProvider>();
+              appState.disconnectFromVercel(subscriptionProvider: subscriptionProvider);
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Disconnect'),

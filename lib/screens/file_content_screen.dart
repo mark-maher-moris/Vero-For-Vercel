@@ -3,17 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
+import '../widgets/syntax_highlighter.dart';
 
 class FileContentScreen extends StatefulWidget {
   final String deploymentId;
   final String fileId;
   final String fileName;
+  final String? fileUrl; // Optional: direct URL from file-tree API
 
   const FileContentScreen({
     super.key,
     required this.deploymentId,
     required this.fileId,
     required this.fileName,
+    this.fileUrl,
   });
 
   @override
@@ -39,10 +42,19 @@ class _FileContentScreenState extends State<FileContentScreen> {
 
     try {
       final appState = context.read<AppState>();
-      final content = await appState.apiService.getDeploymentFileContents(
-        widget.deploymentId,
-        widget.fileId,
-      );
+      String content;
+      
+      // If fileUrl is provided (from file-tree API), fetch directly from URL
+      if (widget.fileUrl != null && widget.fileUrl!.isNotEmpty) {
+        print('[FileContentScreen] Fetching from URL: ${widget.fileUrl}');
+        content = await appState.apiService.fetchFileFromUrl(widget.fileUrl!);
+      } else {
+        // Fall back to the old API method
+        content = await appState.apiService.getDeploymentFileContents(
+          widget.deploymentId,
+          widget.fileId,
+        );
+      }
       
       if (mounted) {
         setState(() {
@@ -111,9 +123,23 @@ class _FileContentScreenState extends State<FileContentScreen> {
               const SizedBox(height: 8),
               Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: AppTheme.onSurfaceVariant)),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _fetchContent,
-                child: const Text('Retry'),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  color: const Color(0xFF1E1E1E), // VSCode dark background
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: SyntaxHighlighter(
+                        code: _content!,
+                        fileName: widget.fileName,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -125,15 +151,20 @@ class _FileContentScreenState extends State<FileContentScreen> {
       return const Center(child: Text('No content available'));
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: SelectionArea(
-        child: Text(
-          _content!,
-          style: const TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 12,
-            height: 1.5,
+    return Expanded(
+      child: Container(
+        width: double.infinity,
+        color: const Color(0xFF1E1E1E), // VSCode dark background
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          scrollDirection: Axis.horizontal,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: SyntaxHighlighter(
+              code: _content!,
+              fileName: widget.fileName,
+              fontSize: 13,
+            ),
           ),
         ),
       ),

@@ -47,13 +47,18 @@ class AuthService {
   }
 
   Future<bool> validateToken(String token) async {
-    final response = await http.get(
-      Uri.parse('https://api.vercel.com/v2/user'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
+    final response = await http
+        .get(
+          Uri.parse('https://api.vercel.com/v2/user'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        )
+        .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw Exception('Token validation timed out. Please check your connection and try again.'),
+        );
     return response.statusCode == 200;
   }
 

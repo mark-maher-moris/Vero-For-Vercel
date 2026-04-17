@@ -7,6 +7,7 @@ import '../models/project.dart';
 import '../models/deployment.dart';
 import '../models/deployment_file.dart';
 import '../models/security.dart';
+import '../models/log.dart';
 import 'auth_service.dart';
 
 /// Stream controller for broadcasting authentication errors (401/403)
@@ -46,7 +47,7 @@ class VercelApiException implements Exception {
 class VercelApi {
   static const String baseUrl = 'https://api.vercel.com';
   final AuthService _authService = AuthService();
-  final String? teamId;
+  String? teamId; // Made mutable so it can be set automatically
 
   VercelApi({this.teamId});
 
@@ -59,6 +60,39 @@ class VercelApi {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
     };
+  }
+
+  /// Fetch user info and automatically set the team ID
+  /// This should be called once after authentication with just the token
+  Future<Map<String, dynamic>> fetchUserInfoAndSetTeamId() async {
+    print('[VercelApi] fetchUserInfoAndSetTeamId called');
+    
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/www/user'),
+            headers: await _getHeaders(),
+          )
+          .timeout(const Duration(seconds: 15));
+      
+      print('[VercelApi]   Response status: ${response.statusCode}');
+      
+      final data = await _handleResponse(response);
+      final user = data['user'] as Map<String, dynamic>?;
+      
+      if (user != null && user.containsKey('defaultTeamId')) {
+        teamId = user['defaultTeamId'] as String?;
+        print('[VercelApi]   Team ID set automatically: $teamId');
+      }
+      
+      return user ?? {};
+    } on TimeoutException catch (_) {
+      print('[VercelApi]   Timeout fetching user info');
+      throw VercelApiException('Request timed out. Please check your connection and try again.', statusCode: 408);
+    } catch (e) {
+      print('[VercelApi]   Error fetching user info: $e');
+      throw VercelApiException('Failed to fetch user info and team ID', statusCode: 500);
+    }
   }
 
   Uri _buildUri(String path, [Map<String, String>? queryParameters]) {
@@ -136,11 +170,21 @@ class VercelApi {
     }
   }
 
+  Map<String, dynamic> _wrapLogLine(String line) {
+    return {
+      'message': line,
+      'level': 'info',
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+  }
+
   Future<Map<String, dynamic>> getTeams() async {
-    final response = await http.get(
-      _buildUri('/v2/teams'),
-      headers: await _getHeaders(),
-    );
+    final response = await http
+        .get(
+          _buildUri('/v2/teams'),
+          headers: await _getHeaders(),
+        )
+        .timeout(const Duration(seconds: 15));
     return await _handleResponse(response);
   }
 
@@ -324,10 +368,12 @@ class VercelApi {
     if (buildMachineTypes != null) params['buildMachineTypes'] = buildMachineTypes;
     if (buildQueueConfiguration != null) params['buildQueueConfiguration'] = buildQueueConfiguration;
 
-    final response = await http.get(
-      _buildUri('/v10/projects', params.isNotEmpty ? params : null),
-      headers: await _getHeaders(),
-    );
+    final response = await http
+        .get(
+          _buildUri('/v10/projects', params.isNotEmpty ? params : null),
+          headers: await _getHeaders(),
+        )
+        .timeout(const Duration(seconds: 15));
     return await _handleResponse(response);
   }
 
@@ -881,78 +927,186 @@ class VercelApi {
   // ==================== LOGS & OBSERVABILITY ====================
 
   /// Get runtime logs for a deployment
+  /// 
+  /// IMPORTANT: This endpoint streams LIVE logs only and waits for new entries.
+  /// It does NOT return historical logs. If no logs are currently being generated,
+  /// the request will timeout after the specified duration.
+  /// 
+  /// For historical build logs, use [getDeploymentEvents] or [getDeploymentBuildLogs].
+  /// 
   /// [projectId] - The project ID
   /// [deploymentId] - The deployment ID
   /// [limit] - Maximum number of log entries to return
   /// [since] - Timestamp to get logs since (milliseconds)
   /// [until] - Timestamp to get logs until (milliseconds)
+  /// [timeoutSeconds] - How long to wait for logs (default: 5 seconds for UX)
   Future<List<Map<String, dynamic>>> getDeploymentRuntimeLogs({
     required String projectId,
     required String deploymentId,
     int? limit,
     int? since,
     int? until,
+    int timeoutSeconds = 5,
   }) async {
+    print('[VercelApi] getDeploymentRuntimeLogs called');
+    print('[VercelApi]   projectId: $projectId');
+    print('[VercelApi]   deploymentId: $deploymentId');
+    print('[VercelApi]   teamId: $teamId');
+    print('[VercelApi]   timeout: ${timeoutSeconds}s (LIVE logs only)');
+    
     final params = <String, String>{};
     if (limit != null) params['limit'] = limit.toString();
     if (since != null) params['since'] = since.toString();
     if (until != null) params['until'] = until.toString();
 
-    final response = await http.get(
-      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/runtime-logs', params.isNotEmpty ? params : null),
-      headers: await _getHeaders(),
-    );
-    final data = await _handleResponse(response);
-    final logs = data['logs'] as List<dynamic>? ?? [];
-    return logs.cast<Map<String, dynamic>>();
+    final uri = _buildUri('/v1/projects/$projectId/deployments/$deploymentId/runtime-logs', params.isNotEmpty ? params : null);
+    print('[VercelApi]   Request URL: $uri');
+
+    final client = http.Client();
+    final maxEntries = limit ?? 100;
+    try {
+      final headers = await _getHeaders();
+      final request = http.Request('GET', uri);
+      request.headers.addAll(headers);
+
+      final streamedResponse = await client.send(request).timeout(
+        Duration(seconds: timeoutSeconds),
+        onTimeout: () {
+          print('[VercelApi]   Request timed out after $timeoutSeconds seconds - no live logs available');
+          throw TimeoutException('No live runtime logs available. The deployment may not be receiving traffic.', Duration(seconds: timeoutSeconds));
+        },
+      );
+
+      print('[VercelApi]   Response status: ${streamedResponse.statusCode}');
+      if (streamedResponse.statusCode != 200) {
+        final body = await streamedResponse.stream.bytesToString();
+        print('[VercelApi]   Response body: $body');
+        final data = await _handleResponse(http.Response(body, streamedResponse.statusCode));
+        final logs = data['logs'] as List<dynamic>? ?? [];
+        print('[VercelApi]   Logs count: ${logs.length}');
+        return logs.cast<Map<String, dynamic>>();
+      }
+
+      final lineStream = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+      final iterator = StreamIterator<String>(lineStream);
+      final logs = <Map<String, dynamic>>[];
+
+      try {
+        // Use a shorter timeout for collecting logs to improve UX
+        final collectStart = DateTime.now();
+        final collectTimeout = Duration(seconds: timeoutSeconds);
+        
+        while (await iterator.moveNext().timeout(
+          collectTimeout,
+          onTimeout: () {
+            print('[VercelApi]   Collection timeout - returning ${logs.length} logs collected so far');
+            return false;
+          },
+        )) {
+          final line = iterator.current.trim();
+          if (line.isEmpty) continue;
+          try {
+            final decoded = jsonDecode(line);
+            if (decoded is Map<String, dynamic>) {
+              logs.add(decoded);
+            } else {
+              logs.add(_wrapLogLine(line));
+            }
+          } catch (e) {
+            logs.add(_wrapLogLine(line));
+          }
+
+          if (logs.length >= maxEntries) {
+            await iterator.cancel();
+            break;
+          }
+          
+          // Check if we've exceeded our collection timeout
+          if (DateTime.now().difference(collectStart) > collectTimeout) {
+            print('[VercelApi]   Collection time limit reached - returning ${logs.length} logs');
+            break;
+          }
+        }
+      } finally {
+        await iterator.cancel();
+      }
+
+      print('[VercelApi]   Lines collected: ${logs.length}');
+      return logs;
+    } on TimeoutException {
+      print('[VercelApi]   No live logs available (timeout)');
+      // Return empty list for timeout - this is expected behavior for deployments without traffic
+      return [];
+    } catch (e) {
+      print('[VercelApi]   Error in getDeploymentRuntimeLogs: $e');
+      rethrow;
+    } finally {
+      client.close();
+    }
   }
 
   /// Get function logs for a deployment
+  /// 
+  /// DEPRECATED: The function-logs endpoint does not exist in the Vercel API.
+  /// Use [getDeploymentRuntimeLogs] with filtering instead.
+  /// 
   /// [projectId] - The project ID
   /// [deploymentId] - The deployment ID
-  /// [functionName] - Optional specific function name to filter
+  /// [functionName] - Optional specific function name to filter (not implemented)
   /// [limit] - Maximum number of log entries
+  @deprecated
   Future<List<Map<String, dynamic>>> getDeploymentFunctionLogs({
     required String projectId,
     required String deploymentId,
     String? functionName,
     int? limit,
   }) async {
-    final params = <String, String>{};
-    if (functionName != null) params['function'] = functionName;
-    if (limit != null) params['limit'] = limit.toString();
-
-    final response = await http.get(
-      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/function-logs', params.isNotEmpty ? params : null),
-      headers: await _getHeaders(),
+    print('[VercelApi] WARNING: getDeploymentFunctionLogs is deprecated');
+    print('[VercelApi] Use getDeploymentRuntimeLogs instead');
+    // Delegate to runtime logs and filter by function name if provided
+    final logs = await getDeploymentRuntimeLogs(
+      projectId: projectId,
+      deploymentId: deploymentId,
+      limit: limit,
+      timeoutSeconds: 3, // Short timeout since this is deprecated
     );
-    final data = await _handleResponse(response);
-    final logs = data['logs'] as List<dynamic>? ?? [];
-    return logs.cast<Map<String, dynamic>>();
+    if (functionName != null) {
+      return logs.where((log) {
+        final message = log['message']?.toString().toLowerCase() ?? '';
+        return message.contains(functionName.toLowerCase());
+      }).toList();
+    }
+    return logs;
   }
 
   /// Get request logs for a deployment
+  /// 
+  /// DEPRECATED: Use [getDeploymentRuntimeLogs] instead. This endpoint does not
+  /// support simple GET requests - it requires streaming.
+  /// 
   /// [projectId] - The project ID
   /// [deploymentId] - The deployment ID
   /// [limit] - Maximum number of log entries
-  /// [since] - Timestamp to get logs since
+  /// [since] - Timestamp to get logs since (milliseconds)
+  @deprecated
   Future<List<Map<String, dynamic>>> getDeploymentRequestLogs({
     required String projectId,
     required String deploymentId,
     int? limit,
     int? since,
   }) async {
-    final params = <String, String>{};
-    if (limit != null) params['limit'] = limit.toString();
-    if (since != null) params['since'] = since.toString();
-
-    final response = await http.get(
-      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/runtime-logs', params.isNotEmpty ? params : null),
-      headers: await _getHeaders(),
+    print('[VercelApi] WARNING: getDeploymentRequestLogs is deprecated');
+    print('[VercelApi] Use getDeploymentRuntimeLogs instead');
+    // Delegate to the streaming runtime logs endpoint
+    return getDeploymentRuntimeLogs(
+      projectId: projectId,
+      deploymentId: deploymentId,
+      limit: limit,
+      since: since,
+      timeoutSeconds: 3, // Short timeout for UX
     );
-    final data = await _handleResponse(response);
-    final logs = data['logs'] as List<dynamic>? ?? [];
-    return logs.cast<Map<String, dynamic>>();
   }
 
   /// Get domain configuration including DNS details
@@ -960,7 +1114,7 @@ class VercelApi {
   Future<Map<String, dynamic>> getDomainConfiguration(String domain) async {
     try {
       final response = await http.get(
-        _buildUri('/v6/domains/$domain'),
+        _buildUri('/v6/domains/$domain/config'),
         headers: await _getHeaders(),
       );
       return await _handleResponse(response);
@@ -972,45 +1126,50 @@ class VercelApi {
   }
 
   /// Get deployment-specific domains
+  /// DEPRECATED: This endpoint is not available in the Vercel API.
+  /// Use [getProjectDomains] to get domains for a project instead.
   /// [projectId] - The project ID
   /// [deploymentId] - The deployment ID
+  @deprecated
   Future<List<Map<String, dynamic>>> getDeploymentDomains({
     required String projectId,
     required String deploymentId,
   }) async {
-    try {
-      final response = await http.get(
-        _buildUri('/v1/projects/$projectId/deployments/$deploymentId/domains'),
-        headers: await _getHeaders(),
-      );
-      final data = await _handleResponse(response);
-      final domains = data['domains'] as List<dynamic>? ?? [];
-      return domains.cast<Map<String, dynamic>>();
-    } catch (e, stackTrace) {
-      print('Error in getDeploymentDomains for projectId "$projectId", deploymentId "$deploymentId": $e');
-      print('Stack trace: $stackTrace');
-      rethrow;
-    }
+    // This endpoint doesn't exist in Vercel API - return empty list
+    print('[VercelApi] WARNING: getDeploymentDomains is deprecated and returns empty list');
+    print('[VercelApi] Use getProjectDomains(projectId) instead');
+    return [];
   }
 
   /// Get build logs for a deployment
+  /// Uses the v3/events endpoint which provides build events and logs
   /// [projectId] - The project ID
   /// [deploymentId] - The deployment ID
   Future<List<Map<String, dynamic>>> getDeploymentBuildLogs({
     required String projectId,
     required String deploymentId,
   }) async {
-    final response = await http.get(
-      _buildUri('/v1/projects/$projectId/deployments/$deploymentId/build-logs'),
-      headers: await _getHeaders(),
-    );
-    final data = await _handleResponse(response);
-    final logs = data['logs'] as List<dynamic>? ?? [];
-    return logs.cast<Map<String, dynamic>>();
+    // Build logs are available through the deployment events endpoint
+    final events = await getDeploymentEvents(deploymentId);
+    // Filter for build-related events (delimiter, build-related)
+    return events.where((event) {
+      final type = event['type'] as String? ?? '';
+      final text = event['text'] as String? ?? '';
+      // Include delimiter events and build-related events
+      return type == 'delimiter' ||
+             text.toLowerCase().contains('build') ||
+             text.toLowerCase().contains('compil') ||
+             text.toLowerCase().contains('install');
+    }).cast<Map<String, dynamic>>().toList();
   }
 
-  /// List deployment files
+  /// List deployment files - DEPRECATED: Use getDeploymentFileTree instead
   /// [deploymentId] - The deployment ID
+  /// 
+  /// NOTE: This method uses the old /v6/deployments/{id}/files endpoint which
+  /// returns 404 for many deployments. Use getDeploymentFileTree() with the
+  /// deployment URL for reliable file fetching (competitor approach).
+  @deprecated
   Future<List<DeploymentFile>> getDeploymentFiles(String deploymentId) async {
     print('[VercelApi] getDeploymentFiles called');
     print('[VercelApi]   deploymentId: $deploymentId');
@@ -1033,10 +1192,62 @@ class VercelApi {
       print('[VercelApi]   Response body: ${response.body}');
     }
     
+    // Handle 404 gracefully for Git deployments (no file tree)
+    if (response.statusCode == 404) {
+      print('[VercelApi] File tree not found (likely Git deployment) - returning empty list');
+      return [];
+    }
+    
     final data = await _handleResponse(response);
     final list = data as List<dynamic>? ?? [];
     print('[VercelApi]   Files count: ${list.length}');
     print('[VercelApi] getDeploymentFiles completed');
+    
+    return list.map((json) => DeploymentFile.fromJson(json as Map<String, dynamic>)).toList();
+  }
+
+  /// Get deployment file tree using the file-tree endpoint (competitor approach)
+  /// 
+  /// This endpoint uses the deployment URL instead of ID and returns a hierarchical
+  /// file structure with 'link' fields for fetching file contents.
+  /// 
+  /// [deploymentUrl] - The deployment URL (e.g., 'my-app.vercel.app')
+  /// [base] - The base directory to fetch ('src' for source, 'out' for output)
+  Future<List<DeploymentFile>> getDeploymentFileTree({
+    required String deploymentUrl,
+    String base = 'src',
+  }) async {
+    print('[VercelApi] getDeploymentFileTree called');
+    print('[VercelApi]   deploymentUrl: $deploymentUrl');
+    print('[VercelApi]   base: $base');
+    print('[VercelApi]   teamId: $teamId');
+    
+    final params = <String, String>{
+      'base': base,
+    };
+    if (teamId != null) params['teamId'] = teamId!;
+
+    final uri = _buildUri('/file-tree/$deploymentUrl', params);
+    print('[VercelApi]   Request URL: $uri');
+
+    final response = await http.get(
+      uri,
+      headers: await _getHeaders(),
+    );
+    
+    print('[VercelApi]   Response status: ${response.statusCode}');
+    print('[VercelApi]   Response body length: ${response.body.length}');
+    
+    // Handle 404 gracefully for Git deployments (no file tree)
+    if (response.statusCode == 404) {
+      print('[VercelApi] File tree not found (likely Git deployment) - returning empty list');
+      return [];
+    }
+    
+    final data = await _handleResponse(response);
+    final list = data as List<dynamic>? ?? [];
+    print('[VercelApi]   Files count: ${list.length}');
+    print('[VercelApi] getDeploymentFileTree completed');
     
     return list.map((json) => DeploymentFile.fromJson(json as Map<String, dynamic>)).toList();
   }
@@ -1069,14 +1280,18 @@ class VercelApi {
       try {
         final data = json.decode(response.body);
         print('[VercelApi]   Response parsed as JSON');
-        if (data is Map && data.containsKey('content')) {
-          // Decode base64 content
-          final content = data['content'] as String;
-          print('[VercelApi]   Found content field, decoding base64');
-          return utf8.decode(base64.decode(content));
+        if (data is Map) {
+          // API can return either 'content' or 'data' field with base64
+          String? base64Content = data['content'] as String?;
+          base64Content ??= data['data'] as String?;
+          
+          if (base64Content != null) {
+            print('[VercelApi]   Found base64 field (${data.containsKey('content') ? 'content' : 'data'}), decoding...');
+            return utf8.decode(base64.decode(base64Content));
+          }
         }
         // Fallback: try to decode the entire response as base64
-        print('[VercelApi]   No content field, trying base64 decode of entire body');
+        print('[VercelApi]   No content/data field, trying base64 decode of entire body');
         return utf8.decode(base64.decode(response.body));
       } catch (e) {
         // If decoding fails, return the raw response
@@ -1087,6 +1302,425 @@ class VercelApi {
       print('[VercelApi]   Error response body: ${response.body}');
       throw VercelApiException('Failed to get file contents', statusCode: response.statusCode);
     }
+  }
+
+  /// Fetch file content from a direct URL (used by file-tree API)
+  /// [fileUrl] - The full URL to fetch the file from (includes token)
+  Future<String> fetchFileFromUrl(String fileUrl) async {
+    print('[VercelApi] fetchFileFromUrl called');
+    print('[VercelApi]   fileUrl: $fileUrl');
+    
+    final response = await http.get(
+      Uri.parse(fileUrl),
+      headers: await _getHeaders(),
+    );
+    
+    print('[VercelApi]   Response status: ${response.statusCode}');
+    print('[VercelApi]   Response body length: ${response.body.length}');
+    
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      // Try to decode as base64 first
+      try {
+        final data = json.decode(response.body);
+        if (data is Map) {
+          // API can return either 'content' or 'data' field with base64
+          String? base64Content = data['content'] as String?;
+          base64Content ??= data['data'] as String?;
+          
+          if (base64Content != null) {
+            print('[VercelApi]   Found base64 field (${data.containsKey('content') ? 'content' : 'data'}), decoding...');
+            return utf8.decode(base64.decode(base64Content));
+          }
+        }
+        // If it's JSON but no content/data field, return raw body
+        return response.body;
+      } catch (e) {
+        // Not JSON or decoding failed, return raw response
+        print('[VercelApi]   Returning raw response');
+        return response.body;
+      }
+    } else {
+      print('[VercelApi]   Error response body: ${response.body}');
+      throw VercelApiException('Failed to fetch file from URL', statusCode: response.statusCode);
+    }
+  }
+
+  /// Get project logs using the /logs/request-logs endpoint (Revcel approach)
+  /// 
+  /// This endpoint returns historical logs with pagination and filtering support.
+  /// Unlike the streaming runtime-logs endpoint, this can retrieve logs from any time period.
+  /// 
+  /// [projectId] - The project ID to fetch logs for
+  /// [ownerId] - Required - team ID or user ID (from AppState.user['id'])
+  /// [deploymentId] - Optional deployment ID to filter logs
+  /// [startDate] - Start timestamp as string. Use '1' for max fetch (competitor approach) or milliseconds timestamp
+  /// [endDate] - End timestamp as string in milliseconds (optional)
+  /// [page] - Page number for pagination
+  /// [attributes] - Filter attributes (host, method, statusCode, etc.)
+  /// [limit] - Not directly supported by this endpoint (use pagination instead)
+  Future<ProjectLogsResult> getProjectLogs({
+    required String projectId,
+    required String ownerId,
+    String? deploymentId,
+    String? startDate, // Can be '1' for max fetch or milliseconds timestamp
+    String? endDate, // Milliseconds timestamp (optional)
+    int? page,
+    Map<String, List<String>>? attributes,
+  }) async {
+    print('[VercelApi] getProjectLogs called');
+    print('[VercelApi]   projectId: $projectId');
+    print('[VercelApi]   ownerId: $ownerId');
+    print('[VercelApi]   deploymentId: $deploymentId');
+    print('[VercelApi]   teamId: $teamId');
+
+    // Default to '1' which fetches maximum allowed logs (competitor approach)
+    final effectiveStartDate = startDate ?? '1';
+
+    final params = <String, String>{
+      'projectId': projectId,
+      'ownerId': ownerId,
+      'startDate': effectiveStartDate,
+    };
+
+    if (deploymentId != null) {
+      params['deploymentId'] = deploymentId;
+    }
+
+    if (page != null && page > 0) {
+      params['page'] = page.toString();
+    }
+
+    // Add filter attributes
+    if (attributes != null) {
+      for (final entry in attributes.entries) {
+        if (entry.value.isNotEmpty) {
+          params[entry.key] = entry.value.join(',');
+        }
+      }
+    }
+
+    final uri = _buildUri('/logs/request-logs', params);
+    print('[VercelApi]   Request URL: $uri');
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: await _getHeaders(),
+      );
+
+      print('[VercelApi]   Response status: ${response.statusCode}');
+
+      final data = await _handleResponse(response);
+      final rows = data['rows'] as List<dynamic>? ?? [];
+      final hasMoreRows = data['hasMoreRows'] as bool? ?? false;
+
+      print('[VercelApi]   Logs count: ${rows.length}, hasMoreRows: $hasMoreRows');
+
+      return ProjectLogsResult(
+        logs: rows.map((json) => Log.fromJson(json as Map<String, dynamic>)).toList(),
+        hasMoreRows: hasMoreRows,
+        nextPage: hasMoreRows ? (page ?? 0) + 1 : null,
+      );
+    } catch (e) {
+      print('[VercelApi]   Error in getProjectLogs: $e');
+      rethrow;
+    }
+  }
+
+  /// Get available filter values for project logs
+  /// 
+  /// Fetches distinct values for specific filter attributes (host, method, statusCode, etc.)
+  /// Useful for populating filter dropdowns.
+  /// 
+  /// [projectId] - The project ID
+  /// [attributes] - List of attribute names to fetch values for
+  /// [startDate] - Start date as Unix timestamp string (default: '1' for max fetch)
+  /// [endDate] - End date as Unix timestamp string (optional)
+  Future<Map<String, List<LogFilterValue>>> getProjectLogsFilters({
+    required String projectId,
+    required List<String> attributes,
+    String? startDate, // Unix timestamp as string (default: '1')
+    String? endDate, // Unix timestamp as string
+  }) async {
+    print('[VercelApi] getProjectLogsFilters called');
+    print('[VercelApi]   projectId: $projectId');
+    print('[VercelApi]   attributes: $attributes');
+
+    // ownerId (teamId) is REQUIRED for this endpoint
+    if (teamId == null) {
+      throw VercelApiException('Team ID not set. Please call fetchUserInfoAndSetTeamId() after authentication to automatically retrieve and set your team ID.');
+    }
+
+    // Default to '1' for max fetch like competitor
+    final effectiveStartDate = startDate ?? '1';
+
+    final baseParams = <String, String>{
+      'ownerId': teamId!, // Required parameter
+      'projectId': projectId,
+      'startDate': effectiveStartDate,
+    };
+    
+    if (endDate != null) {
+      baseParams['endDate'] = endDate;
+    }
+
+    final results = <String, List<LogFilterValue>>{};
+
+    // Fetch each attribute with a small delay to avoid rate limiting (like Revcel does)
+    for (int i = 0; i < attributes.length; i++) {
+      final attribute = attributes[i];
+      
+      // Add staggered delay (50ms between requests)
+      if (i > 0) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+
+      final params = Map<String, String>.from(baseParams);
+      params['attributeName'] = attribute;
+
+      final uri = _buildUri('/logs/request-logs/filter-values', params);
+      print('[VercelApi]   Fetching filter values for $attribute');
+
+      try {
+        final response = await http.get(
+          uri,
+          headers: await _getHeaders(),
+        );
+
+        final data = await _handleResponse(response);
+        final rows = data['rows'] as List<dynamic>? ?? [];
+
+        results[attribute] = rows
+            .map((json) => LogFilterValue.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        print('[VercelApi]   Found ${results[attribute]?.length} values for $attribute');
+      } catch (e) {
+        print('[VercelApi]   Error fetching filter values for $attribute: $e');
+        results[attribute] = [];
+      }
+    }
+
+    return results;
+  }
+
+  // Regex for extracting favicon href from HTML
+  // Matches: <link rel="icon" href="..."> or <link rel='icon' href='...'>
+  static final RegExp _linkIconHrefRegex = RegExp(
+    r'<link[^>]*rel=[\x27\x22][^\x27\x22]*(?:icon|shortcut icon|apple-touch-icon)[^\x27\x22]*[\x27\x22][^>]*href=[\x27\x22]([^\x27\x22]+)[\x27\x22][^>]*>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _trailingSlashesRegex = RegExp(r'/+$');
+  static final RegExp _absoluteUrlRegex = RegExp(r'^https?://', caseSensitive: false);
+
+  /// Fetch project favicon using the same approach as Revcel:
+  /// 1. Try Vercel's deployment favicon API endpoint
+  /// 2. Fall back to common favicon paths on the deployment URL
+  /// 3. Parse HTML for link rel="icon" tags as last resort
+  /// 
+  /// [projectId] - The project ID to fetch favicon for
+  /// Returns the favicon URL string, or null if not found
+  Future<String?> getProjectFavicon(String projectId) async {
+    print('[VercelApi] getProjectFavicon called for project: $projectId');
+
+    try {
+      // Fetch the most recent READY deployment for this project
+      final deployments = await getDeployments(projectId: projectId);
+      final readyDeployment = deployments
+          .where((d) => d.state == 'READY')
+          .firstOrNull;
+
+      if (readyDeployment == null) {
+        print('[VercelApi] No READY deployment found for project: $projectId');
+        return null;
+      }
+
+      final deploymentId = readyDeployment.uid;
+      final deploymentHost = readyDeployment.url;
+
+      print('[VercelApi] Using deployment: $deploymentId (host: $deploymentHost)');
+
+      // First attempt: Vercel deployment favicon endpoint
+      final faviconUrl = await _fetchVercelDeploymentFavicon(deploymentId);
+      if (faviconUrl != null) {
+        print('[VercelApi] Found favicon via Vercel API: $faviconUrl');
+        return faviconUrl;
+      }
+
+      // Fallback: try to resolve favicon from the website itself
+      if (deploymentHost.isNotEmpty) {
+        final websiteFavicon = await _resolveWebsiteFavicon('https://$deploymentHost');
+        if (websiteFavicon != null) {
+          print('[VercelApi] Found favicon via website fallback: $websiteFavicon');
+          return websiteFavicon;
+        }
+      }
+
+      print('[VercelApi] No favicon found for project: $projectId');
+      return null;
+    } catch (e, stackTrace) {
+      print('[VercelApi] Error fetching favicon for project $projectId: $e');
+      print('[VercelApi] Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  /// Try to fetch favicon from Vercel's deployment favicon endpoint
+  /// Following the competitor's approach: follow redirects and return the final URL
+  Future<String?> _fetchVercelDeploymentFavicon(String deploymentId) async {
+    try {
+      final params = <String, String>{};
+      if (teamId != null) params['teamId'] = teamId!;
+
+      final uri = _buildUri('/v0/deployments/$deploymentId/favicon', params);
+      print('[VercelApi] Trying Vercel favicon endpoint: $uri');
+
+      final token = await _authService.getToken();
+      if (token == null) return null;
+
+      // Create a client that follows redirects manually so we can capture the final URL
+      final client = http.Client();
+      try {
+        final request = http.Request('GET', uri);
+        request.headers['Authorization'] = 'Bearer $token';
+
+        final streamedResponse = await client.send(request);
+        print('[VercelApi] Favicon initial response: ${streamedResponse.statusCode}');
+
+        // The Vercel API returns 302 redirect to the actual favicon URL
+        // We need to follow the redirect chain to get the final URL
+        Uri currentUri = uri;
+        int redirectCount = 0;
+        const maxRedirects = 5;
+
+        while ((streamedResponse.statusCode == 301 ||
+                streamedResponse.statusCode == 302 ||
+                streamedResponse.statusCode == 307 ||
+                streamedResponse.statusCode == 308) &&
+            redirectCount < maxRedirects) {
+          final location = streamedResponse.headers['location'];
+          if (location == null || location.isEmpty) break;
+
+          // Resolve relative URLs
+          final newUri = location.startsWith('http')
+              ? Uri.parse(location)
+              : currentUri.resolve(location);
+          print('[VercelApi] Following redirect to: $newUri');
+
+          // Cancel the current response stream
+          await streamedResponse.stream.drain();
+
+          // Make the new request
+          final newRequest = http.Request('GET', newUri);
+          newRequest.headers['Authorization'] = 'Bearer $token';
+          final newResponse = await client.send(newRequest);
+
+          currentUri = newUri;
+          redirectCount++;
+
+          // If this is not another redirect, we're done
+          if (newResponse.statusCode != 301 &&
+              newResponse.statusCode != 302 &&
+              newResponse.statusCode != 307 &&
+              newResponse.statusCode != 308) {
+            // Success - return the final URL
+            if (newResponse.statusCode == 200) {
+              print('[VercelApi] Found favicon at final URL: $currentUri');
+              await newResponse.stream.drain(); // Clean up
+              return currentUri.toString();
+            }
+            break;
+          }
+        }
+
+        // If we got a 200 directly (no redirects), check if it's an image
+        if (streamedResponse.statusCode == 200) {
+          final contentType = streamedResponse.headers['content-type'];
+          if (contentType != null && contentType.startsWith('image/')) {
+            // Return the final URL - the image can be loaded from this URL
+            print('[VercelApi] Found favicon at: $currentUri');
+            await streamedResponse.stream.drain(); // Clean up
+            return currentUri.toString();
+          }
+        }
+
+        // Clean up the response stream
+        await streamedResponse.stream.drain();
+      } finally {
+        client.close();
+      }
+
+      print('[VercelApi] Vercel favicon endpoint did not return a valid image');
+      return null;
+    } catch (e) {
+      print('[VercelApi] Error fetching Vercel deployment favicon: $e');
+      return null;
+    }
+  }
+
+  /// Fallback: resolve favicon from the website by checking common paths
+  Future<String?> _resolveWebsiteFavicon(String siteBaseUrl) async {
+    final base = siteBaseUrl.replaceAll(_trailingSlashesRegex, '');
+    final candidatePaths = [
+      '/favicon.ico',
+      '/favicon.png',
+      '/favicon.svg',
+      '/apple-touch-icon.png',
+      '/apple-touch-icon-precomposed.png',
+    ];
+
+    // Try each candidate path
+    for (final path in candidatePaths) {
+      final url = '$base$path';
+      try {
+        final response = await http.get(Uri.parse(url));
+        final contentType = response.headers['content-type'] ?? '';
+
+        if (response.statusCode == 200 &&
+            (contentType.startsWith('image/') ||
+                path.endsWith('.ico') ||
+                path.endsWith('.png') ||
+                path.endsWith('.svg'))) {
+          print('[VercelApi] Found favicon at: $url');
+          return url;
+        }
+      } catch (_) {
+        // Ignore and try next candidate
+      }
+    }
+
+    // Last resort: try parsing the homepage HTML for a link rel="icon" tag
+    try {
+      final homeResponse = await http.get(Uri.parse(base));
+      if (homeResponse.statusCode == 200) {
+        final html = homeResponse.body;
+        final href = _extractIconHrefFromHtml(html);
+        if (href != null) {
+          // Resolve relative URLs
+          String resolvedUrl;
+          if (_absoluteUrlRegex.hasMatch(href)) {
+            resolvedUrl = href;
+          } else if (href.startsWith('/')) {
+            resolvedUrl = '$base$href';
+          } else {
+            resolvedUrl = '$base/$href';
+          }
+          print('[VercelApi] Found favicon via HTML parsing: $resolvedUrl');
+          return resolvedUrl;
+        }
+      }
+    } catch (_) {
+      // Ignore
+    }
+
+    return null;
+  }
+
+  /// Extract favicon href from HTML using regex
+  String? _extractIconHrefFromHtml(String html) {
+    final match = _linkIconHrefRegex.firstMatch(html);
+    return match?.group(1);
   }
 }
 
