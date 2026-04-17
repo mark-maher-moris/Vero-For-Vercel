@@ -173,10 +173,12 @@ class AppState extends ChangeNotifier {
       }
       if (kDebugMode) print('[AppState] Token valid, saving...');
       await _authService.saveToken(token);
-      _isAuthenticated = true;
       if (kDebugMode) print('[AppState] Fetching initial data...');
       await fetchInitialData();
       if (kDebugMode) print('[AppState] Initial data fetched successfully');
+      
+      // Only set authenticated AFTER all data is fetched successfully
+      _isAuthenticated = true;
       
       // Sync login with Superwall using user ID
       if (_user != null && _user!['id'] != null) {
@@ -200,6 +202,7 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       if (kDebugMode) print('[AppState] Login error: $e');
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -265,15 +268,16 @@ class AppState extends ChangeNotifier {
       if (e.statusCode == 404) {
         await logout();
         _errorMessage = 'Session expired. Please log in again.';
+        rethrow;
       } else {
         _errorMessage = e.toString();
+        rethrow;
       }
-      if (kDebugMode) print('Error fetching initial data: $e');
     } catch (e) {
       _errorMessage = e.toString();
       if (kDebugMode) print('Error fetching initial data: $e');
+      rethrow;
     }
-    notifyListeners();
   }
 
   Future<void> fetchTeams() async {
@@ -282,6 +286,7 @@ class AppState extends ChangeNotifier {
       _teams = response['teams'] as List<dynamic>? ?? [];
     } catch (e) {
       if (kDebugMode) print('Error fetching teams: $e');
+      rethrow;
     }
   }
 

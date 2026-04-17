@@ -6,7 +6,6 @@ import 'package:in_app_review/in_app_review.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../services/superwall_service.dart';
-import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -142,10 +141,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       // User already subscribed, skip paywall and complete onboarding
       if (mounted) {
         await context.read<AppState>().markOnboardingComplete();
-        // Explicitly navigate to login screen and remove onboarding from stack
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
+        // Don't navigate manually - let the Consumer in main.dart handle it
+        // The Consumer will detect hasCompletedOnboarding = true and show LoginScreen
       }
       return;
     }
@@ -155,10 +152,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     
     if (mounted) {
       await context.read<AppState>().markOnboardingComplete();
-      // Navigate to login screen after paywall is dismissed
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      // Don't navigate manually - let the Consumer in main.dart handle it
+      // The Consumer will detect hasCompletedOnboarding = true and show LoginScreen
     }
   }
 

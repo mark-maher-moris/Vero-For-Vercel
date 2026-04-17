@@ -68,14 +68,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await context.read<AppState>().login(token);
+      if (mounted) {
+        print('[LoginScreen] Login successful, AppState.isAuthenticated should trigger navigation');
+      }
     } catch (e) {
       if (mounted) {
+        print('[LoginScreen] Login failed with error: $e');
         // Track login error
         SuperwallService().trackError('login_failed', e.toString());
         _showErrorDialog(
           error: e.toString(),
-        location: 'Token authentication failed',
-      );
+          location: 'Token authentication failed',
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -229,6 +233,31 @@ App: VERO For Vercel''';
             }
           },
         ),
+        actions: [
+          IconButton(
+            icon: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.6),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.workspace_premium,
+                color: AppTheme.primary,
+                size: 28,
+              ),
+            ),
+            tooltip: 'Upgrade',
+            onPressed: () {
+              SuperwallService().presentPaywall();
+            },
+          ),
+        ],
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -360,7 +389,7 @@ App: VERO For Vercel''';
                           const Icon(Icons.login, size: 20),
                           const SizedBox(width: 12),
                           Text(
-                            'CONNECT WITH TOKEN',
+                            'CONNECT',
                             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                   color: AppTheme.onPrimary,
                                   fontWeight: FontWeight.bold,
@@ -389,10 +418,11 @@ App: VERO For Vercel''';
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.code,
+                        Image.network(
+                          'https://cdn-icons-png.flaticon.com/512/25/25231.png',
+                          height: 20,
+                          width: 20,
                           color: AppTheme.primary,
-                          size: 18,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -401,8 +431,6 @@ App: VERO For Vercel''';
                             color: AppTheme.primary,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppTheme.primary,
                           ),
                         ),
                       ],

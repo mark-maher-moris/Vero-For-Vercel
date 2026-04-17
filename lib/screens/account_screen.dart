@@ -819,10 +819,17 @@ class _AccountScreenState extends State<AccountScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
               final subscriptionProvider = context.read<SubscriptionProvider>();
-              appState.logout(subscriptionProvider: subscriptionProvider);
+              await appState.logout(subscriptionProvider: subscriptionProvider);
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+                  (route) => false,
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Sign Out'),
@@ -848,10 +855,17 @@ class _AccountScreenState extends State<AccountScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
               final subscriptionProvider = context.read<SubscriptionProvider>();
-              appState.disconnectFromVercel(subscriptionProvider: subscriptionProvider);
+              await appState.disconnectFromVercel(subscriptionProvider: subscriptionProvider);
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+                  (route) => false,
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Disconnect'),
