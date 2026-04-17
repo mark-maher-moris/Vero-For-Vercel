@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -69,11 +70,11 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await context.read<AppState>().login(token);
       if (mounted) {
-        print('[LoginScreen] Login successful, AppState.isAuthenticated should trigger navigation');
+        if (kDebugMode) print('[LoginScreen] Login successful, AppState.isAuthenticated should trigger navigation');
       }
     } catch (e) {
       if (mounted) {
-        print('[LoginScreen] Login failed with error: $e');
+        if (kDebugMode) print('[LoginScreen] Login failed with error: $e');
         // Track login error
         SuperwallService().trackError('login_failed', e.toString());
         _showErrorDialog(

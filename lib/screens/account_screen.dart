@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -279,32 +280,34 @@ class _AccountScreenState extends State<AccountScreen> {
                         final supportId = await SuperwallService().getUserId();
                         final entitlements = await SuperwallService().getEntitlements();
                         final customerInfo = await SuperwallService().getCustomerInfo();
-                        print('========== UPGRADE BUTTON CLICKED - DEBUG DATA ==========');
-                        print('Subscription Status:');
-                        print('  - isPro: ${subscriptionProvider.isPro}');
-                        print('  - hasActiveSubscription: ${subscriptionProvider.hasActiveSubscription}');
-                        print('  - isLoading: ${subscriptionProvider.isLoading}');
-                        print('  - errorMessage: ${subscriptionProvider.errorMessage}');
-                        print('');
-                        print('Superwall Service Data:');
-                        print('  - isInitialized: ${SuperwallService().isInitialized}');
-                        print('  - hasActiveSubscription: ${SuperwallService().hasActiveSubscription}');
-                        print('  - supportId/userId: $supportId');
-                        print('');
-                        print('Entitlements:');
-                        print('  - active: ${entitlements.active.isEmpty ? "(none)" : entitlements.active.map((e) => "${e.id} (products: ${e.productIds.join(",")})").join(", ")}');
-                        print('  - inactive: ${entitlements.inactive.isEmpty ? "(none)" : entitlements.inactive.map((e) => e.id).join(", ")}');
-                        print('  - all: ${entitlements.all.map((e) => e.id).join(", ")}');
-                        print('');
-                        print('Subscriptions (Products):');
-                        if (customerInfo.subscriptions.isEmpty) {
-                          print('  (no subscriptions)');
-                        } else {
-                          for (final sub in customerInfo.subscriptions) {
-                            print('  - ${sub.productId}: active=${sub.isActive}, willRenew=${sub.willRenew}, store=${sub.store}');
+                        if (kDebugMode) {
+                          print('========== UPGRADE BUTTON CLICKED - DEBUG DATA ==========');
+                          print('Subscription Status:');
+                          print('  - isPro: ${subscriptionProvider.isPro}');
+                          print('  - hasActiveSubscription: ${subscriptionProvider.hasActiveSubscription}');
+                          print('  - isLoading: ${subscriptionProvider.isLoading}');
+                          print('  - errorMessage: ${subscriptionProvider.errorMessage}');
+                          print('');
+                          print('Superwall Service Data:');
+                          print('  - isInitialized: ${SuperwallService().isInitialized}');
+                          print('  - hasActiveSubscription: ${SuperwallService().hasActiveSubscription}');
+                          print('  - supportId/userId: $supportId');
+                          print('');
+                          print('Entitlements:');
+                          print('  - active: ${entitlements.active.isEmpty ? "(none)" : entitlements.active.map((e) => "${e.id} (products: ${e.productIds.join(",")})").join(", ")}');
+                          print('  - inactive: ${entitlements.inactive.isEmpty ? "(none)" : entitlements.inactive.map((e) => e.id).join(", ")}');
+                          print('  - all: ${entitlements.all.map((e) => e.id).join(", ")}');
+                          print('');
+                          print('Subscriptions (Products):');
+                          if (customerInfo.subscriptions.isEmpty) {
+                            print('  (no subscriptions)');
+                          } else {
+                            for (final sub in customerInfo.subscriptions) {
+                              print('  - ${sub.productId}: active=${sub.isActive}, willRenew=${sub.willRenew}, store=${sub.store}');
+                            }
                           }
+                          print('=========================================================');
                         }
-                        print('=========================================================');
                         
                         subscriptionProvider.showPaywall();
                       },

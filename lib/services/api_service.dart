@@ -52,9 +52,9 @@ class VercelApi {
   VercelApi({this.teamId});
 
   Future<Map<String, String>> _getHeaders() async {
-    print('[VercelApi] _getHeaders called - fetching token...');
+    if (kDebugMode) print('[VercelApi] _getHeaders called - fetching token...');
     final token = await _authService.getToken();
-    print('[VercelApi] token retrieved: ${token != null ? 'present' : 'null'}');
+    if (kDebugMode) print('[VercelApi] token retrieved: ${token != null ? 'present' : 'null'}');
     if (token == null) throw VercelApiException('No access token found', statusCode: 401);
     return {
       'Authorization': 'Bearer $token',
@@ -65,7 +65,7 @@ class VercelApi {
   /// Fetch user info and automatically set the team ID
   /// This should be called once after authentication with just the token
   Future<Map<String, dynamic>> fetchUserInfoAndSetTeamId() async {
-    print('[VercelApi] fetchUserInfoAndSetTeamId called');
+    if (kDebugMode) print('[VercelApi] fetchUserInfoAndSetTeamId called');
     
     try {
       final response = await http
@@ -75,22 +75,22 @@ class VercelApi {
           )
           .timeout(const Duration(seconds: 15));
       
-      print('[VercelApi]   Response status: ${response.statusCode}');
+      if (kDebugMode) print('[VercelApi]   Response status: ${response.statusCode}');
       
       final data = await _handleResponse(response);
       final user = data['user'] as Map<String, dynamic>?;
       
       if (user != null && user.containsKey('defaultTeamId')) {
         teamId = user['defaultTeamId'] as String?;
-        print('[VercelApi]   Team ID set automatically: $teamId');
+        if (kDebugMode) print('[VercelApi]   Team ID set automatically: $teamId');
       }
       
       return user ?? {};
     } on TimeoutException catch (_) {
-      print('[VercelApi]   Timeout fetching user info');
+      if (kDebugMode) print('[VercelApi]   Timeout fetching user info');
       throw VercelApiException('Request timed out. Please check your connection and try again.', statusCode: 408);
     } catch (e) {
-      print('[VercelApi]   Error fetching user info: $e');
+      if (kDebugMode) print('[VercelApi]   Error fetching user info: $e');
       throw VercelApiException('Failed to fetch user info and team ID', statusCode: 500);
     }
   }
@@ -153,17 +153,17 @@ class VercelApi {
           message: message,
         );
         _authErrorController.add(authError);
-        if (kDebugMode) {
-          print('[VercelApi] Authentication error broadcast: ${response.statusCode} (code: $code) - $message');
-        }
+        if (kDebugMode) print('[VercelApi] Authentication error broadcast: ${response.statusCode} (code: $code) - $message');
       }
 
       // Don't log 404 "File tree not found" as a scary API error, as it's a known limitation for Git deployments
       if (response.statusCode != 404 || message != 'File tree not found') {
-        print('Vercel API Error: $message (Status: ${response.statusCode})');
-        print('  → Endpoint: ${response.request?.method} ${response.request?.url}');
-        print('  → Response Body: ${response.body}');
-        print('  → Timestamp: ${DateTime.now().toIso8601String()}');
+        if (kDebugMode) {
+          print('Vercel API Error: $message (Status: ${response.statusCode})');
+          print('  → Endpoint: ${response.request?.method} ${response.request?.url}');
+          print('  → Response Body: ${response.body}');
+          print('  → Timestamp: ${DateTime.now().toIso8601String()}');
+        }
       }
 
       throw VercelApiException(message, statusCode: response.statusCode, code: code);
@@ -192,13 +192,13 @@ class VercelApi {
   /// Uses v5/domains endpoint for efficient global domain listing
   /// Fetches from personal account + all teams to ensure complete domain list
   Future<List<Domain>> getDomains() async {
-    print('[VercelApi] getDomains called');
+    if (kDebugMode) print('[VercelApi] getDomains called');
     final allDomains = <Domain>[];
     final seenDomainIds = <String>{};
     
     try {
       // First, fetch domains from personal account (no teamId)
-      print('[VercelApi] Fetching domains from personal account...');
+      if (kDebugMode) print('[VercelApi] Fetching domains from personal account...');
       final personalDomains = await _getDomainsForTeam(null);
       for (final domain in personalDomains) {
         if (!seenDomainIds.contains(domain.id)) {
@@ -206,22 +206,22 @@ class VercelApi {
           allDomains.add(domain);
         }
       }
-      print('[VercelApi] Personal account domains: ${personalDomains.length}');
+      if (kDebugMode) print('[VercelApi] Personal account domains: ${personalDomains.length}');
       
       // Then fetch domains from all teams
-      print('[VercelApi] Fetching teams list...');
+      if (kDebugMode) print('[VercelApi] Fetching teams list...');
       final teamsResponse = await getTeams();
       final teams = teamsResponse['teams'] as List<dynamic>? ?? [];
-      print('[VercelApi] Found ${teams.length} teams');
+      if (kDebugMode) print('[VercelApi] Found ${teams.length} teams');
       
       for (final team in teams) {
         final teamId = team['id'] as String?;
         if (teamId == null) continue;
         
-        print('[VercelApi] Fetching domains for team: $teamId');
+        if (kDebugMode) print('[VercelApi] Fetching domains for team: $teamId');
         try {
           final teamDomains = await _getDomainsForTeam(teamId);
-          print('[VercelApi] Team $teamId domains: ${teamDomains.length}');
+          if (kDebugMode) print('[VercelApi] Team $teamId domains: ${teamDomains.length}');
           for (final domain in teamDomains) {
             if (!seenDomainIds.contains(domain.id)) {
               seenDomainIds.add(domain.id);
@@ -229,16 +229,18 @@ class VercelApi {
             }
           }
         } catch (e) {
-          print('[VercelApi] Error fetching domains for team $teamId: $e');
+          if (kDebugMode) print('[VercelApi] Error fetching domains for team $teamId: $e');
           // Continue to next team even if one fails
         }
       }
       
-      print('[VercelApi] Total unique domains found: ${allDomains.length}');
+      if (kDebugMode) print('[VercelApi] Total unique domains found: ${allDomains.length}');
       return allDomains;
     } catch (e, stackTrace) {
-      print('[VercelApi] Error in getDomains: $e');
-      print('[VercelApi] Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('[VercelApi] Error in getDomains: $e');
+        print('[VercelApi] Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -254,12 +256,12 @@ class VercelApi {
       queryParameters: params.isNotEmpty ? params : null,
     );
     
-    print('[VercelApi] _getDomainsForTeam(${teamId ?? 'personal'}) - URI: $uri');
+    if (kDebugMode) print('[VercelApi] _getDomainsForTeam(${teamId ?? 'personal'}) - URI: $uri');
     
     final headers = await _getHeaders();
     final response = await http.get(uri, headers: headers);
     
-    print('[VercelApi] Response status: ${response.statusCode}');
+    if (kDebugMode) print('[VercelApi] Response status: ${response.statusCode}');
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       final List domainsJson = data['domains'] as List? ?? [];
@@ -288,8 +290,10 @@ class VercelApi {
       final records = data['records'] as List<dynamic>? ?? [];
       return records.cast<Map<String, dynamic>>();
     } catch (e, stackTrace) {
-      print('Error in getDomainDnsRecords for domain "$domain": $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('Error in getDomainDnsRecords for domain "$domain": $e');
+        print('Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -304,9 +308,11 @@ class VercelApi {
       );
       return await _handleResponse(response);
     } catch (e, stackTrace) {
-      print('Error in createDnsRecord for domain "$domain": $e');
-      print('Record data: $record');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('Error in createDnsRecord for domain "$domain": $e');
+        print('Record data: $record');
+        print('Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -320,8 +326,10 @@ class VercelApi {
       );
       await _handleResponse(response);
     } catch (e, stackTrace) {
-      print('Error in deleteDnsRecord for domain "$domain", recordId "$recordId": $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('Error in deleteDnsRecord for domain "$domain", recordId "$recordId": $e');
+        print('Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -446,8 +454,10 @@ class VercelApi {
       final data = await _handleResponse(response);
       return data['domains'] as List<dynamic>? ?? [];
     } catch (e, stackTrace) {
-      print('Error in getProjectDomains for projectId "$projectId": $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('Error in getProjectDomains for projectId "$projectId": $e');
+        print('Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -481,8 +491,10 @@ class VercelApi {
       );
       return await _handleResponse(response);
     } catch (e, stackTrace) {
-      print('Error in addDomain for projectId "$projectId", domain "$domainName": $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('Error in addDomain for projectId "$projectId", domain "$domainName": $e');
+        print('Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -495,8 +507,10 @@ class VercelApi {
       );
       return await _handleResponse(response);
     } catch (e, stackTrace) {
-      print('Error in removeDomain for projectId "$projectId", domain "$domain": $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('Error in removeDomain for projectId "$projectId", domain "$domain": $e');
+        print('Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -509,8 +523,10 @@ class VercelApi {
       );
       return await _handleResponse(response);
     } catch (e, stackTrace) {
-      print('Error in verifyDomain for projectId "$projectId", domain "$domain": $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('Error in verifyDomain for projectId "$projectId", domain "$domain": $e');
+        print('Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -948,11 +964,13 @@ class VercelApi {
     int? until,
     int timeoutSeconds = 5,
   }) async {
-    print('[VercelApi] getDeploymentRuntimeLogs called');
-    print('[VercelApi]   projectId: $projectId');
-    print('[VercelApi]   deploymentId: $deploymentId');
-    print('[VercelApi]   teamId: $teamId');
-    print('[VercelApi]   timeout: ${timeoutSeconds}s (LIVE logs only)');
+    if (kDebugMode) {
+      print('[VercelApi] getDeploymentRuntimeLogs called');
+      print('[VercelApi]   projectId: $projectId');
+      print('[VercelApi]   deploymentId: $deploymentId');
+      print('[VercelApi]   teamId: $teamId');
+      print('[VercelApi]   timeout: ${timeoutSeconds}s (LIVE logs only)');
+    }
     
     final params = <String, String>{};
     if (limit != null) params['limit'] = limit.toString();
@@ -960,7 +978,7 @@ class VercelApi {
     if (until != null) params['until'] = until.toString();
 
     final uri = _buildUri('/v1/projects/$projectId/deployments/$deploymentId/runtime-logs', params.isNotEmpty ? params : null);
-    print('[VercelApi]   Request URL: $uri');
+    if (kDebugMode) print('[VercelApi]   Request URL: $uri');
 
     final client = http.Client();
     final maxEntries = limit ?? 100;
@@ -972,18 +990,18 @@ class VercelApi {
       final streamedResponse = await client.send(request).timeout(
         Duration(seconds: timeoutSeconds),
         onTimeout: () {
-          print('[VercelApi]   Request timed out after $timeoutSeconds seconds - no live logs available');
+          if (kDebugMode) print('[VercelApi]   Request timed out after $timeoutSeconds seconds - no live logs available');
           throw TimeoutException('No live runtime logs available. The deployment may not be receiving traffic.', Duration(seconds: timeoutSeconds));
         },
       );
 
-      print('[VercelApi]   Response status: ${streamedResponse.statusCode}');
+      if (kDebugMode) print('[VercelApi]   Response status: ${streamedResponse.statusCode}');
       if (streamedResponse.statusCode != 200) {
         final body = await streamedResponse.stream.bytesToString();
-        print('[VercelApi]   Response body: $body');
+        if (kDebugMode) print('[VercelApi]   Response body: $body');
         final data = await _handleResponse(http.Response(body, streamedResponse.statusCode));
         final logs = data['logs'] as List<dynamic>? ?? [];
-        print('[VercelApi]   Logs count: ${logs.length}');
+        if (kDebugMode) print('[VercelApi]   Logs count: ${logs.length}');
         return logs.cast<Map<String, dynamic>>();
       }
 
@@ -1001,7 +1019,7 @@ class VercelApi {
         while (await iterator.moveNext().timeout(
           collectTimeout,
           onTimeout: () {
-            print('[VercelApi]   Collection timeout - returning ${logs.length} logs collected so far');
+            if (kDebugMode) print('[VercelApi]   Collection timeout - returning ${logs.length} logs collected so far');
             return false;
           },
         )) {
@@ -1025,7 +1043,7 @@ class VercelApi {
           
           // Check if we've exceeded our collection timeout
           if (DateTime.now().difference(collectStart) > collectTimeout) {
-            print('[VercelApi]   Collection time limit reached - returning ${logs.length} logs');
+            if (kDebugMode) print('[VercelApi]   Collection time limit reached - returning ${logs.length} logs');
             break;
           }
         }
@@ -1033,14 +1051,14 @@ class VercelApi {
         await iterator.cancel();
       }
 
-      print('[VercelApi]   Lines collected: ${logs.length}');
+      if (kDebugMode) print('[VercelApi]   Lines collected: ${logs.length}');
       return logs;
     } on TimeoutException {
-      print('[VercelApi]   No live logs available (timeout)');
+      if (kDebugMode) print('[VercelApi]   No live logs available (timeout)');
       // Return empty list for timeout - this is expected behavior for deployments without traffic
       return [];
     } catch (e) {
-      print('[VercelApi]   Error in getDeploymentRuntimeLogs: $e');
+      if (kDebugMode) print('[VercelApi]   Error in getDeploymentRuntimeLogs: $e');
       rethrow;
     } finally {
       client.close();
@@ -1063,8 +1081,10 @@ class VercelApi {
     String? functionName,
     int? limit,
   }) async {
-    print('[VercelApi] WARNING: getDeploymentFunctionLogs is deprecated');
-    print('[VercelApi] Use getDeploymentRuntimeLogs instead');
+    if (kDebugMode) {
+      print('[VercelApi] WARNING: getDeploymentFunctionLogs is deprecated');
+      print('[VercelApi] Use getDeploymentRuntimeLogs instead');
+    }
     // Delegate to runtime logs and filter by function name if provided
     final logs = await getDeploymentRuntimeLogs(
       projectId: projectId,
@@ -1097,8 +1117,10 @@ class VercelApi {
     int? limit,
     int? since,
   }) async {
-    print('[VercelApi] WARNING: getDeploymentRequestLogs is deprecated');
-    print('[VercelApi] Use getDeploymentRuntimeLogs instead');
+    if (kDebugMode) {
+      print('[VercelApi] WARNING: getDeploymentRequestLogs is deprecated');
+      print('[VercelApi] Use getDeploymentRuntimeLogs instead');
+    }
     // Delegate to the streaming runtime logs endpoint
     return getDeploymentRuntimeLogs(
       projectId: projectId,
@@ -1119,8 +1141,10 @@ class VercelApi {
       );
       return await _handleResponse(response);
     } catch (e, stackTrace) {
-      print('Error in getDomainConfiguration for domain "$domain": $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('Error in getDomainConfiguration for domain "$domain": $e');
+        print('Stack trace: $stackTrace');
+      }
       rethrow;
     }
   }
@@ -1136,8 +1160,10 @@ class VercelApi {
     required String deploymentId,
   }) async {
     // This endpoint doesn't exist in Vercel API - return empty list
-    print('[VercelApi] WARNING: getDeploymentDomains is deprecated and returns empty list');
-    print('[VercelApi] Use getProjectDomains(projectId) instead');
+    if (kDebugMode) {
+      print('[VercelApi] WARNING: getDeploymentDomains is deprecated and returns empty list');
+      print('[VercelApi] Use getProjectDomains(projectId) instead');
+    }
     return [];
   }
 
@@ -1171,37 +1197,43 @@ class VercelApi {
   /// deployment URL for reliable file fetching (competitor approach).
   @deprecated
   Future<List<DeploymentFile>> getDeploymentFiles(String deploymentId) async {
-    print('[VercelApi] getDeploymentFiles called');
-    print('[VercelApi]   deploymentId: $deploymentId');
-    print('[VercelApi]   teamId: $teamId');
+    if (kDebugMode) {
+      print('[VercelApi] getDeploymentFiles called');
+      print('[VercelApi]   deploymentId: $deploymentId');
+      print('[VercelApi]   teamId: $teamId');
+    }
     
     final params = <String, String>{};
     if (teamId != null) params['teamId'] = teamId!;
 
     final uri = _buildUri('/v6/deployments/$deploymentId/files', params);
-    print('[VercelApi]   Request URL: $uri');
+    if (kDebugMode) print('[VercelApi]   Request URL: $uri');
 
     final response = await http.get(
       uri,
       headers: await _getHeaders(),
     );
     
-    print('[VercelApi]   Response status: ${response.statusCode}');
-    print('[VercelApi]   Response body length: ${response.body.length}');
-    if (response.statusCode != 200) {
-      print('[VercelApi]   Response body: ${response.body}');
+    if (kDebugMode) {
+      print('[VercelApi]   Response status: ${response.statusCode}');
+      print('[VercelApi]   Response body length: ${response.body.length}');
+      if (response.statusCode != 200) {
+        print('[VercelApi]   Response body: ${response.body}');
+      }
     }
     
     // Handle 404 gracefully for Git deployments (no file tree)
     if (response.statusCode == 404) {
-      print('[VercelApi] File tree not found (likely Git deployment) - returning empty list');
+      if (kDebugMode) print('[VercelApi] File tree not found (likely Git deployment) - returning empty list');
       return [];
     }
     
     final data = await _handleResponse(response);
     final list = data as List<dynamic>? ?? [];
-    print('[VercelApi]   Files count: ${list.length}');
-    print('[VercelApi] getDeploymentFiles completed');
+    if (kDebugMode) {
+      print('[VercelApi]   Files count: ${list.length}');
+      print('[VercelApi] getDeploymentFiles completed');
+    }
     
     return list.map((json) => DeploymentFile.fromJson(json as Map<String, dynamic>)).toList();
   }
@@ -1217,10 +1249,12 @@ class VercelApi {
     required String deploymentUrl,
     String base = 'src',
   }) async {
-    print('[VercelApi] getDeploymentFileTree called');
-    print('[VercelApi]   deploymentUrl: $deploymentUrl');
-    print('[VercelApi]   base: $base');
-    print('[VercelApi]   teamId: $teamId');
+    if (kDebugMode) {
+      print('[VercelApi] getDeploymentFileTree called');
+      print('[VercelApi]   deploymentUrl: $deploymentUrl');
+      print('[VercelApi]   base: $base');
+      print('[VercelApi]   teamId: $teamId');
+    }
     
     final params = <String, String>{
       'base': base,
@@ -1228,26 +1262,30 @@ class VercelApi {
     if (teamId != null) params['teamId'] = teamId!;
 
     final uri = _buildUri('/file-tree/$deploymentUrl', params);
-    print('[VercelApi]   Request URL: $uri');
+    if (kDebugMode) print('[VercelApi]   Request URL: $uri');
 
     final response = await http.get(
       uri,
       headers: await _getHeaders(),
     );
     
-    print('[VercelApi]   Response status: ${response.statusCode}');
-    print('[VercelApi]   Response body length: ${response.body.length}');
+    if (kDebugMode) {
+      print('[VercelApi]   Response status: ${response.statusCode}');
+      print('[VercelApi]   Response body length: ${response.body.length}');
+    }
     
     // Handle 404 gracefully for Git deployments (no file tree)
     if (response.statusCode == 404) {
-      print('[VercelApi] File tree not found (likely Git deployment) - returning empty list');
+      if (kDebugMode) print('[VercelApi] File tree not found (likely Git deployment) - returning empty list');
       return [];
     }
     
     final data = await _handleResponse(response);
     final list = data as List<dynamic>? ?? [];
-    print('[VercelApi]   Files count: ${list.length}');
-    print('[VercelApi] getDeploymentFileTree completed');
+    if (kDebugMode) {
+      print('[VercelApi]   Files count: ${list.length}');
+      print('[VercelApi] getDeploymentFileTree completed');
+    }
     
     return list.map((json) => DeploymentFile.fromJson(json as Map<String, dynamic>)).toList();
   }
@@ -1256,50 +1294,54 @@ class VercelApi {
   /// [deploymentId] - The deployment ID
   /// [fileId] - The file ID (uid)
   Future<String> getDeploymentFileContents(String deploymentId, String fileId) async {
-    print('[VercelApi] getDeploymentFileContents called');
-    print('[VercelApi]   deploymentId: $deploymentId');
-    print('[VercelApi]   fileId: $fileId');
-    print('[VercelApi]   teamId: $teamId');
+    if (kDebugMode) {
+      print('[VercelApi] getDeploymentFileContents called');
+      print('[VercelApi]   deploymentId: $deploymentId');
+      print('[VercelApi]   fileId: $fileId');
+      print('[VercelApi]   teamId: $teamId');
+    }
     
     final params = <String, String>{};
     if (teamId != null) params['teamId'] = teamId!;
 
     final uri = _buildUri('/v8/deployments/$deploymentId/files/$fileId', params);
-    print('[VercelApi]   Request URL: $uri');
+    if (kDebugMode) print('[VercelApi]   Request URL: $uri');
 
     final response = await http.get(
       uri,
       headers: await _getHeaders(),
     );
     
-    print('[VercelApi]   Response status: ${response.statusCode}');
-    print('[VercelApi]   Response body length: ${response.body.length}');
+    if (kDebugMode) {
+      print('[VercelApi]   Response status: ${response.statusCode}');
+      print('[VercelApi]   Response body length: ${response.body.length}');
+    }
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
       // The response body contains the file content encoded as base64
       try {
         final data = json.decode(response.body);
-        print('[VercelApi]   Response parsed as JSON');
+        if (kDebugMode) print('[VercelApi]   Response parsed as JSON');
         if (data is Map) {
           // API can return either 'content' or 'data' field with base64
           String? base64Content = data['content'] as String?;
           base64Content ??= data['data'] as String?;
           
           if (base64Content != null) {
-            print('[VercelApi]   Found base64 field (${data.containsKey('content') ? 'content' : 'data'}), decoding...');
+            if (kDebugMode) print('[VercelApi]   Found base64 field (${data.containsKey('content') ? 'content' : 'data'}), decoding...');
             return utf8.decode(base64.decode(base64Content));
           }
         }
         // Fallback: try to decode the entire response as base64
-        print('[VercelApi]   No content/data field, trying base64 decode of entire body');
+        if (kDebugMode) print('[VercelApi]   No content/data field, trying base64 decode of entire body');
         return utf8.decode(base64.decode(response.body));
       } catch (e) {
         // If decoding fails, return the raw response
-        print('[VercelApi]   Decoding failed, returning raw response: $e');
+        if (kDebugMode) print('[VercelApi]   Decoding failed, returning raw response: $e');
         return response.body;
       }
     } else {
-      print('[VercelApi]   Error response body: ${response.body}');
+      if (kDebugMode) print('[VercelApi]   Error response body: ${response.body}');
       throw VercelApiException('Failed to get file contents', statusCode: response.statusCode);
     }
   }
@@ -1307,16 +1349,20 @@ class VercelApi {
   /// Fetch file content from a direct URL (used by file-tree API)
   /// [fileUrl] - The full URL to fetch the file from (includes token)
   Future<String> fetchFileFromUrl(String fileUrl) async {
-    print('[VercelApi] fetchFileFromUrl called');
-    print('[VercelApi]   fileUrl: $fileUrl');
+    if (kDebugMode) {
+      print('[VercelApi] fetchFileFromUrl called');
+      print('[VercelApi]   fileUrl: $fileUrl');
+    }
     
     final response = await http.get(
       Uri.parse(fileUrl),
       headers: await _getHeaders(),
     );
     
-    print('[VercelApi]   Response status: ${response.statusCode}');
-    print('[VercelApi]   Response body length: ${response.body.length}');
+    if (kDebugMode) {
+      print('[VercelApi]   Response status: ${response.statusCode}');
+      print('[VercelApi]   Response body length: ${response.body.length}');
+    }
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
       // Try to decode as base64 first
@@ -1328,7 +1374,7 @@ class VercelApi {
           base64Content ??= data['data'] as String?;
           
           if (base64Content != null) {
-            print('[VercelApi]   Found base64 field (${data.containsKey('content') ? 'content' : 'data'}), decoding...');
+            if (kDebugMode) print('[VercelApi]   Found base64 field (${data.containsKey('content') ? 'content' : 'data'}), decoding...');
             return utf8.decode(base64.decode(base64Content));
           }
         }
@@ -1336,11 +1382,11 @@ class VercelApi {
         return response.body;
       } catch (e) {
         // Not JSON or decoding failed, return raw response
-        print('[VercelApi]   Returning raw response');
+        if (kDebugMode) print('[VercelApi]   Returning raw response');
         return response.body;
       }
     } else {
-      print('[VercelApi]   Error response body: ${response.body}');
+      if (kDebugMode) print('[VercelApi]   Error response body: ${response.body}');
       throw VercelApiException('Failed to fetch file from URL', statusCode: response.statusCode);
     }
   }
