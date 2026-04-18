@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/demo_api_service.dart';
+import '../services/demo_data.dart';
 import '../services/superwall_service.dart';
 import '../models/project.dart';
 import 'subscription_provider.dart';
@@ -15,6 +17,7 @@ class AppState extends ChangeNotifier {
   bool _isAuthenticated = false;
   bool _isLoading = true;
   bool _hasCompletedOnboarding = false;
+  bool _isDemoMode = false;
   String? _errorMessage;
   
   List<Project> _projects = [];
@@ -32,6 +35,7 @@ class AppState extends ChangeNotifier {
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
+  bool get isDemoMode => _isDemoMode;
   String? get errorMessage => _errorMessage;
   List<Project> get projects => _projects;
   Project? get selectedProject => _selectedProject;
@@ -159,6 +163,84 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Enter a fully offline demo experience populated with curated data.
+  /// No real API calls are made while in demo mode.
+  Future<void> enterDemoMode() async {
+    if (kDebugMode) print('[AppState] Entering demo mode');
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Swap the API service to the demo implementation so every screen
+      // that calls appState.apiService transparently receives demo data.
+      _apiService = DemoVercelApi();
+      _isDemoMode = true;
+
+      // Populate user/team/projects from the curated demo dataset.
+      _user = DemoData.buildUserResponse();
+      _currentTeamId = _user?['defaultTeamId'] as String?;
+      _teams = (DemoData.buildTeamsResponse()['teams'] as List<dynamic>?) ?? [];
+      _projects = DemoData.buildProjects();
+      _selectedProject = _projects.isNotEmpty ? _projects.first : null;
+
+      clearFaviconCache();
+
+      // Mark onboarding as complete so returning to login after demo exit
+      // keeps navigation clean.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_completed_onboarding', true);
+      _hasCompletedOnboarding = true;
+
+      _isAuthenticated = true;
+
+      await _superwallService.trackUserAction('enter_demo_mode', context: 'app_state');
+    } catch (e) {
+      _errorMessage = e.toString();
+      if (kDebugMode) print('[AppState] enterDemoMode error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Exit demo mode and return the user to the login screen so they can
+  /// connect a real Vercel account. Does NOT touch any stored token because
+  /// demo mode never saves one.
+  Future<void> exitDemoMode({SubscriptionProvider? subscriptionProvider}) async {
+    if (kDebugMode) print('[AppState] Exiting demo mode');
+    await _superwallService.trackUserAction('exit_demo_mode', context: 'app_state');
+
+    try {
+      await _superwallService.reset();
+    } catch (e) {
+      if (kDebugMode) print('Superwall reset error (demo exit): $e');
+    }
+
+    if (subscriptionProvider != null) {
+      try {
+        await subscriptionProvider.onUserLogout();
+      } catch (e) {
+        if (kDebugMode) print('SubscriptionProvider reset error (demo exit): $e');
+      }
+    }
+
+    _isDemoMode = false;
+    _isAuthenticated = false;
+    _projects = [];
+    _selectedProject = null;
+    _user = null;
+    _teams = [];
+    _currentTeamId = null;
+    _apiService = VercelApi();
+    clearFaviconCache();
+
+    // Keep onboarding flag so Consumer goes straight to LoginScreen.
+    _hasCompletedOnboarding = true;
+
+    notifyListeners();
+  }
+
   Future<void> login(String token) async {
     _isLoading = true;
     _errorMessage = null;
@@ -232,6 +314,7 @@ class AppState extends ChangeNotifier {
     // Delete token and reset auth state
     await _authService.deleteToken();
     _isAuthenticated = false;
+    _isDemoMode = false;
 
     // Clear all user data
     _projects = [];
@@ -313,6 +396,7 @@ class AppState extends ChangeNotifier {
     // Delete token and reset auth state
     await _authService.deleteToken();
     _isAuthenticated = false;
+    _isDemoMode = false;
 
     // Clear all user data
     _projects = [];

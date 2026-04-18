@@ -7,6 +7,7 @@ import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
+import '../widgets/demo_mode_banners.dart';
 import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
 import 'onboarding_screen.dart';
@@ -224,6 +225,17 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
 
             const SizedBox(height: 32),
+
+            // Demo mode: CTA to connect a real Vercel account.
+            if (appState.isDemoMode) ...[
+              const ConnectRealAccountBanner(
+                title: 'Connect with real data',
+                subtitle:
+                    'You are signed in to the demo. Connect your Vercel account to view your own projects and manage them.',
+                icon: Icons.vpn_key,
+              ),
+              const SizedBox(height: 24),
+            ],
 
             // Upgrade Banner (non-pro users only)
             if (!isPro)

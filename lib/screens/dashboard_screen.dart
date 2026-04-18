@@ -7,6 +7,7 @@ import '../services/superwall_service.dart';
 import '../models/project.dart';
 import '../theme/app_theme.dart';
 import '../widgets/project_card.dart';
+import '../widgets/demo_mode_banners.dart';
 import 'import_github_project_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -136,11 +137,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 100),
               children: [
+                if (appState.isDemoMode) ...[
+                  const ConnectRealAccountBanner(
+                    title: 'Connect your Vercel account',
+                    subtitle:
+                        'You are exploring demo projects. Connect a real account to manage your own.',
+                  ),
+                  const SizedBox(height: 20),
+                ],
                 _buildSearchField(),
                 const SizedBox(height: 24),
                 _buildTeamInfo(appState),
                 const SizedBox(height: 40),
                 _buildProjectsGrid(appState.projects),
+                if (appState.isDemoMode) ...[
+                  const SizedBox(height: 24),
+                  const DemoUpgradeCard(),
+                ],
                 const SizedBox(height: 40),
                 _buildUsageOverview(),
               ],
@@ -286,6 +299,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Watch subscription provider
     final subscription = context.watch<SubscriptionProvider>();
     final isPro = subscription.isPro;
+    final isDemo = context.watch<AppState>().isDemoMode;
     
     return GridView.builder(
       shrinkWrap: true,
@@ -298,7 +312,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       itemCount: projects.length,
       itemBuilder: (context, index) {
-        final isBlurred = !isPro && index > 0;
+        // Demo mode lets the user explore every project freely.
+        final isBlurred = !isPro && !isDemo && index > 0;
         return ProjectCard(
           project: projects[index],
           isBlurred: isBlurred,

@@ -87,6 +87,28 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleTryDemo() async {
+    setState(() => _isLoading = true);
+    SuperwallService().trackUserAction('try_demo_mode', context: 'login');
+    try {
+      await context.read<AppState>().enterDemoMode();
+      if (mounted && kDebugMode) {
+        print('[LoginScreen] Entered demo mode, navigation handled by Consumer');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load demo data: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _showErrorDialog({required String error, required String location}) {
     final fullErrorDetails = '''Error: $error
 Location: Login Screen - $location
@@ -399,6 +421,44 @@ App: VERO For Vercel''';
                           ),
                         ],
                       ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: _isLoading ? null : _handleTryDemo,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primary,
+                  side: BorderSide(
+                    color: AppTheme.primary.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.play_circle_outline, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      'TRY WITH DEMO DATA',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Explore the app with realistic demo projects. No token required.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               Container(
