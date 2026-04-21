@@ -90,38 +90,44 @@ class DeploymentCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        Icons.account_tree, 
-                        size: 12, 
+                        Icons.account_tree,
+                        size: 12,
                         color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        deployment.branch,
-                        style: TextStyle(
-                          fontSize: 11, 
-                          fontFamily: 'monospace', 
-                          color: AppTheme.onSurfaceVariant.withValues(alpha: 0.9),
+                      Flexible(
+                        child: Text(
+                          deployment.branch,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                            color: AppTheme.onSurfaceVariant.withValues(alpha: 0.9),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Text(
                         ' • ',
                         style: TextStyle(
-                          fontSize: 11, 
+                          fontSize: 11,
                           color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
                         ),
                       ),
-                      Text(
-                        timeago.format(DateTime.fromMillisecondsSinceEpoch(deployment.created)),
-                        style: TextStyle(
-                          fontSize: 11, 
-                          color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      Flexible(
+                        child: Text(
+                          timeago.format(DateTime.fromMillisecondsSinceEpoch(deployment.created)),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (deployment.formattedDuration.isNotEmpty) ...[
                         Text(
                           ' • ',
                           style: TextStyle(
-                            fontSize: 11, 
+                            fontSize: 11,
                             color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
                           ),
                         ),
@@ -131,11 +137,14 @@ class DeploymentCard extends StatelessWidget {
                           color: AppTheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 2),
-                        Text(
-                          deployment.formattedDuration,
-                          style: TextStyle(
-                            fontSize: 11, 
-                            color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        Flexible(
+                          child: Text(
+                            deployment.formattedDuration,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -151,11 +160,14 @@ class DeploymentCard extends StatelessWidget {
                           color: AppTheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          'by ${deployment.deployerName}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppTheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        Flexible(
+                          child: Text(
+                            'by ${deployment.deployerName}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

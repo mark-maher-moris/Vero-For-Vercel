@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/superwall_service.dart';
+import 'app_state.dart';
 
 /// Provider for managing subscription state in the app
 /// Uses Provider pattern for reactive UI updates
 class SubscriptionProvider extends ChangeNotifier {
   final SuperwallService _superwallService = SuperwallService();
+  final AppState? _appState;
   
   // State
   bool _isLoading = false;
@@ -14,7 +16,7 @@ class SubscriptionProvider extends ChangeNotifier {
   
   // Getters
   bool get isLoading => _isLoading;
-  bool get isPro => _isPro;
+  bool get isPro => _isPro || (_appState?.isDemoMode ?? false);
   String? get errorMessage => _errorMessage;
   
   // Computed properties for UI
@@ -23,7 +25,7 @@ class SubscriptionProvider extends ChangeNotifier {
   
   StreamSubscription<bool>? _subscriptionStatusSubscription;
 
-  SubscriptionProvider() {
+  SubscriptionProvider({AppState? appState}) : _appState = appState {
     _init();
   }
 

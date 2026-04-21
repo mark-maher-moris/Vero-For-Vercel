@@ -137,23 +137,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 100),
               children: [
-                if (appState.isDemoMode) ...[
-                  const ConnectRealAccountBanner(
-                    title: 'Connect your Vercel account',
-                    subtitle:
-                        'You are exploring demo projects. Connect a real account to manage your own.',
-                  ),
-                  const SizedBox(height: 20),
-                ],
                 _buildSearchField(),
                 const SizedBox(height: 24),
                 _buildTeamInfo(appState),
+                const SizedBox(height: 24),
+                const ConnectRealAccountBanner(
+                  title: 'Connect with real data',
+                  subtitle: 'You are signed in to the demo. Connect your Vercel account to view your own projects and manage them.',
+                  icon: Icons.vpn_key,
+                ),
                 const SizedBox(height: 40),
                 _buildProjectsGrid(appState.projects),
-                if (appState.isDemoMode) ...[
-                  const SizedBox(height: 24),
-                  const DemoUpgradeCard(),
-                ],
                 const SizedBox(height: 40),
                 _buildUsageOverview(),
               ],

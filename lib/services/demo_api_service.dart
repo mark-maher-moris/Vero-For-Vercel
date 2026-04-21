@@ -172,7 +172,7 @@ class DemoVercelApi extends VercelApi {
 
   @override
   Future<List<DeploymentFile>> getDeploymentFiles(String deploymentId) async {
-    return const [];
+    return DemoData.buildDeploymentFiles(deploymentId);
   }
 
   @override
@@ -180,16 +180,24 @@ class DemoVercelApi extends VercelApi {
     required String deploymentUrl,
     String base = 'src',
   }) async {
-    return const [];
+    return DemoData.buildDeploymentFiles(deploymentUrl);
   }
 
   @override
   Future<String> getDeploymentFileContents(String deploymentId, String fileId) async {
-    return '// File contents are not available in demo mode.\n// Connect your Vercel account to browse deployment files.\n';
+    // Extract file name from fileId (format: file_page, file_layout, etc.)
+    final fileName = fileId.replaceAll('file_', '').replaceAll('dir_', '');
+    return DemoData.getDemoFileContent(fileName);
   }
 
   @override
   Future<String> fetchFileFromUrl(String fileUrl) async {
+    // Handle demo:// URLs
+    if (fileUrl.startsWith('demo://file/')) {
+      // Extract file name from URL (e.g., demo://file/page.tsx -> page.tsx)
+      final fileName = fileUrl.replaceFirst('demo://file/', '');
+      return DemoData.getDemoFileContent(fileName);
+    }
     return '// File contents are not available in demo mode.\n';
   }
 

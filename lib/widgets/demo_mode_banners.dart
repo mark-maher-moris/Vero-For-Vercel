@@ -154,25 +154,7 @@ class ConnectRealAccountBanner extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: const Text(
-                            'DEMO MODE',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
-                              color: AppTheme.primary,
-                            ),
-                          ),
-                        ),
+                      
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(

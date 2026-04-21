@@ -52,7 +52,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 8, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     // Initialize with a dummy future that will be replaced in _fetchData
     _deploymentFilesFuture = Future.value([]);
     // Track project workspace view
@@ -70,7 +70,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
-      final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'security', 'env_vars', 'domains'];
+      final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'security', 'env_vars', 'domains', 'cron_jobs'];
       SuperwallService().trackUserAction('switch_tab',
         context: 'project_workspace',
         properties: {
@@ -309,7 +309,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           isScrollable: true,
           onTap: (index) {
             // Track tab tap attempt
-            final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'security', 'env_vars', 'domains'];
+            final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'security', 'env_vars', 'domains', 'cron_jobs'];
             SuperwallService().trackUserAction('tab_tapped', 
               context: 'project_workspace',
               properties: {
@@ -361,6 +361,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             _buildProTab('SECURITY', isPro),
             _buildProTab('ENV VARS', isPro),
             _buildProTab('DOMAINS', isPro),
+            _buildProTab('CRON JOBS', isPro),
           ],
         ),
       ),
@@ -380,6 +381,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   _buildBlurredTabIfNeeded(_buildSecurityTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildEnvVarsTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildDomainsTab(), isPro, context),
+                  _buildBlurredTabIfNeeded(_buildCronJobsTab(), isPro, context),
                 ],
               ),
     );
@@ -936,6 +938,195 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       ],
     );
   }
+
+  Widget _buildCronJobsTab() {
+    final crons = widget.project.crons;
+    final hasCrons = crons != null && crons.definitions.isNotEmpty;
+
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      color: AppTheme.primary,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Row(
+            children: [
+              Text('CRON JOBS', style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(width: 8),
+              if (hasCrons)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: crons!.isEnabled ? AppTheme.success.withOpacity(0.1) : AppTheme.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Text(
+                    crons.isEnabled ? 'ENABLED' : 'DISABLED',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: crons.isEnabled ? AppTheme.success : AppTheme.error,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (!hasCrons)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.schedule, size: 48, color: AppTheme.onSurfaceVariant.withOpacity(0.3)),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Cron Jobs',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'This project has no scheduled cron jobs configured.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...crons!.definitions.map((cron) => _buildCronItem(cron)),
+                  if (crons.updatedAt != null) ...[
+                    const Divider(height: 24),
+                    Row(
+                      children: [
+                        Icon(Icons.update, size: 14, color: AppTheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Updated ${timeago.format(crons.updatedAt!)}',
+                          style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCronItem(dynamic cron) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.schedule, size: 16, color: AppTheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  cron.path,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  cron.displaySchedule,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _copyToClipboard(cron.schedule),
+                child: Text(
+                  cron.schedule,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.onSurfaceVariant,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.language, size: 12, color: AppTheme.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  cron.host,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.onSurfaceVariant,
+                    fontFamily: 'monospace',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _launchUrl(cron.fullUrl),
+                child: const Icon(
+                  Icons.open_in_new,
+                  size: 14,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildSecurityFeatureItem(IconData icon, String name, String status) {
     return Padding(
@@ -2956,8 +3147,8 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             Text('ALIASES', style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: 16),
             ...aliases.take(3).map((alias) {
-              final domain = alias['domain'] as String? ?? '';
-              final target = alias['target'] as String? ?? '';
+              final domain = alias is String ? alias : (alias['domain'] as String? ?? '');
+              final target = alias is String ? '' : (alias['target'] as String? ?? '');
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),

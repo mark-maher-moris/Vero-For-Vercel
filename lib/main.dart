@@ -9,6 +9,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'widgets/auth_error_handler.dart';
+import 'widgets/app_level_demo_banner.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,11 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppState()),
-        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        ChangeNotifierProxyProvider<AppState, SubscriptionProvider>(
+          create: (context) => SubscriptionProvider(appState: context.read<AppState>()),
+          update: (_, appState, subscriptionProvider) => 
+              subscriptionProvider ?? SubscriptionProvider(appState: appState),
+        ),
       ],
       child: const VeroApp(),
     ),
@@ -37,6 +42,14 @@ class VeroApp extends StatelessWidget {
       title: 'Vero For Vercel',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return Column(
+          children: [
+            const AppLevelDemoBanner(),
+            Expanded(child: child!),
+          ],
+        );
+      },
       home: AuthErrorHandler(
         child: Consumer<AppState>(
           builder: (context, appState, child) {
