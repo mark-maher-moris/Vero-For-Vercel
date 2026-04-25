@@ -53,9 +53,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleTokenLogin() async {
     final token = _tokenController.text.trim();
     if (token.isEmpty) {
-      _showErrorDialog(
-        error: 'Please enter a token',
-        location: 'Empty token input',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a token'),
+        ),
       );
       return;
     }

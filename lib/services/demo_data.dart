@@ -59,10 +59,10 @@ class DemoData {
         name: 'next-commerce',
         framework: 'nextjs',
         url: 'demo.vercel.store',
-        alias: ['demo.vercel.store', 'next-commerce-demo.vercel.app'],
+        alias: ['demo.vercel.store', 'next-commerce-demo.vercel.app', 'shop.vercel.store'],
         repo: 'vercel/commerce',
         branch: 'main',
-        commitMessage: 'feat(cart): optimistic UI updates for line items',
+        commitMessage: 'feat(cart): optimistic UI updates for line items and improved checkout flow',
         commitSha: 'a3f51cd2',
         state: 'READY',
         createdAgo: const Duration(days: 318),
@@ -78,10 +78,10 @@ class DemoData {
         name: 'shadcn-ui',
         framework: 'nextjs',
         url: 'ui.shadcn.com',
-        alias: ['ui.shadcn.com'],
+        alias: ['ui.shadcn.com', 'shadcn-ui-docs.vercel.app'],
         repo: 'shadcn-ui/ui',
         branch: 'main',
-        commitMessage: 'docs(calendar): add range selection example',
+        commitMessage: 'docs(calendar): add range selection example with date-fns integration',
         commitSha: '7d8b91fe',
         state: 'READY',
         createdAgo: const Duration(days: 512),
@@ -95,10 +95,10 @@ class DemoData {
         name: 'cal-com',
         framework: 'nextjs',
         url: 'cal.com',
-        alias: ['cal.com', 'www.cal.com'],
+        alias: ['cal.com', 'www.cal.com', 'app.cal.com'],
         repo: 'calcom/cal.com',
         branch: 'main',
-        commitMessage: 'fix(booking): handle timezone dst transitions correctly',
+        commitMessage: 'fix(booking): handle timezone dst transitions correctly for international users',
         commitSha: 'c82a714b',
         state: 'READY',
         createdAgo: const Duration(days: 980),
@@ -110,30 +110,14 @@ class DemoData {
         now: now,
       ),
       _project(
-        id: 'prj_demo_next_learn',
-        name: 'nextjs-dashboard',
-        framework: 'nextjs',
-        url: 'next-learn-dashboard.vercel.sh',
-        alias: ['next-learn-dashboard.vercel.sh'],
-        repo: 'vercel/next-learn',
-        branch: 'main',
-        commitMessage: 'chore(deps): bump next to 15.1.4',
-        commitSha: '2fe0a08c',
-        state: 'READY',
-        createdAgo: const Duration(days: 241),
-        updatedAgo: const Duration(days: 1, hours: 3),
-        hasWebAnalytics: true,
-        now: now,
-      ),
-      _project(
         id: 'prj_demo_docs',
         name: 'vero-docs',
         framework: 'nextjs',
-        url: 'vero-docs.vercel.app',
+        url: 'docs.vero.app',
         alias: ['docs.vero.app', 'vero-docs.vercel.app'],
         repo: 'buildagon/vero-docs',
         branch: 'main',
-        commitMessage: 'docs: add getting-started guide for teams',
+        commitMessage: 'docs: add getting-started guide for teams and advanced configuration',
         commitSha: 'e10cc431',
         state: 'BUILDING',
         createdAgo: const Duration(days: 64),
@@ -146,10 +130,10 @@ class DemoData {
         name: 'vero-marketing',
         framework: 'astro',
         url: 'vero.app',
-        alias: ['vero.app', 'www.vero.app'],
+        alias: ['vero.app', 'www.vero.app', 'marketing.vero.app'],
         repo: 'buildagon/vero-marketing',
         branch: 'production',
-        commitMessage: 'feat(pricing): add annual toggle with 20% off',
+        commitMessage: 'feat(pricing): add annual toggle with 20% off and updated enterprise tier',
         commitSha: '4b2e70af',
         state: 'READY',
         createdAgo: const Duration(days: 128),
@@ -157,164 +141,7 @@ class DemoData {
         hasAnalytics: true,
         hasWebAnalytics: true,
         hasFirewall: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_tanstack',
-        name: 'tanstack-query',
-        framework: 'nextjs',
-        url: 'tanstack.com',
-        alias: ['tanstack.com', 'www.tanstack.com'],
-        repo: 'TanStack/query',
-        branch: 'main',
-        commitMessage: 'feat(query): add experimental suspense support',
-        commitSha: '9f3e2d1a',
-        state: 'READY',
-        createdAgo: const Duration(days: 720),
-        updatedAgo: const Duration(days: 2),
-        hasAnalytics: true,
-        hasWebAnalytics: true,
-        hasFirewall: true,
         hasCronJobs: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_nuxt',
-        name: 'nuxt-docs',
-        framework: 'nuxtjs',
-        url: 'nuxt.com',
-        alias: ['nuxt.com', 'www.nuxt.com'],
-        repo: 'nuxt/nuxt.com',
-        branch: 'main',
-        commitMessage: 'docs: update module integration guide',
-        commitSha: 'b8c4f2e3',
-        state: 'READY',
-        createdAgo: const Duration(days: 540),
-        updatedAgo: const Duration(hours: 4),
-        hasAnalytics: true,
-        hasWebAnalytics: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_remix',
-        name: 'remix-run',
-        framework: 'remix',
-        url: 'remix.run',
-        alias: ['remix.run', 'www.remix.run'],
-        repo: 'remix-run/remix',
-        branch: 'dev',
-        commitMessage: 'fix(loader): handle nested data loading errors',
-        commitSha: 'd5a1b9c4',
-        state: 'READY',
-        createdAgo: const Duration(days: 890),
-        updatedAgo: const Duration(minutes: 23),
-        hasAnalytics: true,
-        hasWebAnalytics: true,
-        hasFirewall: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_sveltekit',
-        name: 'sveltekit-docs',
-        framework: 'sveltekit',
-        url: 'kit.svelte.dev',
-        alias: ['kit.svelte.dev', 'sveltekit.dev'],
-        repo: 'sveltejs/kit.svelte.dev',
-        branch: 'main',
-        commitMessage: 'feat(routing): add advanced route matching patterns',
-        commitSha: 'e7f3c8d5',
-        state: 'BUILDING',
-        createdAgo: const Duration(days: 380),
-        updatedAgo: const Duration(minutes: 8),
-        hasWebAnalytics: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_fastapi',
-        name: 'fastapi-backend',
-        framework: 'python',
-        url: 'api.vero.app',
-        alias: ['api.vero.app'],
-        repo: 'buildagon/fastapi-backend',
-        branch: 'main',
-        commitMessage: 'feat(auth): implement JWT refresh token rotation',
-        commitSha: 'f6a2e9b1',
-        state: 'READY',
-        createdAgo: const Duration(days: 156),
-        updatedAgo: const Duration(hours: 5),
-        hasAnalytics: true,
-        hasFirewall: true,
-        hasCronJobs: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_vue',
-        name: 'vue-docs',
-        framework: 'vue',
-        url: 'vuejs.org',
-        alias: ['vuejs.org', 'www.vuejs.org'],
-        repo: 'vuejs/docs',
-        branch: 'main',
-        commitMessage: 'docs(composition): add lifecycle hooks examples',
-        commitSha: 'a4b7c3d2',
-        state: 'READY',
-        createdAgo: const Duration(days: 1100),
-        updatedAgo: const Duration(days: 1, hours: 7),
-        hasAnalytics: true,
-        hasWebAnalytics: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_supabase',
-        name: 'supabase-docs',
-        framework: 'nextjs',
-        url: 'supabase.com',
-        alias: ['supabase.com', 'www.supabase.com'],
-        repo: 'supabase/supabase',
-        branch: 'master',
-        commitMessage: 'docs(auth): update OIDC provider configuration',
-        commitSha: 'c3d8e4f1',
-        state: 'READY',
-        createdAgo: const Duration(days: 1250),
-        updatedAgo: const Duration(hours: 3),
-        hasAnalytics: true,
-        hasWebAnalytics: true,
-        hasFirewall: true,
-        hasCronJobs: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_tauri',
-        name: 'tauri-app',
-        framework: 'nextjs',
-        url: 'tauri.app',
-        alias: ['tauri.app', 'www.tauri.app'],
-        repo: 'tauri-apps/tauri',
-        branch: 'dev',
-        commitMessage: 'feat(window): add custom window decorations API',
-        commitSha: 'b5e9f3a2',
-        state: 'ERROR',
-        createdAgo: const Duration(days: 89),
-        updatedAgo: const Duration(minutes: 15),
-        hasWebAnalytics: true,
-        now: now,
-      ),
-      _project(
-        id: 'prj_demo_bun',
-        name: 'bun-website',
-        framework: 'remix',
-        url: 'bun.sh',
-        alias: ['bun.sh', 'www.bun.sh'],
-        repo: 'oven-sh/bun',
-        branch: 'main',
-        commitMessage: 'perf(runtime): optimize JIT compilation',
-        commitSha: 'd6f1a4e3',
-        state: 'READY',
-        createdAgo: const Duration(days: 340),
-        updatedAgo: const Duration(hours: 9),
-        hasAnalytics: true,
-        hasWebAnalytics: true,
-        hasFirewall: true,
         now: now,
       ),
     ];
@@ -424,16 +251,31 @@ class DemoData {
         'host': host,
         'path': '/api/cron/sync',
         'schedule': '0 */6 * * *', // Every 6 hours
+        'description': 'Synchronize inventory data with external warehouse providers.',
       },
       {
         'host': host,
         'path': '/api/cron/cleanup',
         'schedule': '0 0 * * 0', // Weekly on Sunday
+        'description': 'Hard delete expired sessions and temporary build artifacts from the database.',
       },
       {
         'host': host,
         'path': '/api/cron/health-check',
         'schedule': '*/5 * * * *', // Every 5 minutes
+        'description': 'Perform heartbeat checks on all upstream microservices.',
+      },
+      {
+        'host': host,
+        'path': '/api/cron/generate-sitemap',
+        'schedule': '0 2 * * *', // Every day at 2 AM
+        'description': 'Re-index and generate the XML sitemap for SEO optimizations.',
+      },
+      {
+        'host': host,
+        'path': '/api/cron/backup-db',
+        'schedule': '0 4 * * *', // Every day at 4 AM
+        'description': 'Trigger automated database snapshots and upload to S3 bucket.',
       },
     ];
   }
@@ -1026,28 +868,116 @@ class DemoData {
   /// Get demo file content for a given file.
   static String getDemoFileContent(String fileName) {
     final contents = {
-      'page.tsx': '''import { Button } from "@/components/ui/button";
+      'page.tsx': '''import { Suspense } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { fetchLatestProducts } from "@/lib/db";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Vero | The Modern Vercel Dashboard",
+  description: "Experience the ultimate control over your deployments, analytics, and infrastructure with Vero.",
+};
+
+async function ProductList() {
+  const products = await fetchLatestProducts();
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {products.map((product) => (
+        <Card key={product.id} className="overflow-hidden border-2 border-primary/10 hover:border-primary/30 transition-all">
+          <CardHeader className="p-0">
+            <div className="h-48 bg-muted animate-pulse" />
+          </CardHeader>
+          <CardHeader>
+            <CardTitle>{product.name}</CardTitle>
+            <CardDescription>{product.category}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">\${product.price}</p>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full">Add to Cart</Button>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
-        <h1 className="text-4xl font-bold">Welcome to Vero</h1>
-        <p className="mt-4 text-lg">Your modern Vercel management dashboard</p>
-        <Button className="mt-6">Get Started</Button>
+    <main className="flex min-h-screen flex-col items-center p-8 md:p-24 bg-gradient-to-b from-background to-muted/20">
+      <div className="z-10 max-w-6xl w-full items-center justify-between font-mono text-sm">
+        <section className="text-center mb-16">
+          <h1 className="text-6xl font-extrabold tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+            Welcome to Vero
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Your modern Vercel management dashboard. Seamlessly monitor, deploy, and scale your applications with unprecedented visibility.
+          </p>
+          <div className="mt-8 flex gap-4 justify-center">
+            <Button size="lg" className="rounded-full px-8">Get Started</Button>
+            <Button size="lg" variant="outline" className="rounded-full px-8">Documentation</Button>
+          </div>
+        </section>
+
+        <section className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-3xl font-bold">Featured Products</h2>
+            <Button variant="link">View all products</Button>
+          </div>
+          
+          <Suspense fallback={<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-[400px] w-full rounded-xl" />)}
+          </div>}>
+            <ProductList />
+          </Suspense>
+        </section>
       </div>
     </main>
   );
 }''',
-      'layout.tsx': '''import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+    'layout.tsx': '''import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
-  title: "Vero - Vercel Dashboard",
-  description: "Manage your Vercel deployments with ease",
+  title: {
+    default: "Vero - Modern Vercel Dashboard",
+    template: "%s | Vero",
+  },
+  description: "Advanced analytics, deployment monitoring, and team collaboration for Vercel users.",
+  keywords: ["vercel", "dashboard", "analytics", "deployment", "nextjs", "react"],
+  authors: [{ name: "Buildagon Team", url: "https://buildagon.com" }],
+  creator: "Buildagon",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "white" },
+    { media: "(prefers-color-scheme: dark)", color: "black" },
+  ],
 };
 
 export default function RootLayout({
@@ -1056,41 +986,135 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`\${inter.variable} \${mono.variable} font-sans antialiased min-h-screen flex flex-col`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Navigation />
+          <div className="flex-1">
+            {children}
+          </div>
+          <Footer />
+          <Toaster />
+        </ThemeProvider>
+      </body>
     </html>
   );
 }''',
-      'globals.css': '''@tailwind base;
+    'globals.css': '''@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-}''',
-      'button.tsx': '''import * as React from "react";
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost";
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}''',
+    'button.tsx': '''import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        outline: "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-9 px-4 py-2",
+        sm: "h-8 rounded-md px-3 text-xs",
+        lg: "h-10 rounded-md px-8",
+        icon: "h-9 w-9",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: bool;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", ...props }, ref) => {
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
     return (
-      <button
-        className={\`px-4 py-2 rounded-md font-medium transition-colors \${className}\`}
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
       />
@@ -1099,48 +1123,100 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-export { Button };''',
-      'utils.ts': '''import { clsx, type ClassValue } from "clsx";
+export { Button, buttonVariants };''',
+    'utils.ts': '''import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+/**
+ * Merges multiple tailwind classes and resolves conflicts.
+ * Uses clsx for conditional classes and tailwind-merge for conflict resolution.
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date): string {
+/**
+ * Formats a date using the standard en-US locale.
+ * @param date The date object to format.
+ * @returns A string in the format "Month Day, Year".
+ */
+export function formatDate(date: Date | number): string {
+  const d = typeof date === 'number' ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
-  }).format(date);
-}''',
-      'package.json': '''{
-  "name": "vero-app",
-  "version": "0.1.0",
+  }).format(d);
+}
+
+/**
+ * Formats a currency amount to USD string.
+ */
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
+}
+
+/**
+ * Capitalizes the first letter of each word in a string.
+ */
+export function titleCase(str: string): string {
+  return str.toLowerCase().split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+}
+
+/**
+ * Returns a promise that resolves after a specified delay.
+ */
+export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+''',
+    'package.json': '''{
+  "name": "vero-app-v2",
+  "version": "2.4.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "analyze": "ANALYZE=true next build",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.1.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.473.0",
     "next": "15.1.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "clsx": "^2.1.0",
-    "tailwind-merge": "^2.2.0"
+    "next-themes": "^0.4.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@types/react": "^18.2.48",
-    "typescript": "^5.3.3",
-    "tailwindcss": "^3.4.1"
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0"
+    }
   }
 }''',
-      'tsconfig.json': '''{
+    'tsconfig.json': '''{
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ESNext",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -1160,147 +1236,297 @@ export function formatDate(date: Date): string {
     ],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }''',
-      'next.config.js': '''/** @type {import('next').NextConfig} */
+    'next.config.js': '''/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['vero.app'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'vero.app',
+      }
+    ],
+  },
+  experimental: {
+    optimizePackageImports: ["lucide-react", "date-fns"],
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
   },
 };
 
 module.exports = nextConfig;''',
-      'tailwind.config.ts': '''import type { Config } from "tailwindcss";
+    'tailwind.config.ts': '''import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 const config: Config = {
-  content: [
+    darkMode: ["class"],
+    content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {
-      colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-      },
-    },
+  	extend: {
+  		colors: {
+  			background: "hsl(var(--background))",
+  			foreground: "hsl(var(--foreground))",
+  			card: {
+  				DEFAULT: "hsl(var(--card))",
+  				foreground: "hsl(var(--card-foreground))"
+  			},
+  			primary: {
+  				DEFAULT: "hsl(var(--primary))",
+  				foreground: "hsl(var(--primary-foreground))"
+  			},
+  			secondary: {
+  				DEFAULT: "hsl(var(--secondary))",
+  				foreground: "hsl(var(--secondary-foreground))"
+  			},
+  			muted: {
+  				DEFAULT: "hsl(var(--muted))",
+  				foreground: "hsl(var(--muted-foreground))"
+  			},
+  			accent: {
+  				DEFAULT: "hsl(var(--accent))",
+  				foreground: "hsl(var(--accent-foreground))"
+  			},
+  			destructive: {
+  				DEFAULT: "hsl(var(--destructive))",
+  				foreground: "hsl(var(--destructive-foreground))"
+  			},
+  			border: "hsl(var(--border))",
+  			input: "hsl(var(--input))",
+  			ring: "hsl(var(--ring))",
+  		},
+  		borderRadius: {
+  			lg: "var(--radius)",
+  			md: "calc(var(--radius) - 2px)",
+  			sm: "calc(var(--radius) - 4px)"
+  		}
+  	}
   },
-  plugins: [],
+  plugins: [animate],
 };
 export default config;''',
-      'README.md': '''# Vero App
+    'README.md': '''# Vero Enterprise v2.4
 
-A modern Vercel management dashboard built with Next.js 15.
+Welcome to the future of Vercel deployment management. Vero provides a sophisticated interface over the Vercel API, offering enhanced observability, streamlined workflows, and enterprise-grade security controls.
 
-## Getting Started
+## ✨ Features
 
-1. Install dependencies:
-   \`\`\`bash
+- **Real-time Deployment Tracking**: Watch your builds progress in real-time with granular log access.
+- **Advanced Analytics**: Interactive dashboards for bandwidth, requests, and performance metrics.
+- **Team Collaboration**: Shared workspace with RBAC (Role-Based Access Control).
+- **Security First**: Managed WAF rulesets, DDoS protection, and attack-challenge mode integration.
+- **Global Edge Network**: Seamlessly manage deployments across all Vercel edge regions.
+
+## 🚀 Quick Start
+
+1. **Environment Setup**:
+   Copy `.env.example` to `.env.local` and fill in your Vercel API tokens.
+
+2. **Installation**:
+   ```bash
    pnpm install
-   \`\`\`
+   ```
 
-2. Run the development server:
-   \`\`\`bash
+3. **Development**:
+   ```bash
    pnpm dev
-   \`\`\`
+   ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+4. **Production Build**:
+   ```bash
+   pnpm build
+   pnpm start
+   ```
 
-## Features
+## 🛠 Tech Stack
 
-- Real-time deployment monitoring
-- Analytics dashboard
-- Team collaboration tools
-- Security firewall management
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS 3.4
+- **Components**: Radix UI + shadcn/ui
+- **Icons**: Lucide React
+- **Type Safety**: TypeScript 5.7
 
-## License
+## 📄 License
 
-MIT''',
-      '.env.example': '''DATABASE_URL=postgresql://user:password@localhost:5432/vero
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_ANALYTICS_ID=G-XXXXXX
-STRIPE_SECRET_KEY=sk_test_XXXXXX
-RESEND_API_KEY=re_XXXXXX''',
-      'robots.txt': '''User-agent: *
+Proprietary. 2026 Buildagon Inc. All rights reserved.
+''',
+    '.env.example': '''# Vercel API Credentials
+VERCEL_TOKEN=your_token_here
+VERCEL_TEAM_ID=your_team_id_here
+
+# Database Configuration (Neon/Supabase)
+DATABASE_URL=postgresql://user:password@aws-0-us-east-1.pooler.neon.tech/vero_main?sslmode=require
+
+# Authentication (NextAuth.js)
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=generate_a_long_random_string_here
+
+# Third-party Services
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
+RESEND_API_KEY=re_123456789
+NEXT_PUBLIC_GA_ID=G-VERO4242
+
+# Feature Flags
+ENABLE_ANALYTICS=true
+ENABLE_BETA_FEATURES=false
+''',
+    'robots.txt': '''# https://www.robotstxt.org/robotstxt.html
+User-agent: *
 Allow: /
-Disallow: /api/
-Sitemap: https://vero.app/sitemap.xml''',
-    };
 
-    return contents[fileName] ?? '// Demo file content\n// This is a placeholder for ${fileName}';
-  }
+# Sitemap
+Sitemap: https://vero.app/sitemap.xml
+
+# Security
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+''',
+  };
+
+  return contents[fileName] ?? '// Demo file content\n// This is a placeholder for ${fileName}';
+}
 
   /// Deployment events / build logs (for the events endpoint).
   static List<Map<String, dynamic>> buildDeploymentEvents(String deploymentId) {
-    final base = DateTime.now().subtract(const Duration(minutes: 4)).millisecondsSinceEpoch;
+    final base = DateTime.now().subtract(const Duration(minutes: 12)).millisecondsSinceEpoch;
     int t(int s) => base + s * 1000;
 
     return [
-      {'type': 'delimiter', 'created': t(0), 'text': 'Cloning github.com/vero-demo/app (Branch: main)'},
-      {'type': 'stdout', 'created': t(2), 'text': 'Cloning completed: 812.456ms'},
-      {'type': 'stdout', 'created': t(3), 'text': 'Running "install" command: `pnpm install`'},
-      {'type': 'stdout', 'created': t(5), 'text': 'Packages: +1243, -0, changed 0'},
-      {'type': 'stdout', 'created': t(7), 'text': 'Downloading packages...'},
-      {'type': 'stdout', 'created': t(9), 'text': 'Progress: resolved 1243, reused 842, downloaded 401, added 1243'},
-      {'type': 'stdout', 'created': t(11), 'text': 'Lockfile is up to date, resolution step is skipped'},
-      {'type': 'stdout', 'created': t(14), 'text': 'Progress: resolved 1243, reused 1243, downloaded 0, added 1243, done'},
-      {'type': 'stdout', 'created': t(16), 'text': 'node_modules installed in 13.2s'},
-      {'type': 'delimiter', 'created': t(17), 'text': 'Running "build" command: `next build`'},
-      {'type': 'stdout', 'created': t(19), 'text': '  ▲ Next.js 15.1.4'},
-      {'type': 'stdout', 'created': t(20), 'text': '  - Linting and checking validity of types'},
-      {'type': 'stdout', 'created': t(21), 'text': '  - Environments: .env.production, .env.local'},
-      {'type': 'stdout', 'created': t(22), 'text': '  - Loading env from .env.production'},
-      {'type': 'stdout', 'created': t(23), 'text': '  ✓ Loaded env from .env.production (8 variables)'},
-      {'type': 'stdout', 'created': t(24), 'text': '   Creating an optimized production build ...'},
-      {'type': 'stdout', 'created': t(28), 'text': '  ✓ Compiled successfully'},
-      {'type': 'stdout', 'created': t(29), 'text': '  ✓ Linting and checking validity of types'},
-      {'type': 'stdout', 'created': t(31), 'text': '  ✓ Collecting page data'},
-      {'type': 'stdout', 'created': t(33), 'text': '    [ ] /'},
-      {'type': 'stdout', 'created': t(34), 'text': '    [ ] /about'},
-      {'type': 'stdout', 'created': t(35), 'text': '    [ ] /pricing'},
-      {'type': 'stdout', 'created': t(36), 'text': '    [ ] /blog/[slug]'},
-      {'type': 'stdout', 'created': t(37), 'text': '    [ ] /dashboard'},
-      {'type': 'stdout', 'created': t(38), 'text': '    [ ] /api/auth/*'},
-      {'type': 'stdout', 'created': t(39), 'text': '    [ ] /api/webhooks/*'},
-      {'type': 'stdout', 'created': t(40), 'text': '  ✓ Generating static pages (27/27)'},
-      {'type': 'stdout', 'created': t(41), 'text': '    / (312ms)'},
-      {'type': 'stdout', 'created': t(42), 'text': '    /about (245ms)'},
-      {'type': 'stdout', 'created': t(43), 'text': '    /pricing (287ms)'},
-      {'type': 'stdout', 'created': t(44), 'text': '    /blog/first-post (198ms)'},
-      {'type': 'stdout', 'created': t(45), 'text': '    /blog/second-post (203ms)'},
-      {'type': 'stdout', 'created': t(46), 'text': '  ✓ Finalizing page optimization'},
-      {'type': 'stdout', 'created': t(47), 'text': '  ✓ Collecting build traces'},
-      {'type': 'stdout', 'created': t(48), 'text': '  ✓ Generating route manifests'},
-      {'type': 'delimiter', 'created': t(49), 'text': 'Deploying outputs'},
-      {'type': 'stdout', 'created': t(50), 'text': 'Uploading build output...'},
-      {'type': 'stdout', 'created': t(52), 'text': 'Build output uploaded: 42.3 MB'},
-      {'type': 'stdout', 'created': t(53), 'text': 'Deploying to Edge Network...'},
-      {'type': 'stdout', 'created': t(55), 'text': 'Deployment completed in 52.3s'},
-      {'type': 'stdout', 'created': t(56), 'text': 'Production: https://vero.app (42.3 MB)'},
-      {'type': 'stdout', 'created': t(57), 'text': 'Preview: https://vero-app-git-main.vero-demo.vercel.app (42.3 MB)'},
+      {'type': 'delimiter', 'created': t(0), 'text': 'Cloning github.com/vero-demo/app (Branch: main, Commit: a3f51cd)'},
+      {'type': 'stdout', 'created': t(1), 'text': 'Cloning into \'/vercel/path0\'...'},
+      {'type': 'stdout', 'created': t(2), 'text': 'Cloning completed: 1.2s'},
+      {'type': 'stdout', 'created': t(3), 'text': 'Checking for build cache...'},
+      {'type': 'stdout', 'created': t(4), 'text': 'Found cache for branch "main" (124 MB)'},
+      {'type': 'stdout', 'created': t(5), 'text': 'Restored build cache in 2.1s'},
+      {'type': 'stdout', 'created': t(6), 'text': 'Detected package manager: pnpm (v9.5.0)'},
+      {'type': 'stdout', 'created': t(7), 'text': 'Running "install" command: `pnpm install`'},
+      {'type': 'stdout', 'created': t(10), 'text': 'Packages: +1542, -0, changed 0'},
+      {'type': 'stdout', 'created': t(12), 'text': 'Downloading packages...'},
+      {'type': 'stdout', 'created': t(15), 'text': 'Progress: resolved 1542, reused 1420, downloaded 122, added 1542'},
+      {'type': 'stdout', 'created': t(18), 'text': 'Lockfile is up to date, resolution step is skipped'},
+      {'type': 'stdout', 'created': t(22), 'text': 'Progress: resolved 1542, reused 1542, downloaded 0, added 1542, done'},
+      {'type': 'stdout', 'created': t(25), 'text': 'node_modules installed in 18.4s'},
+      {'type': 'delimiter', 'created': t(26), 'text': 'Running "build" command: `next build`'},
+      {'type': 'stdout', 'created': t(28), 'text': '  ▲ Next.js 15.1.4'},
+      {'type': 'stdout', 'created': t(29), 'text': '  - Linting and checking validity of types'},
+      {'type': 'stdout', 'created': t(30), 'text': '  - Environments: .env.production, .env.local'},
+      {'type': 'stdout', 'created': t(31), 'text': '  - Loading env from .env.production'},
+      {'type': 'stdout', 'created': t(32), 'text': '  ✓ Loaded env from .env.production (12 variables)'},
+      {'type': 'stdout', 'created': t(33), 'text': '   Creating an optimized production build ...'},
+      {'type': 'stdout', 'created': t(38), 'text': '  (node:14) [DEP0040] DeprecationWarning: The `punycode` module is deprecated.'},
+      {'type': 'stdout', 'created': t(45), 'text': '  ✓ Compiled successfully'},
+      {'type': 'stdout', 'created': t(46), 'text': '  ✓ Linting and checking validity of types'},
+      {'type': 'stdout', 'created': t(50), 'text': '  ✓ Collecting page data'},
+      {'type': 'stdout', 'created': t(52), 'text': '    [ ] /'},
+      {'type': 'stdout', 'created': t(53), 'text': '    [ ] /about'},
+      {'type': 'stdout', 'created': t(54), 'text': '    [ ] /pricing'},
+      {'type': 'stdout', 'created': t(55), 'text': '    [ ] /blog/[slug]'},
+      {'type': 'stdout', 'created': t(56), 'text': '    [ ] /dashboard'},
+      {'type': 'stdout', 'created': t(57), 'text': '    [ ] /api/auth/*'},
+      {'type': 'stdout', 'created': t(58), 'text': '    [ ] /api/webhooks/*'},
+      {'type': 'stdout', 'created': t(59), 'text': '    [ ] /api/v1/analytics'},
+      {'type': 'stdout', 'created': t(60), 'text': '    [ ] /api/v1/users'},
+      {'type': 'stdout', 'created': t(65), 'text': '  ✓ Generating static pages (54/54)'},
+      {'type': 'stdout', 'created': t(66), 'text': '    / (412ms)'},
+      {'type': 'stdout', 'created': t(67), 'text': '    /about (315ms)'},
+      {'type': 'stdout', 'created': t(68), 'text': '    /pricing (297ms)'},
+      {'type': 'stdout', 'created': t(69), 'text': '    /blog/getting-started (242ms)'},
+      {'type': 'stdout', 'created': t(70), 'text': '    /blog/advanced-patterns (283ms)'},
+      {'type': 'stdout', 'created': t(71), 'text': '    /blog/nextjs-15-deep-dive (312ms)'},
+      {'type': 'stdout', 'created': t(72), 'text': '    /blog/optimizing-performance (256ms)'},
+      {'type': 'stdout', 'created': t(75), 'text': '  ✓ Finalizing page optimization'},
+      {'type': 'stdout', 'created': t(78), 'text': '  ✓ Collecting build traces'},
+      {'type': 'stdout', 'created': t(82), 'text': '  ✓ Generating route manifests'},
+      {'type': 'stdout', 'created': t(85), 'text': '  Route (app)                              Size     First Load JS'},
+      {'type': 'stdout', 'created': t(86), 'text': '  ┌ ○ /                                    1.2 kB          104 kB'},
+      {'type': 'stdout', 'created': t(87), 'text': '  ├ ○ /about                               452 B           103 kB'},
+      {'type': 'stdout', 'created': t(88), 'text': '  ├ ○ /pricing                             892 B           104 kB'},
+      {'type': 'stdout', 'created': t(89), 'text': '  └ λ /blog/[slug]                         1.1 kB          104 kB'},
+      {'type': 'stdout', 'created': t(90), 'text': '  + First Load JS shared by all            103 kB'},
+      {'type': 'stdout', 'created': t(91), 'text': '    ├ chunks/framework-f3b1.js             45.2 kB'},
+      {'type': 'stdout', 'created': t(92), 'text': '    ├ chunks/main-c9a2.js                  32.1 kB'},
+      {'type': 'stdout', 'created': t(93), 'text': '    └ chunks/pages/_app-d8f2.js            24.8 kB'},
+      {'type': 'delimiter', 'created': t(95), 'text': 'Deploying outputs'},
+      {'type': 'stdout', 'created': t(96), 'text': 'Uploading build output...'},
+      {'type': 'stdout', 'created': t(100), 'text': 'Build output uploaded: 56.8 MB'},
+      {'type': 'stdout', 'created': t(102), 'text': 'Deploying to Edge Network...'},
+      {'type': 'stdout', 'created': t(105), 'text': 'Checking for domain verification...'},
+      {'type': 'stdout', 'created': t(108), 'text': 'Deployment completed in 1m 12s'},
+      {'type': 'stdout', 'created': t(110), 'text': 'Production: https://vero.app (56.8 MB)'},
+      {'type': 'stdout', 'created': t(112), 'text': 'Preview: https://vero-app-git-main-vero-demo.vercel.app'},
     ];
   }
 
   /// Runtime / request logs for a deployment.
   static List<Map<String, dynamic>> buildRuntimeLogs() {
     final now = DateTime.now();
-    final paths = ['/', '/api/health', '/api/products', '/checkout', '/about', '/api/auth/session'];
-    final methods = ['GET', 'GET', 'GET', 'POST', 'GET', 'GET'];
-    final statuses = [200, 200, 200, 201, 200, 200];
+    final paths = [
+      '/',
+      '/api/health',
+      '/api/products',
+      '/checkout',
+      '/about',
+      '/api/auth/session',
+      '/api/v1/user/profile',
+      '/api/v1/inventory/status',
+      '/blog/nextjs-15-deep-dive',
+      '/pricing',
+      '/dashboard/settings',
+      '/api/webhooks/stripe'
+    ];
+    final methods = ['GET', 'GET', 'GET', 'POST', 'GET', 'GET', 'GET', 'GET', 'GET', 'GET', 'GET', 'POST'];
+    final statuses = [200, 200, 200, 201, 200, 200, 200, 200, 200, 200, 200, 200];
+    final userAgents = [
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+      'Vercel Edge Network (Health Check)',
+      'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    ];
 
-    return List.generate(12, (i) {
+    return List.generate(24, (i) {
+      final path = paths[i % paths.length];
+      final method = methods[i % methods.length];
+      final status = statuses[i % statuses.length];
+      final duration = 12 + (i * 7) % 80;
+      final timestamp = now.subtract(Duration(seconds: i * 4)).toIso8601String();
+      final region = ['iad1', 'fra1', 'sfo1', 'cdg1', 'hnd1'][i % 5];
+      
       return {
-        'message':
-            '${methods[i % methods.length]} ${paths[i % paths.length]} -> ${statuses[i % statuses.length]} (${12 + (i * 7) % 80}ms)',
-        'level': 'info',
-        'timestamp': now.subtract(Duration(seconds: i * 4)).toIso8601String(),
+        'message': '$method $path -> $status (${duration}ms) [Region: $region]',
+        'level': status >= 400 ? 'error' : (status >= 300 ? 'warning' : 'info'),
+        'timestamp': timestamp,
         'source': 'edge',
-        'region': 'iad1',
+        'region': region,
+        'userAgent': userAgents[i % userAgents.length],
+        'requestId': 'req_runtime_${_shortHash(i)}',
       };
     });
   }
@@ -1309,33 +1535,60 @@ Sitemap: https://vero.app/sitemap.xml''',
   static Map<String, dynamic> buildProjectLogsResponse(String projectId) {
     final now = DateTime.now();
     final rows = <Map<String, dynamic>>[];
-    final paths = ['/', '/blog', '/pricing', '/api/users/me', '/api/checkout', '/dashboard'];
-    final statuses = [200, 200, 304, 401, 200, 500];
-    final methods = ['GET', 'GET', 'GET', 'GET', 'POST', 'GET'];
-    final regions = ['iad1', 'fra1', 'sfo1', 'cdg1', 'hnd1'];
+    final paths = [
+      '/', 
+      '/blog', 
+      '/pricing', 
+      '/api/users/me', 
+      '/api/checkout', 
+      '/dashboard',
+      '/api/v1/search?q=vero',
+      '/api/v1/auth/callback',
+      '/docs/getting-started',
+      '/api/v1/analytics/track'
+    ];
+    final statuses = [200, 200, 304, 401, 200, 500, 200, 302, 200, 204];
+    final methods = ['GET', 'GET', 'GET', 'GET', 'POST', 'GET', 'GET', 'GET', 'GET', 'POST'];
+    final regions = ['iad1', 'fra1', 'sfo1', 'cdg1', 'hnd1', 'icn1', 'arn1', 'lhr1'];
+    final hosts = ['vero.app', 'www.vero.app', 'marketing.vero.app'];
 
-    for (var i = 0; i < 25; i++) {
-      final ts = now.subtract(Duration(seconds: i * 7)).toIso8601String();
+    for (var i = 0; i < 50; i++) {
+      final ts = now.subtract(Duration(seconds: i * 15)).toIso8601String();
+      final path = paths[i % paths.length];
+      final status = statuses[i % statuses.length];
+      
       rows.add({
-        'requestId': 'req_${projectId}_$i',
+        'requestId': 'req_${projectId}_${_shortHash(i)}',
         'timestamp': ts,
         'branch': 'main',
         'deploymentId': 'dpl_${projectId}_prod',
-        'domain': 'vero.app',
-        'deploymentDomain': 'vero.app',
+        'domain': hosts[i % hosts.length],
+        'deploymentDomain': 'vero-app-git-main-vero-demo.vercel.app',
         'environment': 'production',
-        'requestPath': paths[i % paths.length],
-        'route': paths[i % paths.length],
+        'requestPath': path,
+        'route': path,
         'clientUserAgent':
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36',
         'clientRegion': regions[i % regions.length],
-        'requestSearchParams': const <String, dynamic>{},
+        'requestSearchParams': i % 4 == 0 ? {'q': 'demo', 'filter': 'active'} : const <String, dynamic>{},
         'requestMethod': methods[i % methods.length],
         'cache': i % 3 == 0 ? 'HIT' : 'MISS',
-        'statusCode': statuses[i % statuses.length],
+        'statusCode': status,
+        'executionTime': 45 + (i * 12) % 150,
         'events': const [],
-        'logs': const [],
-        'requestTags': const [],
+        'logs': [
+          {
+            'message': 'Initiating database connection to primary replica...',
+            'level': 'info',
+            'timestamp': ts,
+          },
+          if (status >= 400) {
+            'message': 'Error processing request: ${status == 401 ? "Unauthorized access attempt" : "Internal server error in upstream service"}',
+            'level': 'error',
+            'timestamp': ts,
+          }
+        ],
+        'requestTags': ['demo', 'production', regions[i % regions.length]],
       });
     }
 
