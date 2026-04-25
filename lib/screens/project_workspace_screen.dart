@@ -70,7 +70,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
-      final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'security', 'env_vars', 'domains', 'cron_jobs'];
+      final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'cron_jobs', 'security', 'env_vars', 'domains'];
       SuperwallService().trackUserAction('switch_tab',
         context: 'project_workspace',
         properties: {
@@ -309,7 +309,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           isScrollable: true,
           onTap: (index) {
             // Track tab tap attempt
-            final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'security', 'env_vars', 'domains', 'cron_jobs'];
+            final tabNames = ['overview', 'logs', 'deployments', 'files', 'activity', 'cron_jobs', 'security', 'env_vars', 'domains'];
             SuperwallService().trackUserAction('tab_tapped', 
               context: 'project_workspace',
               properties: {
@@ -358,10 +358,10 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             const Tab(text: 'DEPLOYMENTS'),
             _buildProTab('FILES', isPro),
             _buildProTab('ACTIVITY', isPro),
+            _buildProTab('CRON JOBS', isPro),
             _buildProTab('SECURITY', isPro),
             _buildProTab('ENV VARS', isPro),
             _buildProTab('DOMAINS', isPro),
-            _buildProTab('CRON JOBS', isPro),
           ],
         ),
       ),
@@ -378,10 +378,10 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   _buildDeploymentsTab(),
                   _buildBlurredTabIfNeeded(_buildFilesTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildActivityTab(), isPro, context),
+                  _buildBlurredTabIfNeeded(_buildCronJobsTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildSecurityTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildEnvVarsTab(), isPro, context),
                   _buildBlurredTabIfNeeded(_buildDomainsTab(), isPro, context),
-                  _buildBlurredTabIfNeeded(_buildCronJobsTab(), isPro, context),
                 ],
               ),
     );

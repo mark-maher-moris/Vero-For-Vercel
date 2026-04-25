@@ -1479,6 +1479,8 @@ Disallow: /admin/
       {'type': 'stdout', 'created': t(100), 'text': 'Build output uploaded: 56.8 MB'},
       {'type': 'stdout', 'created': t(102), 'text': 'Deploying to Edge Network...'},
       {'type': 'stdout', 'created': t(105), 'text': 'Checking for domain verification...'},
+      {'type': 'stdout', 'created': t(106), 'text': 'Configuring Edge Middleware...'},
+      {'type': 'stdout', 'created': t(107), 'text': 'Analyzing project security headers...'},
       {'type': 'stdout', 'created': t(108), 'text': 'Deployment completed in 1m 12s'},
       {'type': 'stdout', 'created': t(110), 'text': 'Production: https://vero.app (56.8 MB)'},
       {'type': 'stdout', 'created': t(112), 'text': 'Preview: https://vero-app-git-main-vero-demo.vercel.app'},
@@ -1488,44 +1490,95 @@ Disallow: /admin/
   /// Runtime / request logs for a deployment.
   static List<Map<String, dynamic>> buildRuntimeLogs() {
     final now = DateTime.now();
-    final paths = [
-      '/',
-      '/api/health',
-      '/api/products',
-      '/checkout',
-      '/about',
-      '/api/auth/session',
-      '/api/v1/user/profile',
-      '/api/v1/inventory/status',
-      '/blog/nextjs-15-deep-dive',
-      '/pricing',
-      '/dashboard/settings',
-      '/api/webhooks/stripe'
-    ];
-    final methods = ['GET', 'GET', 'GET', 'POST', 'GET', 'GET', 'GET', 'GET', 'GET', 'GET', 'GET', 'POST'];
-    final statuses = [200, 200, 200, 201, 200, 200, 200, 200, 200, 200, 200, 200];
-    final userAgents = [
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-      'Vercel Edge Network (Health Check)',
-      'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    
+    final logTemplates = [
+      {
+        'method': 'GET',
+        'path': '/api/v1/user/profile',
+        'status': 200,
+        'region': 'iad1',
+        'duration': 42,
+        'messages': [
+          'DEBUG: Incoming request from authenticated user session',
+          'INFO: Cache miss for user_profile:user_882',
+          'INFO: Fetching user data from PostgreSQL (primary)...',
+          'DEBUG: DB Query: SELECT * FROM users WHERE id = \'user_882\' LIMIT 1',
+          'INFO: Request processed successfully in 42ms'
+        ]
+      },
+      {
+        'method': 'POST',
+        'path': '/api/webhooks/stripe',
+        'status': 201,
+        'region': 'fra1',
+        'duration': 156,
+        'messages': [
+          'INFO: Received Stripe webhook: checkout.session.completed',
+          'DEBUG: Verifying webhook signature...',
+          'INFO: Signature verified successfully',
+          'INFO: Updating subscription status for org_992...',
+          'DEBUG: DB Query: UPDATE subscriptions SET status = \'active\' WHERE org_id = \'org_992\'',
+          'INFO: Triggering welcome email sequence via Resend API'
+        ]
+      },
+      {
+        'method': 'GET',
+        'path': '/dashboard/analytics',
+        'status': 500,
+        'region': 'sfo1',
+        'duration': 1204,
+        'messages': [
+          'ERROR: Unhandled exception in server-side component',
+          'ERROR: ConnectionTimeout: Failed to connect to analytics-db-replica:5432 after 1000ms',
+          'ERROR: Stack trace:\n  at fetchAnalytics (/var/task/.next/server/app/dashboard/analytics/page.js:412:12)\n  at async Page (/var/task/.next/server/app/dashboard/analytics/page.js:89:18)',
+          'WARN: Retrying connection (attempt 1/3)...'
+        ]
+      },
+      {
+        'method': 'GET',
+        'path': '/',
+        'status': 200,
+        'region': 'cdg1',
+        'duration': 18,
+        'messages': [
+          'INFO: Edge Network: Cache hit (stale-while-revalidate)',
+          'DEBUG: Serving static page from edge cache (TTL: 3600s)',
+          'INFO: X-Vercel-Cache: HIT'
+        ]
+      },
+      {
+        'method': 'GET',
+        'path': '/api/v1/products/search?q=vero',
+        'status': 200,
+        'region': 'hnd1',
+        'duration': 89,
+        'messages': [
+          'INFO: Search query received: "vero"',
+          'DEBUG: Sanitizing input query...',
+          'INFO: Searching Elasticsearch index: products_v2',
+          'DEBUG: Query DSL: {"query": {"match": {"name": "vero"}}}',
+          'INFO: Found 12 results in 45ms',
+          'DEBUG: Serializing response with fast-json-stringify'
+        ]
+      }
     ];
 
-    return List.generate(24, (i) {
-      final path = paths[i % paths.length];
-      final method = methods[i % methods.length];
-      final status = statuses[i % statuses.length];
-      final duration = 12 + (i * 7) % 80;
-      final timestamp = now.subtract(Duration(seconds: i * 4)).toIso8601String();
-      final region = ['iad1', 'fra1', 'sfo1', 'cdg1', 'hnd1'][i % 5];
+    return List.generate(8, (i) {
+      final template = logTemplates[i % logTemplates.length];
+      final timestamp = now.subtract(Duration(seconds: i * 45)).toIso8601String();
+      final method = template['method'] as String;
+      final path = template['path'] as String;
+      final status = template['status'] as int;
+      final duration = template['duration'] as int;
+      final region = template['region'] as String;
+      final messages = template['messages'] as List<String>;
       
       return {
-        'message': '$method $path -> $status (${duration}ms) [Region: $region]',
-        'level': status >= 400 ? 'error' : (status >= 300 ? 'warning' : 'info'),
+        'message': '$method $path -> $status (${duration}ms)\n${messages.join('\n')}',
+        'level': status >= 500 ? 'error' : (status >= 400 ? 'warning' : 'info'),
         'timestamp': timestamp,
         'source': 'edge',
         'region': region,
-        'userAgent': userAgents[i % userAgents.length],
         'requestId': 'req_runtime_${_shortHash(i)}',
       };
     });
@@ -1535,60 +1588,137 @@ Disallow: /admin/
   static Map<String, dynamic> buildProjectLogsResponse(String projectId) {
     final now = DateTime.now();
     final rows = <Map<String, dynamic>>[];
-    final paths = [
-      '/', 
-      '/blog', 
-      '/pricing', 
-      '/api/users/me', 
-      '/api/checkout', 
-      '/dashboard',
-      '/api/v1/search?q=vero',
-      '/api/v1/auth/callback',
-      '/docs/getting-started',
-      '/api/v1/analytics/track'
+    
+    final scenarios = [
+      {
+        'path': '/api/v1/auth/session',
+        'method': 'GET',
+        'status': 200,
+        'cache': 'MISS',
+        'region': 'iad1',
+        'logs': [
+          {'level': 'info', 'message': '[auth] Initiating session validation for JWT cookie: session_v2_...'},
+          {'level': 'debug', 'message': '[jwt] Decoded payload: {"sub":"user_992","iat":1714041600,"exp":1714128000,"role":"admin"}'},
+          {'level': 'info', 'message': '[db] Fetching user preferences from neon_db_main...'},
+          {'level': 'debug', 'message': '[db] Query: SELECT * FROM user_settings WHERE user_id = \'user_992\''},
+          {'level': 'info', 'message': '[auth] Session valid. Extending expiry by 24h.'},
+          {'level': 'debug', 'message': '[response] Set-Cookie: session_v2=...; HttpOnly; Secure; SameSite=Lax'},
+        ]
+      },
+      {
+        'path': '/api/v1/orders/create',
+        'method': 'POST',
+        'status': 201,
+        'cache': 'BYPASS',
+        'region': 'fra1',
+        'logs': [
+          {'level': 'info', 'message': '[orders] Processing new order request...'},
+          {'level': 'debug', 'message': '[request] Payload: {"items":[{"id":"sku_1","qty":1},{"id":"sku_42","qty":3}],"total":299.00}'},
+          {'level': 'info', 'message': '[inventory] Validating stock levels for items: [sku_1, sku_42]'},
+          {'level': 'debug', 'message': '[db] Query: SELECT stock_count FROM inventory WHERE sku_id IN (\'sku_1\', \'sku_42\') FOR UPDATE'},
+          {'level': 'info', 'message': r'[stripe] Creating PaymentIntent for $299.00...'},
+          {'level': 'debug', 'message': '[stripe] API Response: {"id":"pi_3P92k8L1","status":"requires_payment_method","client_secret":"pi_3P9..._secret_..."}'},
+          {'level': 'info', 'message': '[orders] Order #ORD-2026-X92 pending payment confirmation.'},
+        ]
+      },
+      {
+        'path': '/api/v1/reports/export',
+        'method': 'GET',
+        'status': 401,
+        'cache': 'MISS',
+        'region': 'sfo1',
+        'logs': [
+          {'level': 'warn', 'message': '[security] Unauthorized access attempt to protected export endpoint.'},
+          {'level': 'error', 'message': '[auth] Authentication failed: Missing or invalid Authorization header.'},
+          {'level': 'debug', 'message': '[headers] { "host": "vero.app", "user-agent": "curl/8.4.0", "accept": "*/*" }'},
+          {'level': 'info', 'message': '[security] IP 192.168.1.42 flagged for rate-limit observation.'},
+        ]
+      },
+      {
+        'path': '/dashboard/billing',
+        'method': 'GET',
+        'status': 500,
+        'cache': 'MISS',
+        'region': 'cdg1',
+        'logs': [
+          {'level': 'info', 'message': '[billing] Fetching usage data for current billing cycle...'},
+          {'level': 'error', 'message': '[upstream] Internal Server Error: Failed to connect to BillingProvider gateway.'},
+          {'level': 'error', 'message': 'ConnectionResetError: Remote host [10.42.1.88:443] closed the connection during handshake.'},
+          {'level': 'debug', 'message': '[stack] Error: ConnectionResetError\n    at BillingProvider.fetchData (/var/task/lib/billing.js:142:18)\n    at async Page (/var/task/.next/server/app/dashboard/billing/page.js:89:12)'},
+          {'level': 'warn', 'message': '[circuit-breaker] Billing service is currently degraded. Falling back to cached data.'},
+        ]
+      },
+      {
+        'path': '/api/v1/inventory/sync',
+        'method': 'POST',
+        'status': 200,
+        'cache': 'MISS',
+        'region': 'hnd1',
+        'logs': [
+          {'level': 'info', 'message': '[sync] Starting manual inventory synchronization with AWS SCM...'},
+          {'level': 'info', 'message': '[sync] Found 1,242 SKU updates in the last 24 hours.'},
+          {'level': 'debug', 'message': '[db] Batch Update: UPDATE products SET stock = ? WHERE id = ? [250 operations]'},
+          {'level': 'debug', 'message': '[db] Batch Update: UPDATE products SET stock = ? WHERE id = ? [250 operations]'},
+          {'level': 'debug', 'message': '[db] Batch Update: UPDATE products SET stock = ? WHERE id = ? [250 operations]'},
+          {'level': 'debug', 'message': '[db] Batch Update: UPDATE products SET stock = ? WHERE id = ? [250 operations]'},
+          {'level': 'debug', 'message': '[db] Batch Update: UPDATE products SET stock = ? WHERE id = ? [242 operations]'},
+          {'level': 'info', 'message': '[sync] Synchronization completed successfully in 4.2s.'},
+        ]
+      },
+      {
+        'path': '/api/v1/analytics/track',
+        'method': 'POST',
+        'status': 204,
+        'cache': 'BYPASS',
+        'region': 'icn1',
+        'logs': [
+          {'level': 'info', 'message': '[analytics] Received tracking beacon: page_view'},
+          {'level': 'debug', 'message': '[analytics] Properties: {"url":"/pricing","referrer":"google.com","screen":"1920x1080"}'},
+          {'level': 'info', 'message': '[ingest] Dispatching to ClickHouse event queue...'},
+          {'level': 'debug', 'message': '[ingest] Sequence ID: seq_8812903_v2'},
+        ]
+      }
     ];
-    final statuses = [200, 200, 304, 401, 200, 500, 200, 302, 200, 204];
-    final methods = ['GET', 'GET', 'GET', 'GET', 'POST', 'GET', 'GET', 'GET', 'GET', 'POST'];
-    final regions = ['iad1', 'fra1', 'sfo1', 'cdg1', 'hnd1', 'icn1', 'arn1', 'lhr1'];
-    final hosts = ['vero.app', 'www.vero.app', 'marketing.vero.app'];
 
-    for (var i = 0; i < 50; i++) {
-      final ts = now.subtract(Duration(seconds: i * 15)).toIso8601String();
-      final path = paths[i % paths.length];
-      final status = statuses[i % statuses.length];
+    for (var i = 0; i < 8; i++) {
+      final scenario = scenarios[i % scenarios.length];
+      final ts = now.subtract(Duration(minutes: i * 15)).toIso8601String();
+      final path = scenario['path'] as String;
+      final status = scenario['status'] as int;
+      final method = scenario['method'] as String;
+      final region = scenario['region'] as String;
       
       rows.add({
         'requestId': 'req_${projectId}_${_shortHash(i)}',
         'timestamp': ts,
         'branch': 'main',
         'deploymentId': 'dpl_${projectId}_prod',
-        'domain': hosts[i % hosts.length],
+        'domain': 'vero.app',
         'deploymentDomain': 'vero-app-git-main-vero-demo.vercel.app',
         'environment': 'production',
         'requestPath': path,
         'route': path,
-        'clientUserAgent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36',
-        'clientRegion': regions[i % regions.length],
-        'requestSearchParams': i % 4 == 0 ? {'q': 'demo', 'filter': 'active'} : const <String, dynamic>{},
-        'requestMethod': methods[i % methods.length],
-        'cache': i % 3 == 0 ? 'HIT' : 'MISS',
+        'clientUserAgent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36',
+        'clientRegion': region,
+        'requestMethod': method,
+        'cache': scenario['cache'],
         'statusCode': status,
-        'executionTime': 45 + (i * 12) % 150,
-        'events': const [],
-        'logs': [
+        'events': [
           {
-            'message': 'Initiating database connection to primary replica...',
-            'level': 'info',
+            'source': 'lambda',
+            'route': path,
+            'pathType': 'route',
             'timestamp': ts,
-          },
-          if (status >= 400) {
-            'message': 'Error processing request: ${status == 401 ? "Unauthorized access attempt" : "Internal server error in upstream service"}',
-            'level': 'error',
-            'timestamp': ts,
+            'httpStatus': status,
+            'region': region,
+            'cache': scenario['cache'],
+            'functionMaxMemoryUsed': status >= 500 ? 512 : 128,
+            'functionMemorySize': 1024,
+            'durationMs': 120 + (i * 45) % 500,
           }
         ],
-        'requestTags': ['demo', 'production', regions[i % regions.length]],
+        'logs': scenario['logs'],
+        'requestTags': ['demo', 'production', region],
       });
     }
 

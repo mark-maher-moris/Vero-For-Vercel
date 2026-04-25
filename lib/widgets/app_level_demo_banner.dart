@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
@@ -5,8 +6,57 @@ import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
 import '../services/superwall_service.dart';
 
-class AppLevelDemoBanner extends StatelessWidget {
+class AppLevelDemoBanner extends StatefulWidget {
   const AppLevelDemoBanner({super.key});
+
+  @override
+  State<AppLevelDemoBanner> createState() => _AppLevelDemoBannerState();
+}
+
+class _AppLevelDemoBannerState extends State<AppLevelDemoBanner> {
+  late DateTime _deadline;
+  Timer? _timer;
+  String _countdown = '36:00:00';
+
+  @override
+  void initState() {
+    super.initState();
+    _deadline = DateTime.now().add(const Duration(hours: 36));
+    _startCountdown();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startCountdown() {
+    _updateCountdown();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateCountdown();
+    });
+  }
+
+  void _updateCountdown() {
+    final now = DateTime.now();
+    final difference = _deadline.difference(now);
+
+    if (difference.isNegative) {
+      setState(() {
+        _countdown = '00:00:00';
+      });
+      return;
+    }
+
+    final hours = difference.inHours.toString().padLeft(2, '0');
+    final minutes = (difference.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (difference.inSeconds % 60).toString().padLeft(2, '0');
+
+    setState(() {
+      _countdown = '$hours:$minutes:$seconds';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,8 +64,8 @@ class AppLevelDemoBanner extends StatelessWidget {
     final subscription = context.watch<SubscriptionProvider>();
 
     // Only show if authenticated, in demo mode, and NOT actually subscribed
-    if (!appState.isAuthenticated || 
-        !appState.isDemoMode || 
+    if (!appState.isAuthenticated ||
+        !appState.isDemoMode ||
         subscription.hasActiveSubscription) {
       return const SizedBox.shrink();
     }
@@ -52,7 +102,7 @@ class AppLevelDemoBanner extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
                   Container(
@@ -71,15 +121,31 @@ class AppLevelDemoBanner extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'UPGRADE TO PRO TO UNLOCK ALL FEATURES',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
-                      ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Limited time lifetime deal - upgrade now, offer ends in',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _countdown,
+                          style: const TextStyle(
+                            color: Color(0xFF0070F3),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
