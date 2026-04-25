@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
@@ -14,15 +15,39 @@ class AppLevelDemoBanner extends StatefulWidget {
 }
 
 class _AppLevelDemoBannerState extends State<AppLevelDemoBanner> {
+  static const String _firstLaunchKey = 'first_launch_timestamp';
   late DateTime _deadline;
   Timer? _timer;
   String _countdown = '36:00:00';
+  bool _isOfferExpired = false;
 
   @override
   void initState() {
     super.initState();
-    _deadline = DateTime.now().add(const Duration(hours: 36));
-    _startCountdown();
+    _initializeDeadline();
+  }
+
+  Future<void> _initializeDeadline() async {
+    final prefs = await SharedPreferences.getInstance();
+    final firstLaunchTimestamp = prefs.getInt(_firstLaunchKey);
+
+    if (firstLaunchTimestamp == null) {
+      // First time launching the app - store the timestamp
+      await prefs.setInt(_firstLaunchKey, DateTime.now().millisecondsSinceEpoch);
+      _deadline = DateTime.now().add(const Duration(hours: 36));
+    } else {
+      // Calculate deadline from stored first launch timestamp
+      _deadline = DateTime.fromMillisecondsSinceEpoch(firstLaunchTimestamp).add(const Duration(hours: 36));
+    }
+
+    // Check if offer has expired
+    if (DateTime.now().isAfter(_deadline)) {
+      setState(() {
+        _isOfferExpired = true;
+      });
+    } else {
+      _startCountdown();
+    }
   }
 
   @override
@@ -126,25 +151,29 @@ class _AppLevelDemoBannerState extends State<AppLevelDemoBanner> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Limited time lifetime deal - upgrade now, offer ends in',
-                          style: TextStyle(
+                        Text(
+                          _isOfferExpired
+                              ? 'Upgrade now and unlock the full app'
+                              : 'Limited time lifetime deal - upgrade now, offer ends in',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _countdown,
-                          style: const TextStyle(
-                            color: Color(0xFF0070F3),
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
+                        if (!_isOfferExpired) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            _countdown,
+                            style: const TextStyle(
+                              color: Color(0xFF0070F3),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
