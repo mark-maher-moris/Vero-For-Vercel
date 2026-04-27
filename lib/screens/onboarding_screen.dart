@@ -824,6 +824,13 @@ class _FeaturesSlide extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
                     _buildFeatureCard(
+                      icon: Icons.analytics_outlined,
+                      title: 'Analysis',
+                      description:
+                          'Deep dive into project performance with comprehensive analytics and insights.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureCard(
                       icon: Icons.folder_outlined,
                       title: 'Project Management',
                       description:

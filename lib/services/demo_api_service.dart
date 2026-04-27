@@ -4,6 +4,7 @@ import '../models/domain.dart';
 import '../models/log.dart';
 import '../models/project.dart';
 import '../models/security.dart';
+import '../models/analytics.dart';
 import 'api_service.dart';
 import 'demo_data.dart';
 
@@ -163,6 +164,38 @@ class DemoVercelApi extends VercelApi {
     required String to,
   }) async {
     return DemoData.buildBilling();
+  }
+
+  // ---------------------------------------------------------------------------
+  // ANALYTICS – overridden with demo data
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<AnalyticsOverview> getAnalyticsOverview({
+    required String projectId,
+    required String from,
+    required String to,
+  }) async {
+    return DemoData.buildAnalyticsOverview(from: from, projectId: projectId);
+  }
+
+  @override
+  Future<List<TimeseriesPoint>> getAnalyticsTimeseries({
+    required String projectId,
+    required String from,
+    required String to,
+  }) async {
+    return DemoData.buildAnalyticsTimeseries(from, to, projectId: projectId);
+  }
+
+  @override
+  Future<List<BreakdownItem>> getAnalyticsBreakdown({
+    required String projectId,
+    required String from,
+    required String to,
+    required String groupBy,
+  }) async {
+    return DemoData.buildAnalyticsBreakdown(groupBy, projectId: projectId);
   }
 
   @override

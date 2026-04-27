@@ -1,9 +1,12 @@
+import 'dart:math';
+
 import '../models/project.dart';
 import '../models/deployment.dart';
 import '../models/deployment_file.dart';
 import '../models/domain.dart';
 import '../models/env_var.dart';
 import '../models/security.dart';
+import '../models/analytics.dart';
 
 /// Static demo data for showcase mode.
 ///
@@ -1726,6 +1729,163 @@ Disallow: /admin/
       'rows': rows,
       'hasMoreRows': false,
     };
+  }
+
+  // ===========================================================================
+  // ANALYTICS DEMO DATA
+  // ===========================================================================
+
+  /// Build realistic analytics overview data for demo projects.
+  /// If [from] is provided and is more than ~2 days in the past, returns
+  /// previous-period data (~15% lower) so percent-change metrics look realistic.
+  static AnalyticsOverview buildAnalyticsOverview({String? from, String? projectId}) {
+    var previousPeriod = false;
+    if (from != null) {
+      try {
+        final fromDate = DateTime.parse(from);
+        // If the from date is more than 2 days ago, treat as previous period
+        previousPeriod = DateTime.now().toUtc().difference(fromDate).inDays > 2;
+      } catch (_) {
+        // ignore parse errors
+      }
+    }
+    
+    // Use projectId to vary base values (seeded by project ID hash)
+    final seed = projectId?.hashCode ?? 0;
+    final random = Random(seed);
+    final baseViews = 80000 + random.nextInt(80000); // 80K-160K
+    final baseVisitors = (baseViews * 0.35).round(); // ~35% conversion
+    final baseBounceRate = 28 + random.nextInt(12); // 28-40%
+    
+    final multiplier = previousPeriod ? 0.85 : 1.0;
+    return AnalyticsOverview(
+      total: (baseViews * multiplier).round(), // Page views
+      devices: (baseVisitors * multiplier).round(), // Unique visitors
+      bounceRate: baseBounceRate, // Percentage
+    );
+  }
+
+  /// Build timeseries data for the analytics chart.
+  static List<TimeseriesPoint> buildAnalyticsTimeseries(String from, String to, {String? projectId}) {
+    final points = <TimeseriesPoint>[];
+    final fromDate = DateTime.parse(from);
+    final toDate = DateTime.parse(to);
+    final duration = toDate.difference(fromDate);
+    
+    // Use projectId to seed random for consistent but unique data per project
+    final seed = projectId?.hashCode ?? 42;
+    final random = Random(seed);
+    
+    // Base traffic level varies by project
+    final baseTraffic = 1000 + random.nextInt(1000); // 1000-2000
+    
+    // Determine interval based on duration
+    final intervalHours = duration.inDays > 30 ? 24 : (duration.inDays > 7 ? 6 : 1);
+    final steps = (duration.inHours / intervalHours).ceil();
+    
+    // Generate realistic traffic patterns (higher during weekdays, peak hours)
+    for (var i = 0; i < steps; i++) {
+      final timestamp = fromDate.add(Duration(hours: i * intervalHours));
+      final isWeekend = timestamp.weekday == 6 || timestamp.weekday == 7;
+      final baseMultiplier = isWeekend ? 0.6 : 1.0;
+      final hourFactor = (timestamp.hour >= 9 && timestamp.hour <= 18) ? 1.3 : 0.7;
+      
+      final total = (baseTraffic * baseMultiplier * hourFactor + random.nextInt(500)).round();
+      final devices = (total * 0.4).round();
+      
+      final bounceRate = 30 + random.nextInt(10);
+      points.add(TimeseriesPoint(
+        key: timestamp.toIso8601String(),
+        total: total,
+        devices: devices,
+        bounceRate: bounceRate,
+      ));
+    }
+    
+    return points;
+  }
+
+  /// Build breakdown items for analytics (pages, referrers, countries, etc.)
+  static List<BreakdownItem> buildAnalyticsBreakdown(String groupBy, {String? projectId}) {
+    // Use projectId to seed random for consistent but unique data per project
+    final seed = projectId?.hashCode ?? 0;
+    final random = Random(seed);
+    
+    // Vary visitor counts by project (±30%)
+    final multiplier = 0.7 + (random.nextDouble() * 0.6);
+    
+    final Map<String, List<Map<String, dynamic>>> demoData = {
+      'path': [
+        {'key': '/', 'visitors': ((15420 * multiplier).round())},
+        {'key': '/pricing', 'visitors': ((8320 * multiplier).round())},
+        {'key': '/docs', 'visitors': ((6450 * multiplier).round())},
+        {'key': '/blog', 'visitors': ((4210 * multiplier).round())},
+        {'key': '/about', 'visitors': ((2890 * multiplier).round())},
+        {'key': '/contact', 'visitors': ((1450 * multiplier).round())},
+        {'key': '/features', 'visitors': ((1120 * multiplier).round())},
+      ],
+      'referrer': [
+        {'key': 'Direct', 'visitors': ((18500 * multiplier).round())},
+        {'key': 'google.com', 'visitors': ((12400 * multiplier).round())},
+        {'key': 'github.com', 'visitors': ((6800 * multiplier).round())},
+        {'key': 'twitter.com', 'visitors': ((4200 * multiplier).round())},
+        {'key': 'linkedin.com', 'visitors': ((3100 * multiplier).round())},
+        {'key': 'vercel.com', 'visitors': ((2800 * multiplier).round())},
+        {'key': 'reddit.com', 'visitors': ((1500 * multiplier).round())},
+      ],
+      'country': [
+        {'key': 'United States', 'visitors': ((18500 * multiplier).round())},
+        {'key': 'United Kingdom', 'visitors': ((6200 * multiplier).round())},
+        {'key': 'Germany', 'visitors': ((4800 * multiplier).round())},
+        {'key': 'Canada', 'visitors': ((3900 * multiplier).round())},
+        {'key': 'India', 'visitors': ((3400 * multiplier).round())},
+        {'key': 'France', 'visitors': ((2800 * multiplier).round())},
+        {'key': 'Netherlands', 'visitors': ((2100 * multiplier).round())},
+        {'key': 'Australia', 'visitors': ((1800 * multiplier).round())},
+      ],
+      'device_type': [
+        {'key': 'Desktop', 'visitors': ((28500 * multiplier).round())},
+        {'key': 'Mobile', 'visitors': ((12300 * multiplier).round())},
+        {'key': 'Tablet', 'visitors': ((4200 * multiplier).round())},
+      ],
+      'client_name': [
+        {'key': 'Chrome', 'visitors': ((22400 * multiplier).round())},
+        {'key': 'Safari', 'visitors': ((10200 * multiplier).round())},
+        {'key': 'Firefox', 'visitors': ((6800 * multiplier).round())},
+        {'key': 'Edge', 'visitors': ((3400 * multiplier).round())},
+        {'key': 'Samsung Browser', 'visitors': ((2100 * multiplier).round())},
+      ],
+      'os_name': [
+        {'key': 'Mac OS X', 'visitors': ((18500 * multiplier).round())},
+        {'key': 'Windows', 'visitors': ((14200 * multiplier).round())},
+        {'key': 'iOS', 'visitors': ((8900 * multiplier).round())},
+        {'key': 'Android', 'visitors': ((7600 * multiplier).round())},
+        {'key': 'Linux', 'visitors': ((3800 * multiplier).round())},
+      ],
+      'route': [
+        {'key': '/', 'visitors': ((15420 * multiplier).round())},
+        {'key': '/api/health', 'visitors': ((12400 * multiplier).round())},
+        {'key': '/api/webhooks', 'visitors': ((8200 * multiplier).round())},
+        {'key': '/dashboard', 'visitors': ((6400 * multiplier).round())},
+        {'key': '/settings', 'visitors': ((3200 * multiplier).round())},
+        {'key': '/api/users', 'visitors': ((2800 * multiplier).round())},
+      ],
+      'hostname': [
+        {'key': 'vero.app', 'visitors': ((28500 * multiplier).round())},
+        {'key': 'www.vero.app', 'visitors': ((12400 * multiplier).round())},
+        {'key': 'api.vero.app', 'visitors': ((4200 * multiplier).round())},
+        {'key': 'docs.vero.app', 'visitors': ((3800 * multiplier).round())},
+      ],
+    };
+
+    final items = demoData[groupBy] ?? demoData['path']!;
+    return items
+        .map((item) => BreakdownItem(
+              key: item['key'] as String,
+              visitors: item['visitors'] as int,
+            ))
+        .toList()
+      ..sort((a, b) => b.visitors.compareTo(a.visitors));
   }
 
   static String _shortHash(int i) {
