@@ -29,6 +29,8 @@ class Log {
   final List<LogEvent> events;
   final List<LogLine> logs;
   final List<String> requestTags;
+  final double? latitude;
+  final double? longitude;
 
   Log({
     required this.requestId,
@@ -49,6 +51,8 @@ class Log {
     required this.events,
     required this.logs,
     required this.requestTags,
+    this.latitude,
+    this.longitude,
   });
 
   factory Log.fromJson(Map<String, dynamic> json) {
@@ -88,6 +92,23 @@ class Log {
     final tagsList = json['requestTags'] as List<dynamic>? ?? [];
     final parsedTags = tagsList.map((t) => t.toString()).toList();
 
+    // Extract geo data from headers if available
+    final headers = json['proxyHeaders'] as Map<String, dynamic>? ?? 
+                   json['headers'] as Map<String, dynamic>? ?? {};
+    
+    double? lat = double.tryParse(headers['x-vercel-ip-latitude']?.toString() ?? '');
+    double? lng = double.tryParse(headers['x-vercel-ip-longitude']?.toString() ?? '');
+
+    // Fallback to region-based coordinates if headers are missing
+    final region = json['clientRegion'] as String? ?? '';
+    if ((lat == null || lng == null) && region.isNotEmpty) {
+      final coords = COORDINATES_FOR_REGION[region];
+      if (coords != null) {
+        lat = coords['lat'];
+        lng = coords['lng'];
+      }
+    }
+
     return Log(
       requestId: json['requestId'] as String? ?? json['id'] as String? ?? '',
       timestamp: parsedTimestamp,
@@ -99,7 +120,7 @@ class Log {
       requestPath: json['requestPath'] as String? ?? json['path'] as String? ?? '',
       route: json['route'] as String? ?? '',
       clientUserAgent: json['clientUserAgent'] as String? ?? '',
-      clientRegion: json['clientRegion'] as String? ?? '',
+      clientRegion: region,
       requestSearchParams: searchParams,
       requestMethod: json['requestMethod'] as String? ?? json['method'] as String? ?? 'GET',
       cache: json['cache'] as String? ?? '',
@@ -107,6 +128,8 @@ class Log {
       events: parsedEvents,
       logs: parsedLogs,
       requestTags: parsedTags,
+      latitude: lat,
+      longitude: lng,
     );
   }
 
@@ -342,6 +365,28 @@ const LABEL_FOR_REGION = {
   'sfo1': 'San Francisco, USA',
   'sin1': 'Singapore',
   'syd1': 'Sydney, Australia',
+};
+
+/// Coordinate mapping for Vercel regions (approximate locations)
+const COORDINATES_FOR_REGION = {
+  'arn1': {'lat': 59.3293, 'lng': 18.0686}, // Stockholm, Sweden
+  'bom1': {'lat': 19.0760, 'lng': 72.8777}, // Mumbai, India
+  'cdg1': {'lat': 48.8566, 'lng': 2.3522},  // Paris, France
+  'cle1': {'lat': 41.4993, 'lng': -81.6944}, // Cleveland, USA
+  'cpt1': {'lat': -33.9249, 'lng': 18.4241}, // Cape Town, South Africa
+  'dub1': {'lat': 53.3498, 'lng': -6.2603},  // Dublin, Ireland
+  'fra1': {'lat': 50.1109, 'lng': 8.6821},   // Frankfurt, Germany
+  'gru1': {'lat': -23.5505, 'lng': -46.6333}, // São Paulo, Brazil
+  'hkg1': {'lat': 22.3193, 'lng': 114.1694}, // Hong Kong
+  'hnd1': {'lat': 35.6762, 'lng': 139.6503}, // Tokyo, Japan
+  'iad1': {'lat': 38.9072, 'lng': -77.0369}, // Washington, D.C., USA
+  'icn1': {'lat': 37.4563, 'lng': 126.7052}, // Seoul, South Korea
+  'kix1': {'lat': 34.6937, 'lng': 135.5023}, // Osaka, Japan
+  'lhr1': {'lat': 51.5074, 'lng': -0.1278},  // London, United Kingdom
+  'pdx1': {'lat': 45.5152, 'lng': -122.6784}, // Portland, USA
+  'sfo1': {'lat': 37.7749, 'lng': -122.4194}, // San Francisco, USA
+  'sin1': {'lat': 1.3521, 'lng': 103.8198},  // Singapore
+  'syd1': {'lat': -33.8688, 'lng': 151.2093}, // Sydney, Australia
 };
 
 /// Result from project logs API call

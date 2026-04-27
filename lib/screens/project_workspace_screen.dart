@@ -2,22 +2,27 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/project.dart';
 import '../models/deployment.dart';
 import '../models/log.dart';
+import '../models/analytics.dart';
+import '../services/api_service.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import '../services/superwall_service.dart';
 import '../models/deployment_file.dart';
 import '../theme/app_theme.dart';
 import '../models/env_var.dart';
-import '../widgets/action_card.dart';
 import '../widgets/deployment_card.dart';
 import '../widgets/project_logo_widget.dart';
-import '../widgets/traffic_globe.dart';
+// import '../widgets/traffic_globe.dart'; // Temporarily hidden
+import '../widgets/analytics_metric_card.dart';
+import '../widgets/analytics_chart.dart';
+import '../widgets/analytics_breakdown_card.dart';
 import 'file_content_screen.dart';
 import 'deployment_logs_screen.dart';
 
@@ -42,6 +47,14 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   bool _isFetchingData = false;
   String? _errorMessage;
   late Future<List<DeploymentFile>> _deploymentFilesFuture;
+
+  // Analytics State
+  AnalyticsData _analyticsData = AnalyticsData();
+  TimeRange _selectedTimeRange = TimeRange.week;
+  bool _isLoadingAnalytics = false;
+  String? _analyticsError;
+  bool _analyticsLocked = false;
+  bool get _analyticsEnabled => widget.project.webAnalytics != null && !_analyticsLocked;
 
   // Live deployment logs (request logs like competitor)
   List<Log>? _liveLogs;
@@ -82,6 +95,87 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     // Lazy load live logs when switching to logs tab
     if (_tabController.index == 1 && !_tabController.indexIsChanging) {
       _fetchLiveDeploymentLogs();
+    }
+    // Rebuild to update TabBarView physics based on current tab
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _fetchAnalytics() async {
+    if (_isLoadingAnalytics) return;
+
+    setState(() {
+      _isLoadingAnalytics = true;
+      _analyticsError = null;
+    });
+
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final pid = widget.project.id;
+      final range = _selectedTimeRange;
+
+      // Parallel data fetching for analytics
+      final results = await Future.wait([
+        appState.apiService.getAnalyticsOverview(projectId: pid, from: range.from, to: range.to),
+        appState.apiService.getAnalyticsOverview(projectId: pid, from: range.previousFrom, to: range.previousTo),
+        appState.apiService.getAnalyticsTimeseries(projectId: pid, from: range.from, to: range.to),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'path'),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'referrer'),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'country'),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'device_type'),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'client_name'),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'os_name'),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'route'),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'hostname'),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _analyticsData = AnalyticsData()
+            ..overview = results[0] as AnalyticsOverview
+            ..previousOverview = results[1] as AnalyticsOverview
+            ..timeseries = results[2] as List<TimeseriesPoint>
+            ..pages = results[3] as List<BreakdownItem>
+            ..referrers = results[4] as List<BreakdownItem>
+            ..countries = results[5] as List<BreakdownItem>
+            ..devices = results[6] as List<BreakdownItem>
+            ..browsers = results[7] as List<BreakdownItem>
+            ..os = results[8] as List<BreakdownItem>
+            ..routes = results[9] as List<BreakdownItem>
+            ..hostnames = results[10] as List<BreakdownItem>;
+          _isLoadingAnalytics = false;
+          _analyticsLocked = false;
+        });
+      }
+    } on VercelApiException catch (e) {
+      // Analytics not enabled: typically 403/forbidden
+      final isForbidden = e.statusCode == 403 ||
+          (e.code != null && (e.code == 'forbidden' || e.code == 'unauthorized'));
+      final messageLower = e.message.toLowerCase();
+      final isNotEnabled = messageLower.contains('not enabled') ||
+          messageLower.contains('analytics') ||
+          messageLower.contains('forbidden');
+
+      print('[ProjectWorkspace] Analytics error: ${e.statusCode} - ${e.message} (code: ${e.code})');
+
+        setState(() {
+          if (isForbidden || isNotEnabled) {
+            _analyticsLocked = true;
+            _analyticsError = null; // suppress error, show locked state instead
+          } else {
+            _analyticsError = e.message;
+          }
+          _isLoadingAnalytics = false;
+        });
+    } catch (e) {
+      print('[ProjectWorkspace] Error fetching analytics: $e');
+      if (mounted) {
+        setState(() {
+          _analyticsError = e.toString();
+          _isLoadingAnalytics = false;
+        });
+      }
     }
   }
 
@@ -168,11 +262,17 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     });
 
     try {
-      final deps = await appState.apiService.getDeployments(
-        projectId: widget.project.id,
-      );
-      final doms = await appState.apiService.getProjectDomains(widget.project.id);
-      final envs = await appState.apiService.getProjectEnvVars(widget.project.id);
+      // Parallel data fetching for base project data and analytics
+      final results = await Future.wait([
+        appState.apiService.getDeployments(projectId: widget.project.id),
+        appState.apiService.getProjectDomains(widget.project.id),
+        appState.apiService.getProjectEnvVars(widget.project.id),
+        _fetchAnalytics(),
+      ]);
+
+      final deps = results[0] as List<Deployment>;
+      final doms = results[1] as List<dynamic>;
+      final envs = results[2] as List<dynamic>;
       
       // Initialize and await the deployment files future
       // Use file-tree endpoint like competitor (works for all deployment types)
@@ -372,6 +472,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
               ? _buildErrorView()
               : TabBarView(
                 controller: _tabController,
+                physics: _tabController.index == 0 ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
                 children: [
                   _buildOverviewTab(),
                   _buildLogsTab(),
@@ -512,172 +613,301 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   }
 
   Widget _buildOverviewTab() {
-    final repoUrl =
-        widget.project.link != null
-            ? 'https://github.com/${widget.project.link!['org']}/${widget.project.link!['repo']}'
-            : null;
-
     return RefreshIndicator(
       onRefresh: _fetchData,
       color: AppTheme.primary,
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          _buildInfoCard(),
-          const SizedBox(height: 24),
-          _buildProjectStatusSection(),
-          const SizedBox(height: 24),
-          TrafficGlobe(projectId: widget.project.id),
-          const SizedBox(height: 24),
-          _buildQuickActions(),
-          const SizedBox(height: 24),
-          if (repoUrl != null) _buildGitSection(repoUrl),
-          if (repoUrl != null) const SizedBox(height: 24),
-          _buildTechnicalStats(),
-          const SizedBox(height: 24),
-          _buildSecurityFeaturesSection(),
-          const SizedBox(height: 24),
-          _buildFeaturesSection(),
+          // Project Overview Section (always visible)
+          _buildProjectOverviewSection(),
+          const SizedBox(height: 32),
+          // Analytics Section (locked or real based on enabled state)
+          _analyticsEnabled ? _buildRealAnalyticsSection() : _buildLockedAnalyticsSection(),
+          const SizedBox(height: 48),
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('PROJECT', style: Theme.of(context).textTheme.labelSmall),
-              const SizedBox(width: 8),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: AppTheme.success,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'PRODUCTION',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: AppTheme.primary),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            widget.project.name,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: AppTheme.primary,
-              letterSpacing: -1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Updated ${timeago.format(widget.project.updatedAt)}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                Icons.fingerprint,
-                size: 12,
-                color: AppTheme.onSurfaceVariant.withOpacity(0.6),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                widget.project.id,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.onSurfaceVariant.withOpacity(0.6),
-                  fontFamily: 'monospace',
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => _copyToClipboard(widget.project.id),
-                child: Icon(
-                  Icons.copy,
-                  size: 12,
-                  color: AppTheme.onSurfaceVariant.withOpacity(0.6),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProjectStatusSection() {
-    final isLive = widget.project.live == true;
-    final isPaused = widget.project.paused == true;
+  Widget _buildProjectOverviewSection() {
+    final projectUrl = widget.project.allUrls.isNotEmpty
+        ? 'https://${widget.project.allUrls.first}'
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('PROJECT STATUS', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
+        // Project Header
+        Row(
+          children: [
+            ProjectLogoWidget(project: widget.project, size: 48),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.project.name.toUpperCase(),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.onSurfaceVariant.withOpacity(0.6),
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.project.framework ?? 'Static',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (projectUrl != null)
+              IconButton(
+                icon: const Icon(Icons.open_in_new, color: AppTheme.primary),
+                onPressed: () => launchUrl(Uri.parse(projectUrl)),
+                tooltip: 'Open project',
+              ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        // Project Stats Row
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: AppTheme.surfaceContainerHigh),
           ),
           child: Row(
             children: [
-              _buildStatusBadge(
-                isLive ? Icons.check_circle : Icons.radio_button_unchecked,
-                isLive ? 'Live' : 'Offline',
-                isLive ? AppTheme.success : AppTheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 16),
-              if (isPaused)
-                _buildStatusBadge(
-                  Icons.pause_circle,
-                  'Paused',
-                  AppTheme.error,
+              Expanded(
+                child: _buildProjectStat(
+                  'Deployments',
+                  '${_deployments?.length ?? 0}',
+                  Icons.rocket_outlined,
                 ),
+              ),
+              Container(width: 1, height: 40, color: AppTheme.surfaceContainerHigh),
+              Expanded(
+                child: _buildProjectStat(
+                  'Domains',
+                  '${_domains?.length ?? 0}',
+                  Icons.language_outlined,
+                ),
+              ),
+              Container(width: 1, height: 40, color: AppTheme.surfaceContainerHigh),
+              Expanded(
+                child: _buildProjectStat(
+                  'Env Vars',
+                  '${_envVars?.length ?? 0}',
+                  Icons.vpn_key_outlined,
+                ),
+              ),
+              Container(width: 1, height: 40, color: AppTheme.surfaceContainerHigh),
+              Expanded(
+                child: _buildProjectStat(
+                  'Created',
+                  timeago.format(widget.project.createdAt),
+                  Icons.calendar_today_outlined,
+                ),
+              ),
             ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Project URLs
+        if (widget.project.allUrls.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: widget.project.allUrls.take(3).map((url) {
+              final fullUrl = url.startsWith('http') ? url : 'https://$url';
+              return ActionChip(
+                avatar: const Icon(Icons.link, size: 16, color: AppTheme.primary),
+                label: Text(
+                  url.replaceAll('https://', ''),
+                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurface),
+                ),
+                backgroundColor: AppTheme.surfaceContainerHigh,
+                side: BorderSide.none,
+                onPressed: () => launchUrl(Uri.parse(fullUrl)),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildProjectStat(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: AppTheme.primary.withOpacity(0.7)),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: AppTheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            color: AppTheme.onSurfaceVariant.withOpacity(0.6),
+            letterSpacing: 0.5,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatusBadge(IconData icon, String label, Color color) {
+  Widget _buildLockedAnalyticsSection() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: AppTheme.surfaceContainerHigh),
+      ),
+      child: Column(
+        children: [
+          // Locked Icon
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerHigh,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.lock_outline,
+              size: 48,
+              color: AppTheme.onSurfaceVariant.withOpacity(0.5),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Title
+          const Text(
+            'Analytics Locked',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Description
+          Text(
+            'Web Analytics is not enabled for this project.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.onSurfaceVariant.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Enable it from your Vercel Dashboard to view detailed visitor insights.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppTheme.onSurfaceVariant.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Enable Analytics Button
+          ElevatedButton.icon(
+            onPressed: () {
+              final url = 'https://vercel.com/dashboard';
+              launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+            },
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: const Text('Open Vercel Dashboard'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          // Preview of what they'd get
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerHigh.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.visibility_off, size: 16, color: AppTheme.onSurfaceVariant.withOpacity(0.5)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Unlock analytics to see:'.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.onSurfaceVariant.withOpacity(0.6),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    _buildFeatureChip(Icons.people_outline, 'Visitors'),
+                    _buildFeatureChip(Icons.remove_red_eye_outlined, 'Page Views'),
+                    _buildFeatureChip(Icons.public_outlined, 'Geography'),
+                    _buildFeatureChip(Icons.devices_outlined, 'Devices'),
+                    _buildFeatureChip(Icons.show_chart, 'Traffic Trends'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        color: AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.surfaceContainerHigh),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
+          Icon(icon, size: 14, color: AppTheme.onSurfaceVariant.withOpacity(0.5)),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: color,
+              color: AppTheme.onSurfaceVariant.withOpacity(0.7),
             ),
           ),
         ],
@@ -685,255 +915,216 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     );
   }
 
-  Widget _buildQuickActions() {
-    // Get subscription status
-    final subscription = context.watch<SubscriptionProvider>();
-    final isPro = subscription.isPro;
-
+  Widget _buildRealAnalyticsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('QUICK ACTIONS', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
-        Row(
+        _buildAnalyticsHeader(),
+        const SizedBox(height: 24),
+        _buildMetricCards(),
+        const SizedBox(height: 24),
+        SizedBox(
+          height: 350,
+          child: AnalyticsChart(
+            data: _analyticsData.timeseries,
+            isLoading: _isLoadingAnalytics,
+          ),
+        ),
+        const SizedBox(height: 24),
+        // TrafficGlobe(projectId: widget.project.id), // Temporarily hidden
+        // const SizedBox(height: 24),
+        _buildBreakdownGrid(),
+      ],
+    );
+  }
+
+  Widget _buildAnalyticsHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: ActionCard(
-                icon: Icons.open_in_new,
-                label: 'Visit',
-                onTap: () {
-                  if (_deployments != null && _deployments!.isNotEmpty) {
-                    _launchUrl(_deployments!.first.url);
-                  } else {
-                    _launchUrl('${widget.project.name}.vercel.app');
-                  }
-                },
-              ),
+            Text(
+              widget.project.name.toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppTheme.onSurfaceVariant.withOpacity(0.6),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ActionCard(
-                icon: Icons.terminal,
-                label: 'Logs',
-                onTap: () => _tabController.animateTo(1),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ActionCard(
-                icon: Icons.settings,
-                label: 'Config',
-                onTap: isPro
-                    ? () => _tabController.animateTo(4)
-                    : () => _showPaywall(context),
-              ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.circle, size: 8, color: AppTheme.success),
+                const SizedBox(width: 8),
+                Text(
+                  'LIVE ANALYTICS',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary.withOpacity(0.8),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+        _buildTimeRangePicker(),
       ],
     );
   }
 
-  Widget _buildGitSection(String repoUrl) {
-    final link = widget.project.link!;
-    final type = link['type'] as String? ?? 'unknown';
-    final branch = link['productionBranch'] as String? ?? 'main';
-    final repo = link['repo'] as String? ?? '';
-    final org = link['org'] as String? ?? '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('GIT CONFIGURATION', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.code, color: AppTheme.onSurfaceVariant, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$org/$repo',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                        Text(
-                          type.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Production Branch',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.onSurfaceVariant,
-                          ),
-                        ),
-                        Text(branch, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Provider',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.onSurfaceVariant,
-                          ),
-                        ),
-                        Text(type.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+  Widget _buildTimeRangePicker() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<TimeRange>(
+          value: _selectedTimeRange,
+          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: AppTheme.primary),
+          elevation: 16,
+          style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 13),
+          onChanged: (TimeRange? newValue) {
+            if (newValue != null) {
+              setState(() {
+                _selectedTimeRange = newValue;
+              });
+              _fetchAnalytics();
+            }
+          },
+          items: TimeRange.values.map<DropdownMenuItem<TimeRange>>((TimeRange value) {
+            return DropdownMenuItem<TimeRange>(
+              value: value,
+              child: Text(value.label),
+            );
+          }).toList(),
+          dropdownColor: AppTheme.surfaceContainerHigh,
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildTechnicalStats() {
+  Widget _buildMetricCards() {
+    return LayoutBuilder(builder: (context, constraints) {
+      final cardWidth = (constraints.maxWidth - 32) / 3;
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          SizedBox(
+            width: cardWidth,
+            child: AnalyticsMetricCard(
+              title: 'Visitors',
+              value: NumberFormat.compact().format(_analyticsData.overview?.devices ?? 0),
+              change: _analyticsData.visitorsChange,
+              icon: Icons.people_outline,
+            ),
+          ),
+          SizedBox(
+            width: cardWidth,
+            child: AnalyticsMetricCard(
+              title: 'Views',
+              value: NumberFormat.compact().format(_analyticsData.overview?.total ?? 0),
+              change: _analyticsData.pageViewsChange,
+              icon: Icons.remove_red_eye_outlined,
+            ),
+          ),
+          SizedBox(
+            width: cardWidth,
+            child: AnalyticsMetricCard(
+              title: 'Bounce',
+              value: '${_analyticsData.overview?.bounceRate ?? 0}%',
+              change: _analyticsData.bounceRateChange,
+              invertChange: true,
+              icon: Icons.undo_outlined,
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildBreakdownGrid() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('TECHNICAL DETAILS', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('FRAMEWORK', style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.code, color: AppTheme.onSurface),
-                        const SizedBox(width: 8),
-                        Text(
-                          widget.project.framework ?? 'Other',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (widget.project.nodeVersion != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Node ${widget.project.nodeVersion}',
-                        style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('REGION', style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.project.serverlessFunctionRegion ?? 'Auto-detected',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        AnalyticsBreakdownCard(
+          title: 'Top Pages',
+          icon: Icons.description_outlined,
+          items: _analyticsData.pages,
+          colorPalette: const [
+            Color(0xFF7C3AED), // Purple
+            Color(0xFF8B5CF6), // Light purple
+            Color(0xFFA78BFA), // Lighter purple
+            Color(0xFFC4B5FD), // Very light purple
+            Color(0xFF6D28D9), // Dark purple
+          ],
+          onItemTap: (path) {
+            final projectUrl = widget.project.allUrls.isNotEmpty
+                ? 'https://${widget.project.allUrls.first}'
+                : null;
+            if (projectUrl != null && path.isNotEmpty) {
+              final fullUrl = path.startsWith('/') 
+                  ? '$projectUrl$path' 
+                  : '$projectUrl/$path';
+              launchUrl(Uri.parse(fullUrl), mode: LaunchMode.externalApplication);
+            }
+          },
+        ),
+        const SizedBox(height: 24),
+        AnalyticsBreakdownCard(
+          title: 'Top Referrers',
+          icon: Icons.link_outlined,
+          items: _analyticsData.referrers,
+          emptyLabel: 'No external referrers found',
+          colorPalette: const [
+            Color(0xFF059669), // Green
+            Color(0xFF10B981), // Light green
+            Color(0xFF34D399), // Lighter green
+            Color(0xFF6EE7B7), // Very light green
+            Color(0xFF047857), // Dark green
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildSecurityFeaturesSection() {
-    final security = widget.project.security;
-    if (security == null) return const SizedBox.shrink();
-
-    final features = <Widget>[];
-
-    final firewallEnabled = security['firewallEnabled'] as bool?;
-    final attackModeEnabled = security['attackModeEnabled'] as bool?;
-    final pageIntegrityEnabled = security['pageIntegrityEnabled'] as bool?;
-
-    if (firewallEnabled == true) {
-      features.add(_buildSecurityFeatureItem(Icons.shield, 'Firewall', 'Enabled'));
-    }
-    if (attackModeEnabled == true) {
-      features.add(_buildSecurityFeatureItem(Icons.security, 'Attack Mode', 'Enabled'));
-    }
-    if (pageIntegrityEnabled == true) {
-      features.add(_buildSecurityFeatureItem(Icons.verified_user, 'Page Integrity', 'Enabled'));
-    }
-
-    if (features.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('SECURITY FEATURES', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: Column(children: features),
+        const SizedBox(height: 24),
+        AnalyticsBreakdownCard(
+          title: 'Countries',
+          icon: Icons.public_outlined,
+          items: _analyticsData.countries,
+          colorPalette: const [
+            Color(0xFFD97706), // Orange
+            Color(0xFFF59E0B), // Light orange
+            Color(0xFFFBBF24), // Lighter orange
+            Color(0xFFFCD34D), // Very light orange
+            Color(0xFFB45309), // Dark orange
+          ],
+        ),
+        const SizedBox(height: 24),
+        AnalyticsBreakdownCard(
+          title: 'Devices',
+          icon: Icons.devices_outlined,
+          items: _analyticsData.devices,
+          colorPalette: const [
+            Color(0xFFDB2777), // Pink
+            Color(0xFFEC4899), // Light pink
+            Color(0xFFF472B6), // Lighter pink
+            Color(0xFFFBCFE8), // Very light pink
+            Color(0xFFBE185D), // Dark pink
+          ],
+        ),
+        const SizedBox(height: 24),
+        AnalyticsBreakdownCard(
+          title: 'Browsers',
+          icon: Icons.open_in_browser_outlined,
+          items: _analyticsData.browsers,
+          colorPalette: const [
+            Color(0xFF0891B2), // Cyan
+            Color(0xFF06B6D4), // Light cyan
+            Color(0xFF22D3EE), // Lighter cyan
+            Color(0xFF67E8F9), // Very light cyan
+            Color(0xFF0E7490), // Dark cyan
+          ],
         ),
       ],
     );
@@ -1127,92 +1318,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     );
   }
 
-
-  Widget _buildSecurityFeatureItem(IconData icon, String name, String status) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppTheme.onSurfaceVariant),
-          const SizedBox(width: 12),
-          Expanded(child: Text(name)),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.success.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: AppTheme.success.withOpacity(0.3), width: 1),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                fontSize: 11,
-                color: AppTheme.success,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeaturesSection() {
-    final features = <Widget>[];
-
-    if (widget.project.analytics != null && widget.project.analytics!['enabledAt'] != null) {
-      features.add(_buildFeatureItem(Icons.analytics, 'Analytics', 'Enabled'));
-    }
-    if (widget.project.webAnalytics != null && widget.project.webAnalytics!['enabledAt'] != null) {
-      features.add(_buildFeatureItem(Icons.speed, 'Web Analytics', 'Enabled'));
-    }
-    if (widget.project.speedInsights != null && widget.project.speedInsights!['enabledAt'] != null) {
-      features.add(_buildFeatureItem(Icons.bolt, 'Speed Insights', 'Enabled'));
-    }
-    if (widget.project.gitComments?['onPullRequest'] == true ||
-        widget.project.gitComments?['onCommit'] == true) {
-      features.add(_buildFeatureItem(Icons.comment, 'Git Comments', 'Enabled'));
-    }
-
-    if (features.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('FEATURES', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: Column(children: features),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeatureItem(IconData icon, String name, String status) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppTheme.onSurfaceVariant),
-          const SizedBox(width: 12),
-          Expanded(child: Text(name)),
-          Text(
-            status,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.success,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildDeploymentsTab() {
     return RefreshIndicator(

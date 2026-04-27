@@ -8,6 +8,7 @@ import '../models/deployment.dart';
 import '../models/deployment_file.dart';
 import '../models/security.dart';
 import '../models/log.dart';
+import '../models/analytics.dart';
 import 'auth_service.dart';
 
 /// Stream controller for broadcasting authentication errors (401/403)
@@ -893,6 +894,85 @@ class VercelApi {
     final data = await _handleResponse(response);
     final List attacks = data['attacks'] as List? ?? [];
     return attacks.map((a) => ActiveAttack.fromJson(a as Map<String, dynamic>)).toList();
+  }
+
+  // ==================== ANALYTICS API ====================
+
+  Uri _buildAnalyticsUri(String path, [Map<String, String>? queryParameters]) {
+    final params = Map<String, String>.from(queryParameters ?? {});
+    if (teamId != null) {
+      params['teamId'] = teamId!;
+    }
+    
+    // Analytics API uses vercel.com/api instead of api.vercel.com
+    return Uri.parse('https://vercel.com/api$path').replace(queryParameters: params.isNotEmpty ? params : null);
+  }
+
+  Future<AnalyticsOverview> getAnalyticsOverview({
+    required String projectId,
+    required String from,
+    required String to,
+  }) async {
+    final response = await http.get(
+      _buildAnalyticsUri('/web-analytics/overview', {
+        'projectId': projectId,
+        'from': from,
+        'to': to,
+      }),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    return AnalyticsOverview.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<List<TimeseriesPoint>> getAnalyticsTimeseries({
+    required String projectId,
+    required String from,
+    required String to,
+  }) async {
+    final response = await http.get(
+      _buildAnalyticsUri('/web-analytics/timeseries', {
+        'projectId': projectId,
+        'from': from,
+        'to': to,
+      }),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final dataObj = data['data'] as Map<String, dynamic>?;
+    final groups = dataObj?['groups'] as Map<String, dynamic>?;
+    final all = groups?['all'] as List<dynamic>? ?? [];
+    return all.map((json) => TimeseriesPoint.fromJson(json as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<BreakdownItem>> getAnalyticsBreakdown({
+    required String projectId,
+    required String from,
+    required String to,
+    required String groupBy,
+  }) async {
+    final response = await http.get(
+      _buildAnalyticsUri('/web-analytics/timeseries', {
+        'projectId': projectId,
+        'from': from,
+        'to': to,
+        'groupBy': groupBy,
+      }),
+      headers: await _getHeaders(),
+    );
+    final data = await _handleResponse(response);
+    final dataObj = data['data'] as Map<String, dynamic>?;
+    final groups = dataObj?['groups'] as Map<String, dynamic>? ?? {};
+    
+    final results = <BreakdownItem>[];
+    groups.forEach((key, value) {
+      if (key != 'all' && value is List) {
+        results.add(BreakdownItem.fromTimeseriesGroup(key, value));
+      }
+    });
+    
+    results.sort((a, b) => b.visitors.compareTo(a.visitors));
+    return results;
   }
 
   // ==================== DEPLOYMENT ACTIONS ====================

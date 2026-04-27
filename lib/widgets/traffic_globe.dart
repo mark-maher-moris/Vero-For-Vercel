@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_globe_3d/flutter_globe_3d.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
+import '../models/log.dart';
 
 class TrafficGlobe extends StatefulWidget {
   final String projectId;
@@ -25,6 +26,7 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
   final List<Map<String, dynamic>> _recentVisitors = [];
   bool _isLive = false;
   String? _activeDeploymentId;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -78,46 +80,55 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
         return;
       }
 
-      final logs = await appState.apiService.getDeploymentRequestLogs(
+      // Get ownerId from team or user
+      final ownerId = appState.currentTeamId ?? appState.user?['id']?.toString();
+      if (ownerId == null) return;
+
+      // Use the robust getProjectLogs endpoint like the competitor app
+      final result = await appState.apiService.getProjectLogs(
         projectId: widget.projectId,
-        deploymentId: _activeDeploymentId!,
-        limit: 20,
+        ownerId: ownerId,
+        deploymentId: _activeDeploymentId,
       );
+
+      final logs = result.logs;
 
       if (logs.isNotEmpty) {
         bool foundAnyGeo = false;
         for (var log in logs) {
-          final headers = log['proxyHeaders'] ?? log['headers'] ?? {};
-          final latVal = headers['x-vercel-ip-latitude'];
-          final lngVal = headers['x-vercel-ip-longitude'];
-
-          if (latVal != null && lngVal != null) {
-            final lat = double.tryParse(latVal.toString());
-            final lng = double.tryParse(lngVal.toString());
-
-            if (lat != null && lng != null) {
-              foundAnyGeo = true;
-              final visitor = {
-                'id': log['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
-                'lat': lat,
-                'lng': lng,
-                'city': headers['x-vercel-ip-city'] ?? 'Unknown',
-                'country': headers['x-vercel-ip-country'] ?? '??',
-                'timestamp': log['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
-              };
-              _addVisitorToGlobe(visitor);
-            }
+          if (log.latitude != null && log.longitude != null) {
+            foundAnyGeo = true;
+            final visitor = {
+              'id': log.requestId,
+              'lat': log.latitude,
+              'lng': log.longitude,
+              'city': log.regionLabel ?? 'Unknown',
+              'country': log.clientRegion.toUpperCase(),
+              'timestamp': log.timestamp.millisecondsSinceEpoch,
+            };
+            _addVisitorToGlobe(visitor);
           }
         }
         if (mounted) {
           setState(() {
             _isLive = foundAnyGeo;
+            _isFirstLoad = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLive = false;
+            _isFirstLoad = false;
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLive = false);
+        setState(() {
+          _isLive = false;
+          _isFirstLoad = false;
+        });
       }
     }
   }
@@ -128,7 +139,7 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
     if (mounted) {
       setState(() {
         _recentVisitors.insert(0, visitor);
-        if (_recentVisitors.length > 10) _recentVisitors.removeLast();
+        if (_recentVisitors.length > 20) _recentVisitors.removeLast();
 
         _controller.addNode(
           EarthNode(
@@ -136,11 +147,18 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
             latitude: visitor['lat'],
             longitude: visitor['lng'],
             child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
                 color: AppTheme.primary,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primary.withOpacity(0.5),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
             ),
           ),
@@ -151,53 +169,71 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
 
   @override
   Widget build(BuildContext context) {
-    // Don't show globe if no visitors
-    if (_recentVisitors.isEmpty) {
-      return const SizedBox.shrink();
+    // Don't show globe if no visitors and still loading or if truly empty
+    if (_recentVisitors.isEmpty && !_isFirstLoad) {
+      return Container(
+        height: 120,
+        margin: const EdgeInsets.only(bottom: 24),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: AppTheme.surfaceContainerHigh),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.public, color: AppTheme.onSurfaceVariant.withOpacity(0.2), size: 32),
+              const SizedBox(height: 12),
+              Text(
+                'Waiting for traffic...',
+                style: TextStyle(
+                  color: AppTheme.onSurfaceVariant.withOpacity(0.4),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     
     return Container(
       height: 400,
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-        color: Colors.lightBlueAccent,
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF000000), // Pure black for Vercel vibe
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: AppTheme.surfaceContainerHigh),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: Stack(
           children: [
-            // Blue background circle for globe
-            Center(
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: const BoxDecoration(
-             
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(Icons.public, size: 240, color: Colors.white70),
+            // The globe - wrapped to absorb vertical scroll gestures
+            GestureDetector(
+              onVerticalDragStart: (_) {},
+              onVerticalDragUpdate: (_) {},
+              onVerticalDragEnd: (_) {},
+              behavior: HitTestBehavior.opaque,
+              child: ColorFiltered(
+                colorFilter: const ColorFilter.matrix([
+                  1.5, 0, 0, 0, 0,
+                  0, 1.5, 0, 0, 0,
+                  0, 0, 1.5, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                child: Earth3D(
+                  controller: _controller,
+                  texture: const NetworkImage(
+                    'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg',
+                  ),
+                  initialScale: 4.0
                 ),
               ),
             ),
-            // The globe
-            ColorFiltered(
-              colorFilter: const ColorFilter.matrix([
-                1.8, 0, 0, 0, 0,
-                0, 1.8, 0, 0, 0,
-                0, 0, 1.8, 0, 0,
-                0, 0, 0, 1, 0,
-              ]),
-              child: Earth3D(
-                controller: _controller,
-                texture: const NetworkImage(
-                  'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg',
-                ),
-                initialScale: 4.0
-              ),
-            ),
+            // Header
             Positioned(
               top: 16,
               left: 16,
@@ -212,33 +248,40 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
                         decoration: BoxDecoration(
                           color: _isLive ? AppTheme.success : AppTheme.onSurfaceVariant.withOpacity(0.3),
                           shape: BoxShape.circle,
+                          boxShadow: _isLive ? [
+                            BoxShadow(
+                              color: AppTheme.success.withOpacity(0.5),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            )
+                          ] : null,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'LIVE VISITOR TRAFFIC',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppTheme.primary,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
                               letterSpacing: 1.2,
                             ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   ..._recentVisitors.take(3).map((v) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.location_on, size: 10, color: AppTheme.primary),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 8),
                             Text(
                               '${v['city']}, ${v['country']}',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: AppTheme.surface,
-                                fontWeight: FontWeight.w500,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
@@ -247,26 +290,38 @@ class _TrafficGlobeState extends State<TrafficGlobe> {
                 ],
               ),
             ),
+            // Bottom stats
             Positioned(
               bottom: 16,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface.withOpacity(0.8),
+                  color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.surfaceContainerHigh),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
                 ),
                 child: Text(
-                  '${_recentVisitors.length} Recent Visits',
+                  '${_recentVisitors.length} Recent HITS',
                   style: const TextStyle(
-                    color: AppTheme.onSurfaceVariant,
+                    color: Colors.white,
                     fontSize: 10,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
             ),
+            // Loading overlay
+            if (_isFirstLoad)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
