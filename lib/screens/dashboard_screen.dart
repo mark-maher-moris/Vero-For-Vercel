@@ -290,10 +290,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    // Watch subscription provider
+    // Watch subscription provider and app state for locking logic
     final subscription = context.watch<SubscriptionProvider>();
-    final isPro = subscription.isPro;
-    final isDemo = context.watch<AppState>().isDemoMode;
+    final appState = context.watch<AppState>();
+    final isPro = subscription.hasActiveSubscription;
+    final isDemo = appState.isDemoMode;
+    final isAuthenticated = appState.isAuthenticated;
+    
+    // Lock for authenticated non-subscribers (not demo users)
+    final shouldLock = isAuthenticated && !isPro && !isDemo;
     
     return GridView.builder(
       shrinkWrap: true,
@@ -306,8 +311,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       itemCount: projects.length,
       itemBuilder: (context, index) {
-        // Demo mode lets the user explore every project freely.
-        final isBlurred = !isPro && !isDemo && index > 0;
+        // Lock projects for authenticated non-subscribers (index > 0 means beyond first project)
+        final isBlurred = shouldLock && index > 0;
         return ProjectCard(
           project: projects[index],
           isBlurred: isBlurred,

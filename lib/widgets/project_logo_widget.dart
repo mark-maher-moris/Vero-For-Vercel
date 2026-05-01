@@ -4,6 +4,60 @@ import '../models/project.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 
+/// A widget that loads a favicon image with proper error handling.
+/// Falls back to a placeholder if the image fails to load or decode.
+class _FaviconImage extends StatefulWidget {
+  final String url;
+  final double size;
+  final Widget fallback;
+  final Widget loading;
+
+  const _FaviconImage({
+    required this.url,
+    required this.size,
+    required this.fallback,
+    required this.loading,
+  });
+
+  @override
+  State<_FaviconImage> createState() => _FaviconImageState();
+}
+
+class _FaviconImageState extends State<_FaviconImage> {
+  bool _hasError = false;
+  bool _isLoading = true;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return widget.fallback;
+    }
+
+    return Image.network(
+      widget.url,
+      width: widget.size,
+      height: widget.size,
+      fit: BoxFit.cover,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded || frame != null) {
+          _isLoading = false;
+          return child;
+        }
+        return widget.loading;
+      },
+      errorBuilder: (context, error, stackTrace) {
+        // Mark error and show fallback on next frame to avoid setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() => _hasError = true);
+          }
+        });
+        return widget.loading;
+      },
+    );
+  }
+}
+
 class ProjectLogoWidget extends StatefulWidget {
   final Project project;
   final double size;
@@ -106,20 +160,11 @@ class _ProjectLogoWidgetState extends State<ProjectLogoWidget> {
 
             // Try to load the favicon image
             final faviconUrl = snapshot.data!;
-            return Image.network(
-              faviconUrl,
-              width: widget.size,
-              height: widget.size,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return _buildFallback();
-              },
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) {
-                  return child;
-                }
-                return _buildLoadingIndicator();
-              },
+            return _FaviconImage(
+              url: faviconUrl,
+              size: widget.size,
+              fallback: _buildFallback(),
+              loading: _buildLoadingIndicator(),
             );
           },
         ),

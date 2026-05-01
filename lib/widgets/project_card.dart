@@ -71,7 +71,11 @@ class _ProjectCardState extends State<ProjectCard> {
 
   List<Widget> _buildUrlRows() {
     final urls = widget.project.allUrls;
-    if (urls.isEmpty) {
+    // Limit to max 3 URLs to prevent overflow
+    final displayUrls = urls.take(3).toList();
+    final hasMore = urls.length > 3;
+
+    if (displayUrls.isEmpty) {
       final defaultUrl = '${widget.project.name}.vercel.app';
       return [
         InkWell(
@@ -100,9 +104,9 @@ class _ProjectCardState extends State<ProjectCard> {
       ];
     }
 
-    return urls.map((url) {
+    final List<Widget> rows = displayUrls.map<Widget>((url) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(bottom: 6),
         child: InkWell(
           onTap: () async {
             final uri = Uri.parse(!url.startsWith('http') ? 'https://$url' : url);
@@ -128,6 +132,17 @@ class _ProjectCardState extends State<ProjectCard> {
         ),
       );
     }).toList();
+
+    if (hasMore) {
+      rows.add(
+        Text(
+          '+${urls.length - 3} more',
+          style: const TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant),
+        ),
+      );
+    }
+
+    return rows;
   }
 
   @override
@@ -145,176 +160,215 @@ class _ProjectCardState extends State<ProjectCard> {
       }
     }
 
-    Widget cardContent = GestureDetector(
-      onTap: widget.isBlurred
-          ? widget.onSubscribeTap
-          : () {
-              widget.onProjectTap?.call();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProjectWorkspaceScreen(project: widget.project),
-                ),
-              );
-            },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
+    // Build the header separately (always visible, not blurred)
+    Widget header = Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: isSuccess ? AppTheme.success : AppTheme.error,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            widget.project.name,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            statusStr.toUpperCase(),
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                          const SizedBox(width: 8),
-                          ..._buildStatusIndicators(),
-                        ],
-                      ),
-                    ],
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: isSuccess ? AppTheme.success : AppTheme.error,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                  ProjectLogoWidget(
-                    project: widget.project,
-                    size: 40,
-                    shape: BoxShape.rectangle,
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.project.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Column(
+              const SizedBox(height: 4),
+              Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceContainerLowest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.account_tree, size: 18, color: AppTheme.onSurfaceVariant),
-                        const SizedBox(width: 12),
-                        Text(_branchName, style: Theme.of(context).textTheme.bodyMedium),
-                        const Spacer(),
-                        Text(
-                          timeago.format(widget.project.updatedAt, locale: 'en_short'),
-                          style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    statusStr.toUpperCase(),
+                    style: Theme.of(context).textTheme.labelSmall,
                   ),
-                  const SizedBox(height: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: _buildUrlRows(),
+                  const SizedBox(width: 8),
+                  ..._buildStatusIndicators(),
+                ],
+              ),
+            ],
+          ),
+          ProjectLogoWidget(
+            project: widget.project,
+            size: 40,
+            shape: BoxShape.rectangle,
+          ),
+        ],
+      ),
+    );
+
+    // Build the body content (will be blurred when locked)
+    Widget bodyContent = Container(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerLowest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.account_tree, size: 18, color: AppTheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _branchName,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  timeago.format(widget.project.updatedAt, locale: 'en_short'),
+                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildUrlRows(),
+          ),
+        ],
+      ),
+    );
+
+    // Card container
+    Widget card = Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          header,
+          bodyContent,
+        ],
+      ),
+    );
+
+    if (widget.isBlurred) {
+      return GestureDetector(
+        onTap: widget.onSubscribeTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header is always visible and not blurred
+              header,
+              // Body with blur overlay
+              Stack(
+                children: [
+                  bodyContent,
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(2),
+                        bottomRight: Radius.circular(2),
+                      ),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface.withOpacity(0.7),
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(2),
+                              bottomRight: Radius.circular(2),
+                            ),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.lock,
+                                  color: AppTheme.primary,
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Pro Feature',
+                                  style: TextStyle(
+                                    color: AppTheme.onSurface,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Upgrade to access more projects',
+                                  style: TextStyle(
+                                    color: AppTheme.onSurfaceVariant,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton.icon(
+                                  onPressed: widget.onSubscribeTap,
+                                  icon: const Icon(Icons.star, size: 16),
+                                  label: const Text('Upgrade to Pro'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ],
           ),
         ),
-      ),
-    );
-
-    if (widget.isBlurred) {
-      return Stack(
-        children: [
-          cardContent,
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.lock,
-                          color: AppTheme.primary,
-                          size: 32,
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Pro Feature',
-                          style: TextStyle(
-                            color: AppTheme.onSurface,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Upgrade to access more projects',
-                          style: TextStyle(
-                            color: AppTheme.onSurfaceVariant,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: widget.onSubscribeTap,
-                          icon: const Icon(Icons.star, size: 16),
-                          label: const Text('Upgrade to Pro'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
       );
     }
 
-    return cardContent;
+    // Non-blurred card with tap handler
+    return GestureDetector(
+      onTap: () {
+        widget.onProjectTap?.call();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProjectWorkspaceScreen(project: widget.project),
+          ),
+        );
+      },
+      child: card,
+    );
   }
 }

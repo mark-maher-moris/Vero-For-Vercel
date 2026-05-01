@@ -359,7 +359,13 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   Widget build(BuildContext context) {
     // Watch subscription provider to check if user has Pro
     final subscription = context.watch<SubscriptionProvider>();
+    final appState = context.watch<AppState>();
     final isPro = subscription.isPro;
+    final isDemo = appState.isDemoMode;
+    final isAuthenticated = appState.isAuthenticated;
+    
+    // Lock for authenticated non-subscribers (not demo users)
+    final shouldLockTabs = isAuthenticated && !isPro && !isDemo;
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
@@ -418,8 +424,8 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                 'is_pro_user': isPro,
               }
             );
-            // If free user tries to access pro tabs, show paywall and reset to first tab
-            if (!isPro && index > 2) {
+            // If authenticated non-subscriber tries to access pro tabs, show paywall and reset to first tab
+            if (shouldLockTabs && index > 2) {
               SuperwallService().trackSubscriptionEvent('paywall_triggered', properties: {
                 'trigger': 'pro_tab_access',
                 'tab_name': tabNames[index],
@@ -456,12 +462,12 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             const Tab(text: 'OVERVIEW'),
             const Tab(text: 'LOGS'),
             const Tab(text: 'DEPLOYMENTS'),
-            _buildProTab('FILES', isPro),
-            _buildProTab('ACTIVITY', isPro),
-            _buildProTab('CRON JOBS', isPro),
-            _buildProTab('SECURITY', isPro),
-            _buildProTab('ENV VARS', isPro),
-            _buildProTab('DOMAINS', isPro),
+            _buildProTab('FILES', shouldLockTabs),
+            _buildProTab('ACTIVITY', shouldLockTabs),
+            _buildProTab('CRON JOBS', shouldLockTabs),
+            _buildProTab('SECURITY', shouldLockTabs),
+            _buildProTab('ENV VARS', shouldLockTabs),
+            _buildProTab('DOMAINS', shouldLockTabs),
           ],
         ),
       ),
@@ -477,22 +483,31 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   _buildOverviewTab(),
                   _buildLogsTab(),
                   _buildDeploymentsTab(),
-                  _buildBlurredTabIfNeeded(_buildFilesTab(), isPro, context),
-                  _buildBlurredTabIfNeeded(_buildActivityTab(), isPro, context),
-                  _buildBlurredTabIfNeeded(_buildCronJobsTab(), isPro, context),
-                  _buildBlurredTabIfNeeded(_buildSecurityTab(), isPro, context),
-                  _buildBlurredTabIfNeeded(_buildEnvVarsTab(), isPro, context),
-                  _buildBlurredTabIfNeeded(_buildDomainsTab(), isPro, context),
+                  _buildBlurredTabIfNeeded(_buildFilesTab(), shouldLockTabs, context),
+                  _buildBlurredTabIfNeeded(_buildActivityTab(), shouldLockTabs, context),
+                  _buildBlurredTabIfNeeded(_buildCronJobsTab(), shouldLockTabs, context),
+                  _buildBlurredTabIfNeeded(_buildSecurityTab(), shouldLockTabs, context),
+                  _buildBlurredTabIfNeeded(_buildEnvVarsTab(), shouldLockTabs, context),
+                  _buildBlurredTabIfNeeded(_buildDomainsTab(), shouldLockTabs, context),
                 ],
               ),
     );
   }
 
-  Widget _buildProTab(String text, bool isPro) {
-    if (isPro) {
+  void _showPaywall(BuildContext context) async {
+    await SuperwallService().presentPaywall();
+    // Refresh subscription status after paywall closes
+    if (mounted) {
+      final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
+      subscription.refresh();
+    }
+  }
+
+  Widget _buildProTab(String text, bool shouldLock) {
+    if (!shouldLock) {
       return Tab(text: text);
     }
-    // For free users, show tab with lock icon
+    // For authenticated non-subscribers, show tab with lock icon
     return Tab(
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -509,12 +524,12 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     );
   }
 
-  Widget _buildBlurredTabIfNeeded(Widget child, bool isPro, BuildContext context) {
-    if (isPro) {
+  Widget _buildBlurredTabIfNeeded(Widget child, bool shouldLock, BuildContext context) {
+    if (!shouldLock) {
       return child;
     }
 
-    // For free users, wrap with blur overlay
+    // For authenticated non-subscribers, wrap with blur overlay
     return Stack(
       children: [
         child,
@@ -574,15 +589,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         ),
       ],
     );
-  }
-
-  void _showPaywall(BuildContext context) async {
-    await SuperwallService().presentPaywall();
-    // Refresh subscription status after paywall closes
-    if (mounted) {
-      final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
-      subscription.refresh();
-    }
   }
 
   Widget _buildErrorView() {
@@ -836,7 +842,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             label: const Text('Open Vercel Dashboard'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(4),

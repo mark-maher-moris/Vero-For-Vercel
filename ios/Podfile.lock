@@ -11,11 +11,11 @@ PODS:
     - Flutter
     - FlutterMacOS
   - Superscript (1.0.13)
-  - SuperwallKit (4.14.1):
+  - SuperwallKit (4.14.2):
     - Superscript (= 1.0.13)
   - superwallkit_flutter (0.0.1):
     - Flutter
-    - SuperwallKit (= 4.14.1)
+    - SuperwallKit (= 4.14.2)
   - url_launcher_ios (0.0.1):
     - Flutter
   - webview_flutter_wkwebview (0.0.1):
@@ -62,8 +62,8 @@ SPEC CHECKSUMS:
   share_plus: 8b6f8b3447e494cca5317c8c3073de39b3600d1f
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
   Superscript: bcb4099b41bed108ab7e88cfc56af0ed1170b582
-  SuperwallKit: 841ee108a1a152d83e4c4db8497208dfe1bc61ed
-  superwallkit_flutter: 5279f60943bf51a4bb1b8c75b88f8c4a404ffc2f
+  SuperwallKit: 2db74ff2a15a1ea5771ae222dc164e6f33a8d241
+  superwallkit_flutter: 3377b242cc3f2d11d50cf4f975dcc290fdb7a888
   url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
   webview_flutter_wkwebview: 29eb20d43355b48fe7d07113835b9128f84e3af4
 

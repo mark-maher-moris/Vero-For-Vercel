@@ -370,8 +370,14 @@ class _AccountScreenState extends State<AccountScreen> {
                   context,
                   icon: Icons.vpn_key,
                   title: 'API Token',
-                  subtitle: 'Change token',
-                  onTap: () => _showChangeTokenDialog(context),
+                  subtitle: 'Connect account',
+                  onTap: () {
+                    if (subscriptionProvider.hasActiveSubscription) {
+                      _showChangeTokenDialog(context);
+                    } else {
+                      subscriptionProvider.showPaywall();
+                    }
+                  },
                 ),
                 _buildActionCard(
                   context,

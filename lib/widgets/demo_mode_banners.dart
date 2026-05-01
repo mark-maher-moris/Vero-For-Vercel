@@ -195,13 +195,24 @@ class ConnectRealAccountBanner extends StatelessWidget {
   }
 
   Future<void> _handleConnect(BuildContext context) async {
+    final subscription = context.read<SubscriptionProvider>();
+    
+    // If not subscribed, show paywall instead of allowing them to connect
+    if (!subscription.hasActiveSubscription) {
+      SuperwallService().trackUserAction(
+        'demo_connect_real_paywall_trigger',
+        context: 'demo_banner',
+      );
+      await subscription.showPaywall();
+      return;
+    }
+
     SuperwallService().trackUserAction(
       'demo_connect_real_tap',
       context: 'demo_banner',
     );
 
     final appState = context.read<AppState>();
-    final subscription = context.read<SubscriptionProvider>();
 
     // Pop any nested screens so the Consumer in main.dart swaps the root
     // widget cleanly to the LoginScreen – avoids navigation stack conflicts.

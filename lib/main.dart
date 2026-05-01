@@ -8,6 +8,7 @@ import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/demo_entry_screen.dart';
 import 'widgets/auth_error_handler.dart';
 import 'widgets/app_level_demo_banner.dart';
 
@@ -51,8 +52,8 @@ class VeroApp extends StatelessWidget {
         );
       },
       home: AuthErrorHandler(
-        child: Consumer<AppState>(
-          builder: (context, appState, child) {
+        child: Consumer2<AppState, SubscriptionProvider>(
+          builder: (context, appState, subscription, child) {
             if (appState.isLoading) {
               return const Scaffold(
                 body: Center(
@@ -65,11 +66,18 @@ class VeroApp extends StatelessWidget {
             if (appState.isAuthenticated) {
               return const MainScreen();
             }
-            // Show onboarding first, then login
+            // Show onboarding first, then demo entry
             if (!appState.hasCompletedOnboarding) {
               return const OnboardingScreen();
             }
-            return const LoginScreen();
+            
+            // If the user is subscribed but not authenticated, they can see the login screen
+            // to connect their real Vercel account.
+            if (subscription.hasActiveSubscription) {
+              return const LoginScreen();
+            }
+            
+            return const DemoEntryScreen();
           },
         ),
       ),
