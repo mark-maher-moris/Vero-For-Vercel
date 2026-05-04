@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../models/project.dart';
 import '../providers/app_state.dart';
 import '../widgets/project_selector_appbar.dart';
+import '../services/superwall_service.dart';
 
 class SettingsEnvVarsScreen extends StatefulWidget {
   final Project? project;
@@ -25,6 +26,16 @@ class _SettingsEnvVarsScreenState extends State<SettingsEnvVarsScreen> {
   bool _isPreview = false;
   bool _isDevelopment = false;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Track env vars screen view and trigger paywall
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SuperwallService().trackScreenView('env_vars');
+      SuperwallService().registerPlacement('env_vars_view');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -68,7 +68,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     _tabController = TabController(length: 9, vsync: this);
     // Initialize with a dummy future that will be replaced in _fetchData
     _deploymentFilesFuture = Future.value([]);
-    // Track project workspace view
+    // Track project workspace view (analytics only, no paywall)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SuperwallService().trackScreenView('project_workspace', additionalProps: {
         'project_id': widget.project.id,

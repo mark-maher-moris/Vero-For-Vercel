@@ -6,9 +6,13 @@ import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import '../theme/app_theme.dart';
 import '../services/superwall_service.dart';
+import '../screens/demo_entry_screen.dart';
+import '../screens/login_screen.dart';
 
 class AppLevelDemoBanner extends StatefulWidget {
-  const AppLevelDemoBanner({super.key});
+  final Widget? currentScreen;
+  
+  const AppLevelDemoBanner({super.key, this.currentScreen});
 
   @override
   State<AppLevelDemoBanner> createState() => _AppLevelDemoBannerState();
@@ -88,10 +92,25 @@ class _AppLevelDemoBannerState extends State<AppLevelDemoBanner> {
     final appState = context.watch<AppState>();
     final subscription = context.watch<SubscriptionProvider>();
 
-    // Only show if authenticated, in demo mode, and NOT actually subscribed
-    if (!appState.isAuthenticated ||
-        !appState.isDemoMode ||
-        subscription.hasActiveSubscription) {
+    // Don't show if user has an active subscription
+    if (subscription.hasActiveSubscription) {
+      return const SizedBox.shrink();
+    }
+
+    // Check if we're on the DemoEntryScreen or LoginScreen by checking widget type
+    final currentScreen = widget.currentScreen;
+    final isDemoEntryScreen = currentScreen is DemoEntryScreen;
+    final isLoginScreen = currentScreen is LoginScreen;
+
+    // Show banner if:
+    // 1. User is in demo mode (authenticated with demo data), OR
+    // 2. User is on DemoEntryScreen, OR
+    // 3. User is on LoginScreen and doesn't have a subscription
+    final shouldShowBanner = (appState.isAuthenticated && appState.isDemoMode) ||
+        isDemoEntryScreen ||
+        isLoginScreen;
+
+    if (!shouldShowBanner) {
       return const SizedBox.shrink();
     }
 

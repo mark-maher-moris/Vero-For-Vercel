@@ -134,26 +134,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       'total_pages_viewed': _currentPage + 1,
     });
     
-    // Check if user is already subscribed before showing paywall
-    final isSubscribed = await SuperwallService().getCurrentSubscriptionStatus();
-    
-    if (isSubscribed) {
-      // User already subscribed, skip paywall and complete onboarding
-      if (mounted) {
-        await context.read<AppState>().markOnboardingComplete();
-        // Don't navigate manually - let the Consumer in main.dart handle it
-        // The Consumer will detect hasCompletedOnboarding = true and show LoginScreen
-      }
-      return;
+    // Mark onboarding complete first so navigation state updates
+    if (mounted) {
+      await context.read<AppState>().markOnboardingComplete();
     }
     
     // Register Superwall placement for non-subscribed users
-    await SuperwallService().registerPlacement('after_onboarding');
-    
-    if (mounted) {
-      await context.read<AppState>().markOnboardingComplete();
-      // Don't navigate manually - let the Consumer in main.dart handle it
-      // The Consumer will detect hasCompletedOnboarding = true and show LoginScreen
+    // This will show the paywall "on top" of the next screen (DemoEntryScreen)
+    final isSubscribed = await SuperwallService().getCurrentSubscriptionStatus();
+    if (!isSubscribed) {
+      await SuperwallService().registerPlacement('after_onboarding');
     }
   }
 

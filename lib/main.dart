@@ -46,7 +46,7 @@ class VeroApp extends StatelessWidget {
       builder: (context, child) {
         return Column(
           children: [
-            const AppLevelDemoBanner(),
+            AppLevelDemoBanner(currentScreen: child),
             Expanded(child: child!),
           ],
         );

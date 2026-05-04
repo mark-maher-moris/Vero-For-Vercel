@@ -7,6 +7,7 @@ import '../models/domain.dart';
 import '../models/project.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'domain_dns_details_screen.dart';
+import '../services/superwall_service.dart';
 
 class DomainsDnsScreen extends StatefulWidget {
   const DomainsDnsScreen({super.key});
@@ -19,6 +20,16 @@ class _DomainsDnsScreenState extends State<DomainsDnsScreen> {
   Future<List<Domain>>? _domainsFuture;
   final TextEditingController _domainController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Track domains screen view and trigger paywall
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SuperwallService().trackScreenView('domains');
+      SuperwallService().registerPlacement('domains_view');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

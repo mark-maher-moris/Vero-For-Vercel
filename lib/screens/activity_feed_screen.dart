@@ -6,6 +6,7 @@ import '../models/deployment.dart';
 import '../models/project.dart';
 import '../providers/app_state.dart';
 import '../widgets/project_selector_appbar.dart';
+import '../services/superwall_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -20,6 +21,16 @@ class _ActivityFeedScreenState extends State<ActivityFeedScreen> {
   Project? _currentProject;
   String? _currentTeamId;
   Future<List<Deployment>>? _deploymentsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Track activity screen view and trigger paywall
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SuperwallService().trackScreenView('activity_feed');
+      SuperwallService().registerPlacement('activity_view');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

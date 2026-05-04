@@ -25,12 +25,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _fetchUsageData();
-    // Track dashboard screen view for analytics only
+    // Track dashboard screen view and trigger paywall
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SuperwallService().trackScreenView('dashboard', additionalProps: {
         'project_count': context.read<AppState>().projects.length,
         'has_teams': context.read<AppState>().teams.isNotEmpty,
       });
+      SuperwallService().registerPlacement('dashboard_view');
     });
   }
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../widgets/project_selector_appbar.dart';
+import '../services/superwall_service.dart';
 
 class UsageBillingScreen extends StatefulWidget {
   const UsageBillingScreen({super.key});
@@ -19,6 +20,11 @@ class _UsageBillingScreenState extends State<UsageBillingScreen> {
   void initState() {
     super.initState();
     _fetchUsageData();
+    // Track usage/billing screen view and trigger paywall
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SuperwallService().trackScreenView('usage_billing');
+      SuperwallService().registerPlacement('analytics_view');
+    });
   }
 
   Future<void> _fetchUsageData() async {

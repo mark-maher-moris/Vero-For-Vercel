@@ -300,7 +300,7 @@ App: VERO For Vercel''';
               ),
               const SizedBox(height: 16),
               Text(
-                'VERO For Vercel',
+                'Connect Your Vercel Account',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       letterSpacing: 4,
