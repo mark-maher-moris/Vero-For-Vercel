@@ -23,7 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final List<Animation<double>> _fadeAnimations;
   late final List<Animation<double>> _slideAnimations;
 
-  final int _totalPages = 4;
+  final int _totalPages = 5;
 
   @override
   void initState() {
@@ -80,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _animationControllers[page].forward(from: 0);
     
     // Track onboarding page view
-    final pageNames = ['privacy', 'opensource', 'github_support', 'features'];
+    final pageNames = ['privacy', 'opensource', 'github_support', 'home_widgets', 'features'];
     SuperwallService().trackUserAction('onboarding_page_view', context: 'onboarding', properties: {
       'page_index': page,
       'page_name': pageNames[page],
@@ -178,9 +178,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         slideAnimation: _slideAnimations[2],
                       );
                     case 3:
-                      return _FeaturesSlide(
+                      return _HomeWidgetsSlide(
                         fadeAnimation: _fadeAnimations[3],
                         slideAnimation: _slideAnimations[3],
+                      );
+                    case 4:
+                      return _FeaturesSlide(
+                        fadeAnimation: _fadeAnimations[4],
+                        slideAnimation: _slideAnimations[4],
                       );
                     default:
                       return const SizedBox.shrink();
@@ -729,6 +734,238 @@ class _GitHubSlide extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _HomeWidgetsSlide extends StatelessWidget {
+  final Animation<double> fadeAnimation;
+  final Animation<double> slideAnimation;
+
+  const _HomeWidgetsSlide({
+    required this.fadeAnimation,
+    required this.slideAnimation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: fadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: fadeAnimation.value,
+          child: Transform.translate(
+            offset: Offset(0, slideAnimation.value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 40),
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: const Icon(
+                            Icons.widgets_outlined,
+                            color: AppTheme.primary,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: const Text(
+                            'HOME WIDGETS',
+                            style: TextStyle(
+                              color: AppTheme.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    Text(
+                      'Your Projects\nOn Your Home Screen',
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                            color: AppTheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                            height: 1.1,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Add Vero widgets to your home screen for instant access to live stats — no need to open the app.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.onSurfaceVariant,
+                            height: 1.6,
+                          ),
+                    ),
+                    const SizedBox(height: 32),
+                    _buildWidgetCard(
+                      icon: Icons.people_outline,
+                      title: 'Users Widget',
+                      size: 'Small (2×2)',
+                      description:
+                          '24h visitors and last-hour online count at a glance.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildWidgetCard(
+                      icon: Icons.terminal_outlined,
+                      title: 'Logs Widget',
+                      size: 'Medium & Large',
+                      description:
+                          'Live build and runtime log entries from your latest deployment.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildWidgetCard(
+                      icon: Icons.analytics_outlined,
+                      title: 'Analytics Widget',
+                      size: 'Large (4×4)',
+                      description:
+                          'Visitors, bounce rate, and top traffic sources. Requires Vercel Analytics.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildWidgetCard(
+                      icon: Icons.public_outlined,
+                      title: 'Geo Traffic Widget',
+                      size: 'Medium (4×2)',
+                      description:
+                          'Top countries driving traffic to your project. Requires Vercel Analytics.',
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(2),
+                        border: Border.all(
+                          color: AppTheme.primary.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.lock_outline_rounded,
+                            color: AppTheme.primary,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Widgets require a Pro subscription and show a blur + lock overlay if inactive.',
+                              style: const TextStyle(
+                                color: AppTheme.onSurfaceVariant,
+                                fontSize: 12,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWidgetCard({
+    required IconData icon,
+    required String title,
+    required String size,
+    required String description,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Icon(icon, color: AppTheme.primary, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Text(
+                        size,
+                        style: const TextStyle(
+                          color: AppTheme.onSurfaceVariant,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: AppTheme.onSurfaceVariant,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

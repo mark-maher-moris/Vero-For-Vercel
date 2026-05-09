@@ -9,6 +9,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/demo_entry_screen.dart';
+import 'services/widget_service.dart';
 import 'widgets/auth_error_handler.dart';
 import 'widgets/app_level_demo_banner.dart';
 
@@ -18,6 +19,9 @@ Future<void> main() async {
   
   // Initialize Superwall SDK
   await SuperwallService().initialize();
+  
+  // Initialize WidgetService (sets iOS App Group ID)
+  await WidgetService().initialize();
   
   runApp(
     MultiProvider(

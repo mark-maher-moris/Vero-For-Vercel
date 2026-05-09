@@ -6,12 +6,14 @@ import '../services/api_service.dart';
 import '../services/demo_api_service.dart';
 import '../services/demo_data.dart';
 import '../services/superwall_service.dart';
+import '../services/widget_service.dart';
 import '../models/project.dart';
 import 'subscription_provider.dart';
 
 class AppState extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final SuperwallService _superwallService = SuperwallService();
+  final WidgetService _widgetService = WidgetService();
   VercelApi _apiService = VercelApi();
 
   bool _isAuthenticated = false;
@@ -281,6 +283,8 @@ class AppState extends ChangeNotifier {
         // Track successful login
         await _superwallService.trackUserAction('login_success', context: 'app_state');
       }
+      // Push auth data and widget content after successful login
+      await _pushWidgetData();
     } catch (e) {
       _errorMessage = e.toString();
       if (kDebugMode) print('[AppState] Login error: $e');
@@ -425,5 +429,42 @@ class AppState extends ChangeNotifier {
       _errorMessage = e.toString();
       rethrow;
     }
+  }
+
+  /// Push current auth data and project list to home screen widgets.
+  /// Also refreshes widget content for all configured widgets.
+  Future<void> _pushWidgetData() async {
+    if (_isDemoMode) return;
+    try {
+      await _widgetService.initialize();
+      final isSubscribed = await _superwallService.getCurrentSubscriptionStatus();
+      await _widgetService.pushAuthData(
+        teamId: _currentTeamId,
+        isSubscribed: isSubscribed,
+      );
+      final projectList = _projects
+          .map((p) => <String, String>{'id': p.id, 'name': p.name})
+          .toList();
+      await _widgetService.pushProjects(projectList);
+      // Refresh widget data if not in demo mode
+      if (!_isDemoMode) {
+        await _widgetService.refreshAll(
+          api: _apiService,
+          projects: projectList,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) print('[AppState] _pushWidgetData error: $e');
+    }
+  }
+
+  /// Call this to refresh widget data on demand (e.g. after pull-to-refresh).
+  Future<void> refreshWidgets() => _pushWidgetData();
+
+  /// Set which project a specific widget type should display.
+  Future<void> setWidgetProject(String widgetType, String projectId, String projectName) async {
+    await _widgetService.initialize();
+    await _widgetService.setProjectForWidget(widgetType, projectId, projectName);
+    await _pushWidgetData();
   }
 }

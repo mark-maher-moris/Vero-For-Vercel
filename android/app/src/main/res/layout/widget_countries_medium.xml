@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D0D0D"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GEO · "
+                android:textColor="#4A9EFF"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_project_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Select Project"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/widget_last_updated"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="—"
+                android:textColor="#333333"
+                android:textSize="7sp" />
+
+        </LinearLayout>
+
+        <!-- Countries list -->
+        <LinearLayout
+            android:id="@+id/widget_countries_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:visibility="visible">
+
+            <LinearLayout android:id="@+id/country_row_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/country_name_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#CCCCCC" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_count_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/country_row_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/country_name_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#AAAAAA" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_count_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/country_row_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/country_name_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#888888" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_count_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/country_row_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/country_name_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#666666" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_count_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/country_row_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/country_name_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#555555" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_count_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- No data placeholder -->
+        <TextView
+            android:id="@+id/widget_no_data"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:text="Tap to configure widget"
+            android:textColor="#444444"
+            android:textSize="10sp"
+            android:gravity="center"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Lock overlay -->
+    <LinearLayout
+        android:id="@+id/widget_lock_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC000000"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔒" android:textSize="22sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Upgrade to Pro" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:layout_marginTop="6dp" />
+
+    </LinearLayout>
+
+</FrameLayout>

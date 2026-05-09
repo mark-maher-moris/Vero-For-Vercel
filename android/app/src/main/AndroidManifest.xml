@@ -25,6 +25,13 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Widget deep-link handler: vero://widget/configure?type=... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="vero"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
@@ -44,6 +51,74 @@
         <activity android:name="com.superwall.sdk.debug.DebugViewActivity" />
         <activity android:name="com.superwall.sdk.debug.localizations.SWLocalizationActivity" />
         <activity android:name="com.superwall.sdk.debug.SWConsoleActivity" />
+
+        <!-- ===================== HOME SCREEN WIDGETS ===================== -->
+
+        <!-- Users Small Widget (2x2) -->
+        <receiver
+            android:name=".UsersSmallWidget"
+            android:exported="true"
+            android:label="Vero Users">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_users_small_info" />
+        </receiver>
+
+        <!-- Logs Medium Widget (4x2) -->
+        <receiver
+            android:name=".LogsMediumWidget"
+            android:exported="true"
+            android:label="Vero Logs (Medium)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_logs_medium_info" />
+        </receiver>
+
+        <!-- Logs Large Widget (4x4) -->
+        <receiver
+            android:name=".LogsLargeWidget"
+            android:exported="true"
+            android:label="Vero Logs (Large)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_logs_large_info" />
+        </receiver>
+
+        <!-- Analytics Large Widget (4x4) -->
+        <receiver
+            android:name=".AnalyticsLargeWidget"
+            android:exported="true"
+            android:label="Vero Analytics">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_analytics_large_info" />
+        </receiver>
+
+        <!-- Countries Medium Widget (4x2) -->
+        <receiver
+            android:name=".CountriesMediumWidget"
+            android:exported="true"
+            android:label="Vero Traffic by Country">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_countries_medium_info" />
+        </receiver>
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
