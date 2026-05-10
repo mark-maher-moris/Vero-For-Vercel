@@ -1,0 +1,80 @@
+//
+//  VeroWidgetsLiveActivity.swift
+//  VeroWidgets
+//
+//  Created by Mark Maher on 10/05/2026.
+//
+
+import ActivityKit
+import WidgetKit
+import SwiftUI
+
+struct VeroWidgetsAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        // Dynamic stateful properties about your activity go here!
+        var emoji: String
+    }
+
+    // Fixed non-changing properties about your activity go here!
+    var name: String
+}
+
+struct VeroWidgetsLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: VeroWidgetsAttributes.self) { context in
+            // Lock screen/banner UI goes here
+            VStack {
+                Text("Hello \(context.state.emoji)")
+            }
+            .activityBackgroundTint(Color.cyan)
+            .activitySystemActionForegroundColor(Color.black)
+
+        } dynamicIsland: { context in
+            DynamicIsland {
+                // Expanded UI goes here.  Compose the expanded UI through
+                // various regions, like leading/trailing/center/bottom
+                DynamicIslandExpandedRegion(.leading) {
+                    Text("Leading")
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text("Trailing")
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    Text("Bottom \(context.state.emoji)")
+                    // more content
+                }
+            } compactLeading: {
+                Text("L")
+            } compactTrailing: {
+                Text("T \(context.state.emoji)")
+            } minimal: {
+                Text(context.state.emoji)
+            }
+            .widgetURL(URL(string: "http://www.apple.com"))
+            .keylineTint(Color.red)
+        }
+    }
+}
+
+extension VeroWidgetsAttributes {
+    fileprivate static var preview: VeroWidgetsAttributes {
+        VeroWidgetsAttributes(name: "World")
+    }
+}
+
+extension VeroWidgetsAttributes.ContentState {
+    fileprivate static var smiley: VeroWidgetsAttributes.ContentState {
+        VeroWidgetsAttributes.ContentState(emoji: "😀")
+     }
+     
+     fileprivate static var starEyes: VeroWidgetsAttributes.ContentState {
+         VeroWidgetsAttributes.ContentState(emoji: "🤩")
+     }
+}
+
+#Preview("Notification", as: .content, using: VeroWidgetsAttributes.preview) {
+   VeroWidgetsLiveActivity()
+} contentStates: {
+    VeroWidgetsAttributes.ContentState.smiley
+    VeroWidgetsAttributes.ContentState.starEyes
+}

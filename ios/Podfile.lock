@@ -3,6 +3,8 @@ PODS:
   - flutter_secure_storage_darwin (10.0.0):
     - Flutter
     - FlutterMacOS
+  - home_widget (0.0.1):
+    - Flutter
   - in_app_review (2.0.0):
     - Flutter
   - share_plus (0.0.1):
@@ -25,6 +27,7 @@ PODS:
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_secure_storage_darwin (from `.symlinks/plugins/flutter_secure_storage_darwin/darwin`)
+  - home_widget (from `.symlinks/plugins/home_widget/ios`)
   - in_app_review (from `.symlinks/plugins/in_app_review/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -42,6 +45,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_secure_storage_darwin:
     :path: ".symlinks/plugins/flutter_secure_storage_darwin/darwin"
+  home_widget:
+    :path: ".symlinks/plugins/home_widget/ios"
   in_app_review:
     :path: ".symlinks/plugins/in_app_review/ios"
   share_plus:
@@ -58,6 +63,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_secure_storage_darwin: 557817588b80e60213cbecb573c45c76b788018d
+  home_widget: fdbbfaa90f06f3022cb57f79678d4d58b9c5e140
   in_app_review: 436034b18594851a7328d7f1c2ed5ec235b79cfc
   share_plus: 8b6f8b3447e494cca5317c8c3073de39b3600d1f
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
