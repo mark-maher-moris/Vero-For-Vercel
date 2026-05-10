@@ -9,6 +9,7 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
+@available(iOS 18.0, *)
 struct VeroWidgetsControl: ControlWidget {
     static let kind: String = "com.buildagon.vero.VeroWidgets"
 

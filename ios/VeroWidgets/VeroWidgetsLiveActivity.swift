@@ -19,6 +19,7 @@ struct VeroWidgetsAttributes: ActivityAttributes {
     var name: String
 }
 
+@available(iOS 16.1, *)
 struct VeroWidgetsLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: VeroWidgetsAttributes.self) { context in

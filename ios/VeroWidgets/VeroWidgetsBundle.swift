@@ -11,8 +11,10 @@ import SwiftUI
 @main
 struct VeroWidgetsBundle: WidgetBundle {
     var body: some Widget {
-        VeroWidgets()
-        VeroWidgetsControl()
-        VeroWidgetsLiveActivity()
+        UsersSmallWidget()
+        LogsMediumWidget()
+        LogsLargeWidget()
+        AnalyticsLargeWidget()
+        CountriesMediumWidget()
     }
 }
