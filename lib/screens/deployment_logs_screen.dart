@@ -267,46 +267,47 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
     Color levelColor;
     switch (level) {
       case 'ERROR':
-        levelColor = AppTheme.error;
+        levelColor = const Color(0xFFF14C4C);
         break;
       case 'WARN':
-        levelColor = const Color(0xFFF5A623); // Vercel Warning Yellow
+        levelColor = const Color(0xFFCE9178);
         break;
       default:
-        levelColor = AppTheme.primary;
+        levelColor = const Color(0xFF4EC9B0);
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Time row
-          Text(
-            time,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Color(0xFF666666)),
-          ),
-          const SizedBox(height: 2),
-          // Level and message row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 45,
-                child: Text(
-                  level,
-                  style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: levelColor, fontWeight: FontWeight.bold),
-                ),
+      padding: const EdgeInsets.symmetric(vertical: 1, horizontal: 16),
+      child: SelectableText.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '[$time] ',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF808080),
+                fontFamily: 'monospace',
               ),
-              Expanded(
-                child: Text(
-                  message,
-                  style: TextStyle(fontFamily: 'monospace', fontSize: 13, color: level == 'ERROR' ? AppTheme.error : AppTheme.onSurface),
-                ),
+            ),
+            TextSpan(
+              text: '$level ',
+              style: TextStyle(
+                fontSize: 12,
+                color: levelColor,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
-        ],
+            ),
+            TextSpan(
+              text: message,
+              style: TextStyle(
+                fontSize: 12,
+                color: level == 'ERROR' ? const Color(0xFFF14C4C) : const Color(0xFFD4D4D4),
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

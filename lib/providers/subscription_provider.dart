@@ -16,11 +16,11 @@ class SubscriptionProvider extends ChangeNotifier {
   
   // Getters
   bool get isLoading => _isLoading;
-  bool get isPro => _isPro || (_appState?.isDemoMode ?? false);
+  bool get isPro => _isPro || (_appState?.isDemoMode ?? false) || _superwallService.isFullyFree;
   String? get errorMessage => _errorMessage;
   
   // Computed properties for UI
-  bool get hasActiveSubscription => _isPro;
+  bool get hasActiveSubscription => isPro;
   bool get hasError => _errorMessage != null;
   
   StreamSubscription<bool>? _subscriptionStatusSubscription;

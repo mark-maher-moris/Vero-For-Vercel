@@ -23,6 +23,17 @@ class SuperwallService {
   factory SuperwallService() => _instance;
   SuperwallService._internal();
 
+  /// Temporary free mode flags - set to true to make the app fully free on that platform
+  static const bool _isAndroidFullyFree = true;
+  static const bool _isIOSFullyFree = true;
+
+  /// Whether the app is in fully free mode on the current platform
+  bool get isFullyFree {
+    if (Platform.isAndroid) return _isAndroidFullyFree;
+    if (Platform.isIOS) return _isIOSFullyFree;
+    return false;
+  }
+
   /// Whether Superwall has been initialized
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -37,6 +48,12 @@ class SuperwallService {
 
   /// Get current subscription status directly from Superwall (async)
   Future<bool> getCurrentSubscriptionStatus() async {
+    // If in fully free mode, always return true (Pro)
+    if (isFullyFree) {
+      if (kDebugMode) print('Superwall: Fully free mode enabled, returning Pro status');
+      return true;
+    }
+
     if (!_isInitialized) {
       if (kDebugMode) print('Superwall: Not initialized, returning cached status: $_hasActiveSubscription');
       return _hasActiveSubscription;
@@ -190,6 +207,12 @@ class SuperwallService {
   /// [placement] - The placement identifier configured in Superwall dashboard
   /// [params] - Optional parameters to pass to the paywall
   Future<void> registerPlacement(String placement, {Map<String, dynamic>? params}) async {
+    // Skip paywall triggers in fully free mode
+    if (isFullyFree) {
+      if (kDebugMode) print('Superwall: Fully free mode enabled, skipping paywall placement $placement');
+      return;
+    }
+
     if (!_isInitialized) {
       if (kDebugMode) print('Superwall: Not initialized, skipping placement $placement');
       return;
@@ -211,6 +234,12 @@ class SuperwallService {
 
   /// Present a paywall manually
   Future<void> presentPaywall() async {
+    // Skip paywall presentation in fully free mode
+    if (isFullyFree) {
+      if (kDebugMode) print('Superwall: Fully free mode enabled, skipping manual paywall');
+      return;
+    }
+
     if (!_isInitialized) {
       if (kDebugMode) print('Superwall: Not initialized, cannot present manual paywall');
       return;

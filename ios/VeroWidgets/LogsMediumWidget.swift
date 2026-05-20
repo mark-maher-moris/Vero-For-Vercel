@@ -114,90 +114,88 @@ struct LogsWidgetView: View {
     let entry: LogsEntry
 
     var body: some View {
-        ZStack {
-            Color.veroSurface.ignoresSafeArea()
-
-            VStack(alignment: .leading, spacing: 0) {
-                // Header
-                HStack {
-                    Text("LOGS")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(.veroPrimary)
-                    Text("·")
-                        .foregroundColor(.veroSubtle)
-                        .font(.system(size: 8))
-                    Text(entry.projectName)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer()
-                    Text(entry.deployStatus)
-                        .font(.system(size: 7, weight: .semibold))
-                        .foregroundColor(statusColor(entry.deployStatus))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(statusColor(entry.deployStatus).opacity(0.12))
-                        .cornerRadius(2)
-                }
-                .padding(.bottom, 6)
-
-                if !entry.isConfigured {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 4) {
-                            Image(systemName: "gear")
-                                .foregroundColor(.veroMuted)
-                            Text("Tap to configure")
-                                .font(.system(size: 10))
-                                .foregroundColor(.veroMuted)
-                        }
-                        Spacer()
-                    }
-                    Spacer()
-                } else if entry.logs.isEmpty {
-                    Spacer()
-                    Text("No recent logs")
-                        .font(.system(size: 10))
-                        .foregroundColor(.veroSubtle)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    Spacer()
-                } else {
-                    // Log rows
-                    ForEach(Array(entry.logs.enumerated()), id: \.offset) { _, log in
-                        HStack(alignment: .top, spacing: 6) {
-                            Text(log.message.isEmpty ? "—" : log.message)
-                                .font(.system(size: 9, design: .monospaced))
-                                .foregroundColor(.veroOnSurfaceVariant)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            if log.timestampMs > 0 {
-                                Text(formatTimestamp(log.timestampMs))
-                                    .font(.system(size: 8))
-                                    .foregroundColor(.veroSubtle)
-                            }
-                        }
-                        .padding(.vertical, 1)
-                    }
-                    Spacer(minLength: 0)
-                }
-
-                // Footer
-                Text(relativeTime(from: entry.lastUpdated))
-                    .font(.system(size: 7))
-                    .foregroundColor(Color(hex: "#333333"))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.top, 4)
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("LOGS")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.veroPrimary)
+                Text("·")
+                    .foregroundColor(.veroSubtle)
+                    .font(.system(size: 8))
+                Text(entry.projectName)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                Text(entry.deployStatus)
+                    .font(.system(size: 7, weight: .semibold))
+                    .foregroundColor(statusColor(entry.deployStatus))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(statusColor(entry.deployStatus).opacity(0.12))
+                    .cornerRadius(2)
             }
-            .padding(10)
+            .padding(.bottom, 6)
 
+            if !entry.isConfigured {
+                Spacer()
+                HStack {
+                    Spacer()
+                    VStack(spacing: 4) {
+                        Image(systemName: "gear")
+                            .foregroundColor(.veroMuted)
+                        Text("Tap to configure")
+                            .font(.system(size: 10))
+                            .foregroundColor(.veroMuted)
+                    }
+                    Spacer()
+                }
+                Spacer()
+            } else if entry.logs.isEmpty {
+                Spacer()
+                Text("No recent logs")
+                    .font(.system(size: 10))
+                    .foregroundColor(.veroSubtle)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Spacer()
+            } else {
+                // Log rows
+                ForEach(Array(entry.logs.enumerated()), id: \.offset) { _, log in
+                    HStack(alignment: .top, spacing: 6) {
+                        Text(log.message.isEmpty ? "—" : log.message)
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(.veroOnSurfaceVariant)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if log.timestampMs > 0 {
+                            Text(formatTimestamp(log.timestampMs))
+                                .font(.system(size: 8))
+                                .foregroundColor(.veroSubtle)
+                        }
+                    }
+                    .padding(.vertical, 1)
+                }
+                Spacer(minLength: 0)
+            }
+
+            // Footer
+            Text(relativeTime(from: entry.lastUpdated))
+                .font(.system(size: 7))
+                .foregroundColor(.veroMuted)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.top, 4)
+        }
+        .padding(10)
+        .overlay {
             if !entry.isSubscribed {
                 WidgetLockView()
             }
         }
         .widgetURL(makeWidgetURL(for: "logs"))
+        .applyWidgetBackground(Color.veroSurface)
     }
 }
 

@@ -5,6 +5,7 @@ import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
 import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
+import '../screens/login_screen.dart';
 
 /// Upgrade CTA card shown while the user is browsing demo data.
 ///
@@ -212,12 +213,10 @@ class ConnectRealAccountBanner extends StatelessWidget {
       context: 'demo_banner',
     );
 
-    final appState = context.read<AppState>();
-
-    // Pop any nested screens so the Consumer in main.dart swaps the root
-    // widget cleanly to the LoginScreen – avoids navigation stack conflicts.
-    Navigator.of(context).popUntil((route) => route.isFirst);
-
-    await appState.exitDemoMode(subscriptionProvider: subscription);
+    // Push LoginScreen so the user can go back to the demo.
+    // If they login successfully, LoginScreen will pop itself and MainScreen will refresh.
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
   }
 }

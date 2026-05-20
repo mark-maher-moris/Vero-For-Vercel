@@ -1780,7 +1780,7 @@ Disallow: /admin/
     final baseTraffic = 1000 + random.nextInt(1000); // 1000-2000
     
     // Determine interval based on duration
-    final intervalHours = duration.inDays > 30 ? 24 : (duration.inDays > 7 ? 6 : 1);
+    final intervalHours = duration.inDays > 30 ? 24 : (duration.inDays >= 7 ? 6 : 1);
     final steps = (duration.inHours / intervalHours).ceil();
     
     // Generate realistic traffic patterns (higher during weekdays, peak hours)

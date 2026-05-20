@@ -160,29 +160,11 @@ class LogDetailScreen extends StatelessWidget {
 
   Widget _buildConsoleLogsSection() {
     return Container(
-      color: AppTheme.surface,
+      color: const Color(0xFF000000),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            color: AppTheme.surfaceContainerLow,
-            child: Row(
-              children: [
-                const Icon(Icons.terminal, size: 18, color: AppTheme.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Text(
-                  'Console Logs (${log.logs.length})',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
           ...log.logs.asMap().entries.map((entry) {
             final index = entry.key;
             final logLine = entry.value;
@@ -195,32 +177,51 @@ class LogDetailScreen extends StatelessWidget {
 
   Widget _buildLogLine(LogLine logLine, int index) {
     final timeStr = _formatTime(logLine.timestamp);
+    final level = logLine.level.toUpperCase();
     final isError = logLine.level.toLowerCase() == 'error';
+    final isWarn = logLine.level.toLowerCase() == 'warn' || logLine.level.toLowerCase() == 'warning';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-      color: index % 2 == 0 ? AppTheme.surfaceContainerLow.withOpacity(0.5) : Colors.transparent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            timeStr,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.onSurfaceVariant,
-              fontFamily: 'monospace',
+    Color levelColor;
+    if (isError) {
+      levelColor = const Color(0xFFF14C4C);
+    } else if (isWarn) {
+      levelColor = const Color(0xFFCE9178);
+    } else {
+      levelColor = const Color(0xFF4EC9B0);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1, horizontal: 16),
+      child: SelectableText.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '[$timeStr] ',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF808080),
+                fontFamily: 'monospace',
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          SelectableText(
-            logLine.message,
-            style: TextStyle(
-              fontSize: 13,
-              color: isError ? AppTheme.error : AppTheme.onSurface,
-              fontFamily: 'monospace',
+            TextSpan(
+              text: '$level ',
+              style: TextStyle(
+                fontSize: 12,
+                color: levelColor,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+            TextSpan(
+              text: logLine.message,
+              style: TextStyle(
+                fontSize: 12,
+                color: isError ? const Color(0xFFF14C4C) : const Color(0xFFD4D4D4),
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

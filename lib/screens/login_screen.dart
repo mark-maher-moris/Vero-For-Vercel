@@ -9,7 +9,12 @@ import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool shouldResetOnboardingOnBack;
+
+  const LoginScreen({
+    super.key,
+    this.shouldResetOnboardingOnBack = false,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -72,6 +77,12 @@ class _LoginScreenState extends State<LoginScreen> {
       await context.read<AppState>().login(token);
       if (mounted) {
         if (kDebugMode) print('[LoginScreen] Login successful, AppState.isAuthenticated should trigger navigation');
+        
+        // If this screen was pushed (e.g. from AccountScreen in demo mode), pop it.
+        // The root Consumer in main.dart will rebuild and keep showing MainScreen but with real data.
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -248,11 +259,11 @@ App: VERO For Vercel''';
             final canPop = navigator.canPop();
             
             if (canPop) {
-              // Pop first to avoid race condition with Consumer rebuild
               navigator.pop();
-              // Then reset onboarding state after navigation
-              context.read<AppState>().resetOnboarding();
-            } else {
+            }
+            
+            // Only reset onboarding if specifically requested (e.g., from onboarding screen)
+            if (widget.shouldResetOnboardingOnBack) {
               context.read<AppState>().resetOnboarding();
             }
           },

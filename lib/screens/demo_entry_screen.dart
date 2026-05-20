@@ -59,6 +59,9 @@ class _DemoEntryScreenState extends State<DemoEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final superwallService = SuperwallService();
+    final isFullyFree = superwallService.isFullyFree;
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
       body: SafeArea(
@@ -93,9 +96,11 @@ class _DemoEntryScreenState extends State<DemoEntryScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Explore all features of Vero for Vercel using curated demo data. Ready to manage your own projects? Upgrade to Pro anytime.',
-                style: TextStyle(
+              Text(
+                isFullyFree
+                    ? 'Explore all features of Vero for Vercel using curated demo data.'
+                    : 'Explore all features of Vero for Vercel using curated demo data. Ready to manage your own projects? Upgrade to Pro anytime.',
+                style: const TextStyle(
                   fontSize: 16,
                   color: AppTheme.onSurfaceVariant,
                   height: 1.5,
@@ -130,29 +135,32 @@ class _DemoEntryScreenState extends State<DemoEntryScreen> {
                             ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: OutlinedButton.icon(
-                      onPressed: _isLoading ? null : () => context.read<SubscriptionProvider>().showPaywall(),
-                      icon: const Icon(Icons.star, size: 20),
-                      label: const Text(
-                        'Upgrade to Vero Pro',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  // Only show upgrade button if not in fully free mode
+                  if (!isFullyFree) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading ? null : () => context.read<SubscriptionProvider>().showPaywall(),
+                        icon: const Icon(Icons.star, size: 20),
+                        label: const Text(
+                          'Upgrade to Vero Pro',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.primary,
-                        side: const BorderSide(color: AppTheme.primary),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(2),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primary,
+                          side: const BorderSide(color: AppTheme.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               const SizedBox(height: 48),

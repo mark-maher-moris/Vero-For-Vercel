@@ -296,30 +296,41 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
 
   Widget _buildPaginatedLogView() {
     if (_isLoading && _logs == null) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF4EC9B0)));
     }
 
     if (_errorMessage != null) {
-      return RefreshIndicator(
-        onRefresh: () => _fetchLogs(useNewApi: true),
-        color: AppTheme.primary,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
-                  const SizedBox(height: 16),
-                  const Text('Failed to load logs', style: TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12)),
-                  const SizedBox(height: 24),
-                  ElevatedButton(onPressed: () => _fetchLogs(useNewApi: true), child: const Text('Retry')),
-                  const SizedBox(height: 100),
-                ],
+      return Container(
+        color: const Color(0xFF000000),
+        child: RefreshIndicator(
+          onRefresh: () => _fetchLogs(useNewApi: true),
+          color: const Color(0xFF4EC9B0),
+          backgroundColor: const Color(0xFF1E1E1E),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, color: Color(0xFFF14C4C), size: 48),
+                    const SizedBox(height: 16),
+                    const Text('Failed to load logs', style: TextStyle(color: Color(0xFFD4D4D4), fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF808080), fontSize: 12)),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => _fetchLogs(useNewApi: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E1E1E),
+                        foregroundColor: const Color(0xFFD4D4D4),
+                      ),
+                      child: const Text('Retry'),
+                    ),
+                    const SizedBox(height: 100),
+                  ],
+                ),
               ),
             ),
           ),
@@ -328,20 +339,24 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
     }
 
     if (_logs == null || _logs!.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: () => _fetchLogs(useNewApi: true),
-        color: AppTheme.primary,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('No logs available', style: TextStyle(color: AppTheme.onSurfaceVariant)),
-                  const SizedBox(height: 100),
-                ],
+      return Container(
+        color: const Color(0xFF000000),
+        child: RefreshIndicator(
+          onRefresh: () => _fetchLogs(useNewApi: true),
+          color: const Color(0xFF4EC9B0),
+          backgroundColor: const Color(0xFF1E1E1E),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('No logs available', style: TextStyle(color: Color(0xFF808080), fontFamily: 'monospace')),
+                    const SizedBox(height: 100),
+                  ],
+                ),
               ),
             ),
           ),
@@ -361,39 +376,48 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
       ).toList();
     }
 
-    return RefreshIndicator(
-      onRefresh: () => _fetchLogs(useNewApi: true),
-      color: AppTheme.primary,
-      child: Column(
-        children: [
-          // Table header
-          _buildTableHeader(),
-          Expanded(
-            child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: filteredLogs.length,
-              itemBuilder: (context, index) {
-                final log = filteredLogs[index];
-                return _buildLogListRow(log, index % 2 == 0);
-              },
-            ),
-          ),
-          if (_hasMoreRows)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ElevatedButton(
-                onPressed: _isLoadingMore ? null : _loadMoreLogs,
-                child: _isLoadingMore
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Load More'),
+    return Container(
+      color: const Color(0xFF000000),
+      child: RefreshIndicator(
+        onRefresh: () => _fetchLogs(useNewApi: true),
+        color: const Color(0xFF4EC9B0),
+        backgroundColor: const Color(0xFF1E1E1E),
+        child: Column(
+          children: [
+            // Table header
+            _buildTableHeader(),
+            Expanded(
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: filteredLogs.length,
+                itemBuilder: (context, index) {
+                  final log = filteredLogs[index];
+                  return _buildLogListRow(log, index % 2 == 0);
+                },
               ),
             ),
-        ],
+            if (_hasMoreRows)
+              Container(
+                padding: const EdgeInsets.all(16),
+                color: const Color(0xFF000000),
+                child: ElevatedButton(
+                  onPressed: _isLoadingMore ? null : _loadMoreLogs,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E1E1E),
+                    foregroundColor: const Color(0xFFD4D4D4),
+                  ),
+                  child: _isLoadingMore
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4EC9B0)),
+                      )
+                    : const Text('Load More'),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -403,9 +427,9 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
+        color: const Color(0xFF1E1E1E),
         border: Border(
-          bottom: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.3)),
+          bottom: BorderSide(color: const Color(0xFF333333), width: 1),
         ),
       ),
       child: Row(
@@ -415,22 +439,24 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
             width: 70,
             child: Text(
               'Time',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF808080),
+                fontFamily: 'monospace',
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           // Request info column
           Expanded(
             child: Text(
               'Request',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF808080),
+                fontFamily: 'monospace',
               ),
             ),
           ),
@@ -455,8 +481,8 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        color: isEven ? AppTheme.surfaceContainerLow.withOpacity(0.3) : AppTheme.surface,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        color: isEven ? const Color(0xFF0D0D0D) : const Color(0xFF000000),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -466,14 +492,14 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
               child: Text(
                 log.formattedTime,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   fontFamily: 'monospace',
-                  color: AppTheme.onSurfaceVariant,
+                  color: Color(0xFF808080),
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             // Method badge + Path + Status (combined like competitor)
             Expanded(
               child: Row(
@@ -482,8 +508,12 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: _getMethodColor(log.requestMethod).withOpacity(0.1),
+                      color: _getMethodColor(log.requestMethod).withOpacity(0.15),
                       borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: _getMethodColor(log.requestMethod).withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                     child: Text(
                       log.requestMethod,
@@ -491,6 +521,7 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: _getMethodColor(log.requestMethod),
+                        fontFamily: 'monospace',
                       ),
                     ),
                   ),
@@ -502,8 +533,9 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.onSurface,
+                        fontSize: 12,
+                        color: Color(0xFFD4D4D4),
+                        fontFamily: 'monospace',
                       ),
                     ),
                   ),
@@ -512,9 +544,10 @@ class _AdvancedLogsScreenState extends State<AdvancedLogsScreen> with SingleTick
                   Text(
                     log.statusCode.toString(),
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: Log.getStatusColor(log.statusCode),
+                      fontFamily: 'monospace',
                     ),
                   ),
                 ],

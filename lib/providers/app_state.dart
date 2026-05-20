@@ -255,6 +255,14 @@ class AppState extends ChangeNotifier {
       if (!isValid) {
         throw Exception('Invalid token. Please check your token and try again.');
       }
+
+      // If we were in demo mode, reset to real API before fetching
+      if (_isDemoMode) {
+        _isDemoMode = false;
+        _apiService = VercelApi();
+        clearFaviconCache();
+      }
+
       if (kDebugMode) print('[AppState] Token valid, saving...');
       await _authService.saveToken(token);
       if (kDebugMode) print('[AppState] Fetching initial data...');

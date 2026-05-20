@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:countries_world_map/countries_world_map.dart';
+import 'package:countries_world_map/data/maps/world_map.dart';
 import '../models/analytics.dart';
 
 class CountryAnalysisCard extends StatelessWidget {
@@ -11,12 +13,123 @@ class CountryAnalysisCard extends StatelessWidget {
     this.isLoading = false,
   });
 
-  String _getCountryFlag(String countryCode) {
-    if (countryCode.isEmpty || countryCode.length != 2) return '🏳️';
-    final code = countryCode.toUpperCase();
-    final firstLetter = code.codeUnitAt(0) - 0x41 + 0x1F1E6;
-    final secondLetter = code.codeUnitAt(1) - 0x41 + 0x1F1E6;
-    return String.fromCharCode(firstLetter) + String.fromCharCode(secondLetter);
+  String _countryNameToIsoCode(String countryName) {
+    // If it's already a 2-letter code, return it
+    if (countryName.length == 2) return countryName.toUpperCase();
+
+    final nameToIso = {
+      'United States': 'US',
+      'United Kingdom': 'GB',
+      'United Kingdom of Great Britain and Northern Ireland': 'GB',
+      'Canada': 'CA',
+      'Australia': 'AU',
+      'Germany': 'DE',
+      'France': 'FR',
+      'Spain': 'ES',
+      'Italy': 'IT',
+      'Netherlands': 'NL',
+      'Brazil': 'BR',
+      'Japan': 'JP',
+      'South Korea': 'KR',
+      'Korea, Republic of': 'KR',
+      'China': 'CN',
+      'India': 'IN',
+      'Mexico': 'MX',
+      'Russia': 'RU',
+      'Russian Federation': 'RU',
+      'South Africa': 'ZA',
+      'Sweden': 'SE',
+      'Norway': 'NO',
+      'Denmark': 'DK',
+      'Finland': 'FI',
+      'Poland': 'PL',
+      'Turkey': 'TR',
+      'Argentina': 'AR',
+      'Colombia': 'CO',
+      'Chile': 'CL',
+      'Peru': 'PE',
+      'Venezuela': 'VE',
+      'Indonesia': 'ID',
+      'Malaysia': 'MY',
+      'Philippines': 'PH',
+      'Singapore': 'SG',
+      'Thailand': 'TH',
+      'Vietnam': 'VN',
+      'Hong Kong': 'HK',
+      'Taiwan': 'TW',
+      'New Zealand': 'NZ',
+      'Ireland': 'IE',
+      'Belgium': 'BE',
+      'Austria': 'AT',
+      'Switzerland': 'CH',
+      'Portugal': 'PT',
+      'Greece': 'GR',
+      'Czech Republic': 'CZ',
+      'Czechia': 'CZ',
+      'Hungary': 'HU',
+      'Romania': 'RO',
+      'Ukraine': 'UA',
+      'Israel': 'IL',
+      'United Arab Emirates': 'AE',
+      'Saudi Arabia': 'SA',
+      'Egypt': 'EG',
+      'Nigeria': 'NG',
+      'Kenya': 'KE',
+      'Bangladesh': 'BD',
+      'Pakistan': 'PK',
+      'Sri Lanka': 'LK',
+      'Nepal': 'NP',
+      'Myanmar': 'MM',
+      'Cambodia': 'KH',
+      'Laos': 'LA',
+    };
+    
+    // Try exact match first
+    if (nameToIso.containsKey(countryName)) {
+      return nameToIso[countryName]!;
+    }
+    
+    // Try case-insensitive match
+    final lowerName = countryName.toLowerCase();
+    for (var entry in nameToIso.entries) {
+      if (entry.key.toLowerCase() == lowerName) {
+        return entry.value;
+      }
+    }
+    
+    return '';
+  }
+
+  String _getCountryFlag(String countryCodeOrName) {
+    String isoCode;
+    if (countryCodeOrName.length == 2) {
+      isoCode = countryCodeOrName.toUpperCase();
+    } else {
+      isoCode = _countryNameToIsoCode(countryCodeOrName);
+    }
+
+    if (isoCode.isEmpty) return '🏳️';
+    
+    final code = isoCode.toUpperCase();
+    
+    // Regional indicator symbols start at U+1F1E6 (A)
+    // These require surrogate pair encoding in UTF-16
+    int firstLetter = 0x1F1E6 + (code.codeUnitAt(0) - 0x41);
+    int secondLetter = 0x1F1E6 + (code.codeUnitAt(1) - 0x41);
+    
+    // Convert to surrogate pairs
+    String encodeRune(int rune) {
+      if (rune <= 0xFFFF) {
+        return String.fromCharCode(rune);
+      }
+      // Surrogate pair encoding for code points > 0xFFFF
+      int code = rune - 0x10000;
+      int highSurrogate = 0xD800 + (code >> 10);
+      int lowSurrogate = 0xDC00 + (code & 0x3FF);
+      return String.fromCharCode(highSurrogate) + String.fromCharCode(lowSurrogate);
+    }
+    
+    return encodeRune(firstLetter) + encodeRune(secondLetter);
   }
 
   String _getCountryName(String countryCode) {
@@ -93,28 +206,48 @@ class CountryAnalysisCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayItems = items.take(5).toList();
     final maxVisitors = displayItems.isNotEmpty ? displayItems.first.visitors : 0;
+    
+    // Prepare colors for the map
+    final Map<String, Color> countryColors = {};
+    for (var item in displayItems) {
+      String isoCode;
+      if (item.key.length == 2) {
+        isoCode = item.key.toLowerCase();
+      } else {
+        isoCode = _countryNameToIsoCode(item.key).toLowerCase();
+      }
+      
+      if (isoCode.isNotEmpty) {
+        countryColors[isoCode] = const Color(0xFFF15A24);
+      }
+    }
 
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1A1B1E), // Slightly lighter dark background like in image
         borderRadius: BorderRadius.circular(16), // More rounded corners as in image
       ),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Map Section
+          // Map Section with CountriesWorldMap
           AspectRatio(
-            aspectRatio: 1.8,
+            aspectRatio: 1.0,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.2),
+                color: const Color(0xFF25262B),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: CustomPaint(
-                painter: _DottedMapPainter(
-                  highlightedCountries: displayItems.map((e) => e.key).toList(),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+              child: SimpleMap(
+                instructions: SMapWorld.instructions,
+                defaultColor: const Color(0xFF3A3B40),
+                countryBorder: CountryBorder(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 0.5,
                 ),
+                colors: countryColors,
               ),
             ),
           ),
@@ -221,64 +354,4 @@ class CountryAnalysisCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _DottedMapPainter extends CustomPainter {
-  final List<String> highlightedCountries;
-
-  _DottedMapPainter({required this.highlightedCountries});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
-      ..style = PaintingStyle.fill;
-
-    final highlightPaint = Paint()
-      ..color = const Color(0xFFF15A24).withOpacity(0.8)
-      ..style = PaintingStyle.fill;
-
-    // This is a very simplified grid of dots representing the world
-    const rows = 25;
-    const cols = 50;
-    final cellWidth = size.width / cols;
-    final cellHeight = size.height / rows;
-
-    // Let's use a more recognizable but simple world map shape
-    for (int r = 0; r < rows; r++) {
-      for (int c = 0; c < cols; c++) {
-        // Simple logic to draw "land" dots
-        bool isLand = false;
-        
-        // North America
-        if (r > 3 && r < 10 && c > 5 && c < 15) isLand = true;
-        // South America
-        if (r >= 10 && r < 18 && c > 10 && c < 15 - (r-10)/2) isLand = true;
-        // Europe & Africa
-        if (r > 3 && r < 18 && c > 20 && c < 28) isLand = true;
-        // Asia
-        if (r > 2 && r < 15 && c > 28 && c < 45) isLand = true;
-        // Australia
-        if (r > 15 && r < 20 && c > 38 && c < 45) isLand = true;
-
-        if (isLand) {
-          final center = Offset(c * cellWidth + cellWidth / 2, r * cellHeight + cellHeight / 2);
-          
-          // Randomly highlight some dots to simulate "activity"
-          bool isHighlighted = false;
-          if (highlightedCountries.contains('US') && c > 7 && c < 13 && r > 5 && r < 8) isHighlighted = true;
-          if (highlightedCountries.contains('GB') && c > 21 && c < 23 && r > 4 && r < 6) isHighlighted = true;
-          if (highlightedCountries.contains('DE') && c > 23 && c < 25 && r > 5 && r < 7) isHighlighted = true;
-          if (highlightedCountries.contains('IN') && c > 33 && c < 36 && r > 9 && r < 12) isHighlighted = true;
-          if (highlightedCountries.contains('CA') && c > 6 && c < 14 && r > 2 && r < 5) isHighlighted = true;
-          if (highlightedCountries.contains('FR') && c > 21 && c < 23 && r > 6 && r < 8) isHighlighted = true;
-
-          canvas.drawCircle(center, cellWidth * 0.3, isHighlighted ? highlightPaint : paint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

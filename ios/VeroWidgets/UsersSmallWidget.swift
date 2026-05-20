@@ -55,70 +55,71 @@ struct UsersSmallView: View {
     let entry: UsersEntry
 
     var body: some View {
-        ZStack {
-            Color.veroSurface.ignoresSafeArea()
+        VStack(spacing: 2) {
+            Text(entry.projectName)
+                .font(.system(size: 8, weight: .medium))
+                .foregroundColor(.veroMuted)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .center)
 
-            VStack(spacing: 2) {
-                Text(entry.projectName)
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundColor(.veroMuted)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .center)
+            Spacer(minLength: 4)
 
-                Spacer(minLength: 4)
+            Text("24h")
+                .font(.system(size: 7))
+                .foregroundColor(.veroSubtle)
 
-                Text("24h")
-                    .font(.system(size: 7))
-                    .foregroundColor(.veroSubtle)
+            Text(formatNumber(entry.total24h))
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
 
-                Text(formatNumber(entry.total24h))
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-
-                HStack(spacing: 2) {
-                    Circle()
-                        .fill(Color.veroSuccess)
-                        .frame(width: 5, height: 5)
-                    Text(formatNumber(entry.lastHour))
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.veroSuccess)
-                }
-
-                Text("online")
-                    .font(.system(size: 7))
-                    .foregroundColor(.veroSubtle)
-
-                Spacer(minLength: 4)
-
-                Text("\(entry.bounceRate)% bounce")
-                    .font(.system(size: 8))
-                    .foregroundColor(.veroSubtle)
-
-                Text(relativeTime(from: entry.lastUpdated))
-                    .font(.system(size: 7))
-                    .foregroundColor(Color(hex: "#333333"))
+            HStack(spacing: 2) {
+                Circle()
+                    .fill(Color.veroSuccess)
+                    .frame(width: 5, height: 5)
+                Text(formatNumber(entry.lastHour))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.veroSuccess)
             }
-            .padding(10)
 
+            Text("online")
+                .font(.system(size: 7))
+                .foregroundColor(.veroSubtle)
+
+            Spacer(minLength: 4)
+
+            Text("\(entry.bounceRate)% bounce")
+                .font(.system(size: 8))
+                .foregroundColor(.veroSubtle)
+
+            Text(relativeTime(from: entry.lastUpdated))
+                .font(.system(size: 7))
+                .foregroundColor(.veroMuted)
+        }
+        .padding(10)
+        .overlay {
             if !entry.isConfigured {
-                Color.black.opacity(0.7)
-                VStack(spacing: 4) {
-                    Image(systemName: "gear")
-                        .foregroundColor(.veroMuted)
-                        .font(.system(size: 16))
-                    Text("Tap to configure")
-                        .font(.system(size: 9))
-                        .foregroundColor(.veroMuted)
-                        .multilineTextAlignment(.center)
+                ZStack {
+                    Color.black.opacity(0.7)
+                    VStack(spacing: 4) {
+                        Image(systemName: "gear")
+                            .foregroundColor(.veroMuted)
+                            .font(.system(size: 16))
+                        Text("Tap to configure")
+                            .font(.system(size: 9))
+                            .foregroundColor(.veroMuted)
+                            .multilineTextAlignment(.center)
+                    }
                 }
             }
-
+        }
+        .overlay {
             if !entry.isSubscribed {
                 WidgetLockView(message: "Pro Required", subMessage: "Open Vero")
             }
         }
         .widgetURL(makeWidgetURL(for: "users"))
+        .applyWidgetBackground(Color.veroSurface)
     }
 }
 

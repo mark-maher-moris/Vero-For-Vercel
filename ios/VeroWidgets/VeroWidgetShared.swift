@@ -154,3 +154,17 @@ func statusColor(_ state: String) -> Color {
 func makeWidgetURL(for type: String) -> URL {
     URL(string: "vero://widget/configure?type=\(type)") ?? URL(string: "vero://")!
 }
+
+// MARK: - iOS 17 Container Background Helper
+
+extension View {
+    func applyWidgetBackground<V: View>(_ backgroundView: V) -> some View {
+        if #available(iOS 17.0, *) {
+            return self.containerBackground(for: .widget) {
+                backgroundView
+            }
+        } else {
+            return self.background(backgroundView)
+        }
+    }
+}

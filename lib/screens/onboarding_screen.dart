@@ -215,83 +215,90 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: List.generate(
-              _totalPages,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.only(right: 8),
-                width: _currentPage == index ? 24 : 8,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _currentPage == index
-                      ? AppTheme.primary
-                      : AppTheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(2),
+          Expanded(
+            child: Row(
+              children: List.generate(
+                _totalPages,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.only(right: 8),
+                  width: _currentPage == index ? 24 : 8,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _currentPage == index
+                        ? AppTheme.primary
+                        : AppTheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
             ),
           ),
-          Row(
-            children: [
-              if (_currentPage > 0)
-                TextButton(
-                  onPressed: () {
-                    _pageController.previousPage(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOutCubic,
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.onSurfaceVariant,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_currentPage > 0)
+                  TextButton(
+                    onPressed: () {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOutCubic,
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.onSurfaceVariant,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('BACK', style: TextStyle(fontSize: 13)),
                   ),
-                  child: const Text('BACK'),
-                ),
-              const SizedBox(width: 16),
-              GestureDetector(
-                onTap: _nextPage,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppTheme.primary,
-                        AppTheme.secondaryFixedDim,
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: _nextPage,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.primary,
+                          AppTheme.secondaryFixedDim,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _currentPage == _totalPages - 1 ? 'START' : 'NEXT',
+                          style: const TextStyle(
+                            color: AppTheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        if (_currentPage == _totalPages - 1) ...[
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.arrow_forward,
+                            color: AppTheme.onPrimary,
+                            size: 16,
+                          ),
+                        ],
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _currentPage == _totalPages - 1 ? 'GET STARTED' : 'NEXT',
-                        style: const TextStyle(
-                          color: AppTheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      if (_currentPage == _totalPages - 1) ...[
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.arrow_forward,
-                          color: AppTheme.onPrimary,
-                          size: 18,
-                        ),
-                      ],
-                    ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

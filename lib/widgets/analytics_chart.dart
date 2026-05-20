@@ -40,7 +40,14 @@ class AnalyticsChart extends StatelessWidget {
     }
 
     final maxVisitors = data.fold<int>(0, (max, p) => p.devices > max ? p.devices : max);
+    final minVisitors = data.fold<int>(maxVisitors, (min, p) => p.devices < min ? p.devices : min);
     final totalVisitors = data.fold<int>(0, (sum, p) => sum + p.devices);
+
+    // Calculate dynamic vertical scale for better wave visibility
+    final double chartMinY = (minVisitors > 0 && (maxVisitors - minVisitors) < maxVisitors * 0.5) 
+        ? (minVisitors * 0.8).floorToDouble() 
+        : 0;
+    final double chartMaxY = maxVisitors == 0 ? 10 : maxVisitors * 1.15;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -161,16 +168,18 @@ class AnalyticsChart extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 minX: 0,
                 maxX: (data.length - 1).toDouble(),
-                minY: 0,
-                maxY: maxVisitors * 1.2,
+                minY: chartMinY,
+                maxY: chartMaxY,
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,
                     isCurved: true,
+                    curveSmoothness: 0.3,
+                    preventCurveOverShooting: true,
                     gradient: const LinearGradient(
                       colors: [AppTheme.primary, Color(0xFF5AB2FF)],
                     ),
-                    barWidth: 3,
+                    barWidth: data.length > 50 ? 2 : 3,
                     isStrokeCapRound: true,
                     dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(

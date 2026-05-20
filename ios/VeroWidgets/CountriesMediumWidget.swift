@@ -68,71 +68,69 @@ struct CountriesMediumView: View {
     let entry: CountriesEntry
 
     var body: some View {
-        ZStack {
-            Color.veroSurface.ignoresSafeArea()
-
-            VStack(alignment: .leading, spacing: 0) {
-                // Header
-                HStack {
-                    Text("GEO")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(.veroPrimary)
-                    Text("·")
-                        .foregroundColor(.veroSubtle)
-                        .font(.system(size: 8))
-                    Text(entry.projectName)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    Spacer()
-                    Text(relativeTime(from: entry.lastUpdated))
-                        .font(.system(size: 7))
-                        .foregroundColor(.veroSubtle)
-                }
-                .padding(.bottom, 8)
-
-                if !entry.isConfigured || entry.countries.isEmpty {
-                    Spacer()
-                    Text(entry.isConfigured ? "No traffic data" : "Tap to configure widget")
-                        .font(.system(size: 10))
-                        .foregroundColor(.veroSubtle)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    Spacer()
-                } else {
-                    ForEach(Array(entry.countries.enumerated()), id: \.offset) { idx, country in
-                        HStack(spacing: 8) {
-                            Text(flagEmoji(country.code))
-                                .font(.system(size: 14))
-
-                            Text(country.name)
-                                .font(.system(size: 10))
-                                .foregroundColor(idx == 0 ? .white : .veroOnSurfaceVariant)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                            Text(formatNumber(country.visitors))
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(.veroPrimary)
-
-                            Text("\(country.percentage)%")
-                                .font(.system(size: 9))
-                                .foregroundColor(.veroSubtle)
-                                .frame(width: 28, alignment: .trailing)
-                        }
-                        .padding(.vertical, 2)
-                    }
-                    Spacer(minLength: 0)
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("GEO")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.veroPrimary)
+                Text("·")
+                    .foregroundColor(.veroSubtle)
+                    .font(.system(size: 8))
+                Text(entry.projectName)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer()
+                Text(relativeTime(from: entry.lastUpdated))
+                    .font(.system(size: 7))
+                    .foregroundColor(.veroSubtle)
             }
-            .padding(10)
+            .padding(.bottom, 8)
 
+            if !entry.isConfigured || entry.countries.isEmpty {
+                Spacer()
+                Text(entry.isConfigured ? "No traffic data" : "Tap to configure widget")
+                    .font(.system(size: 10))
+                    .foregroundColor(.veroSubtle)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Spacer()
+            } else {
+                ForEach(Array(entry.countries.enumerated()), id: \.offset) { idx, country in
+                    HStack(spacing: 8) {
+                        Text(flagEmoji(country.code))
+                            .font(.system(size: 14))
+
+                        Text(country.name)
+                            .font(.system(size: 10))
+                            .foregroundColor(idx == 0 ? .white : .veroOnSurfaceVariant)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text(formatNumber(country.visitors))
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.veroPrimary)
+
+                        Text("\(country.percentage)%")
+                            .font(.system(size: 9))
+                            .foregroundColor(.veroSubtle)
+                            .frame(width: 28, alignment: .trailing)
+                    }
+                    .padding(.vertical, 2)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(10)
+        .overlay {
             if !entry.isSubscribed {
                 WidgetLockView()
             }
         }
         .widgetURL(makeWidgetURL(for: "countries"))
+        .applyWidgetBackground(Color.veroSurface)
     }
 
     /// Convert ISO 3166-1 alpha-2 code to flag emoji

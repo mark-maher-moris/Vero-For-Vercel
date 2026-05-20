@@ -71,99 +71,97 @@ struct AnalyticsLargeView: View {
     let entry: AnalyticsWidgetEntry
 
     var body: some View {
-        ZStack {
-            Color.veroSurface.ignoresSafeArea()
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("ANALYTICS")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.veroPrimary)
+                Text("·")
+                    .foregroundColor(.veroSubtle)
+                    .font(.system(size: 8))
+                Text(entry.projectName)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer()
+            }
+            .padding(.bottom, 8)
 
-            VStack(alignment: .leading, spacing: 0) {
-                // Header
-                HStack {
-                    Text("ANALYTICS")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(.veroPrimary)
-                    Text("·")
+            // Stats row
+            HStack(spacing: 8) {
+                statCard(title: "24H VISITORS", value: formatNumber(entry.visitors24h),
+                         color: .veroPrimary)
+                statCard(title: "BOUNCE RATE", value: "\(entry.bounceRate)%",
+                         color: .veroWarning)
+            }
+            .padding(.bottom, 10)
+
+            // Content
+            if !entry.analyticsEnabled {
+                Spacer()
+                VStack(spacing: 6) {
+                    Image(systemName: "chart.bar.xaxis")
+                        .font(.system(size: 20))
                         .foregroundColor(.veroSubtle)
-                        .font(.system(size: 8))
-                    Text(entry.projectName)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    Spacer()
-                }
-                .padding(.bottom, 8)
-
-                // Stats row
-                HStack(spacing: 8) {
-                    statCard(title: "24H VISITORS", value: formatNumber(entry.visitors24h),
-                             color: .veroPrimary)
-                    statCard(title: "BOUNCE RATE", value: "\(entry.bounceRate)%",
-                             color: .veroWarning)
-                }
-                .padding(.bottom, 10)
-
-                // Content
-                if !entry.analyticsEnabled {
-                    Spacer()
-                    VStack(spacing: 6) {
-                        Image(systemName: "chart.bar.xaxis")
-                            .font(.system(size: 20))
-                            .foregroundColor(.veroSubtle)
-                        Text("Enable Vercel Analytics\nto use this widget")
-                            .font(.system(size: 10))
-                            .foregroundColor(.veroSubtle)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
-                    Spacer()
-                } else if !entry.isConfigured {
-                    Spacer()
-                    Text("Tap to configure widget")
+                    Text("Enable Vercel Analytics\nto use this widget")
                         .font(.system(size: 10))
                         .foregroundColor(.veroSubtle)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    Spacer()
-                } else {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("TRAFFIC SOURCES")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(.veroSubtle)
-                            .padding(.bottom, 6)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                Spacer()
+            } else if !entry.isConfigured {
+                Spacer()
+                Text("Tap to configure widget")
+                    .font(.system(size: 10))
+                    .foregroundColor(.veroSubtle)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Spacer()
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("TRAFFIC SOURCES")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.veroSubtle)
+                        .padding(.bottom, 6)
 
-                        ForEach(Array(entry.sources.enumerated()), id: \.offset) { _, src in
-                            HStack {
-                                Text(src.source)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.veroOnSurfaceVariant)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text(formatNumber(src.visitors))
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.veroPrimary)
-                            }
-                            .padding(.vertical, 3)
-                            if src.source != entry.sources.last?.source {
-                                Divider().background(Color.veroSubtle.opacity(0.3))
-                            }
+                    ForEach(Array(entry.sources.enumerated()), id: \.offset) { _, src in
+                        HStack {
+                            Text(src.source)
+                                .font(.system(size: 10))
+                                .foregroundColor(.veroOnSurfaceVariant)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(formatNumber(src.visitors))
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.veroPrimary)
+                        }
+                        .padding(.vertical, 3)
+                        if src.source != entry.sources.last?.source {
+                            Divider().background(Color.veroSubtle.opacity(0.3))
                         }
                     }
-                    Spacer(minLength: 0)
                 }
-
-                // Footer
-                Text(relativeTime(from: entry.lastUpdated))
-                    .font(.system(size: 7))
-                    .foregroundColor(Color(hex: "#333333"))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.top, 6)
+                Spacer(minLength: 0)
             }
-            .padding(12)
 
+            // Footer
+            Text(relativeTime(from: entry.lastUpdated))
+                .font(.system(size: 7))
+                .foregroundColor(.veroMuted)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.top, 6)
+        }
+        .padding(12)
+        .overlay {
             if !entry.isSubscribed {
                 WidgetLockView()
             }
         }
         .widgetURL(makeWidgetURL(for: "analytics"))
+        .applyWidgetBackground(Color.veroSurface)
     }
 
     @ViewBuilder
