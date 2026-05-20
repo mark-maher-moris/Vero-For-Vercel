@@ -2,7 +2,7 @@ name: vero
 description: "Vero For Vercel"
 publish_to: 'none'
 
-version: 1.0.11+11
+version: 1.2.2+12
 
 environment:
   sdk: ^3.10.7
@@ -37,4 +37,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
+    - assets/small-visitors-widgets.png
+    - assets/large-analysis-widget.png
+    - assets/countries-widget.png
     - .env

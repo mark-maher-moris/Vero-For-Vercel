@@ -60,7 +60,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="24h VISITORS"
-                    android:textColor="#666666"
+                    android:textColor="#AAAAAA"
                     android:textSize="7sp" />
 
                 <TextView
@@ -87,7 +87,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="BOUNCE RATE"
-                    android:textColor="#666666"
+                    android:textColor="#AAAAAA"
                     android:textSize="7sp" />
 
                 <TextView
@@ -116,34 +116,49 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="TRAFFIC SOURCES"
-                android:textColor="#555555"
+                android:textColor="#CCCCCC"
                 android:textSize="8sp"
                 android:layout_marginBottom="4dp" />
 
-            <LinearLayout android:id="@+id/source_row_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/source_name_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+            <LinearLayout android:id="@+id/source_row_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/source_name_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/source_count_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" android:textStyle="bold" />
             </LinearLayout>
 
-            <LinearLayout android:id="@+id/source_row_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/source_name_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+            <LinearLayout android:id="@+id/source_row_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/source_name_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/source_count_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" android:textStyle="bold" />
             </LinearLayout>
 
-            <LinearLayout android:id="@+id/source_row_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/source_name_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+            <LinearLayout android:id="@+id/source_row_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/source_name_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/source_count_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" android:textStyle="bold" />
             </LinearLayout>
 
-            <LinearLayout android:id="@+id/source_row_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/source_name_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+            <LinearLayout android:id="@+id/source_row_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/source_name_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/source_count_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" android:textStyle="bold" />
             </LinearLayout>
 
-            <LinearLayout android:id="@+id/source_row_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/source_name_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+            <LinearLayout android:id="@+id/source_row_5" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/source_name_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/source_count_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" android:textStyle="bold" />
             </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="30-DAY VISITORS"
+                android:textColor="#CCCCCC"
+                android:textSize="8sp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp" />
+
+            <View
+                android:id="@+id/widget_analytics_chart"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
         </LinearLayout>
 
@@ -177,7 +192,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="—"
-            android:textColor="#333333"
+            android:textColor="#999999"
             android:textSize="7sp"
             android:gravity="end"
             android:layout_marginTop="4dp" />

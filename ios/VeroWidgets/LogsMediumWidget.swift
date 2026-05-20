@@ -160,7 +160,7 @@ struct LogsWidgetView: View {
                 Spacer()
                 Text("No recent logs")
                     .font(.system(size: 10))
-                    .foregroundColor(.veroSubtle)
+                    .foregroundColor(Color(red: 0.9, green: 0.9, blue: 0.9))
                     .frame(maxWidth: .infinity, alignment: .center)
                 Spacer()
             } else {
@@ -169,14 +169,14 @@ struct LogsWidgetView: View {
                     HStack(alignment: .top, spacing: 6) {
                         Text(log.message.isEmpty ? "—" : log.message)
                             .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(.veroOnSurfaceVariant)
+                            .foregroundColor(Color(red: 0.95, green: 0.95, blue: 0.95))
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if log.timestampMs > 0 {
                             Text(formatTimestamp(log.timestampMs))
                                 .font(.system(size: 8))
-                                .foregroundColor(.veroSubtle)
+                                .foregroundColor(Color(red: 0.9, green: 0.9, blue: 0.9))
                         }
                     }
                     .padding(.vertical, 1)
@@ -187,7 +187,7 @@ struct LogsWidgetView: View {
             // Footer
             Text(relativeTime(from: entry.lastUpdated))
                 .font(.system(size: 7))
-                .foregroundColor(.veroMuted)
+                .foregroundColor(Color(red: 0.7, green: 0.7, blue: 0.7))
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.top, 4)
         }

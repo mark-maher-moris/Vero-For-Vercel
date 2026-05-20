@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#1A1A1A"
-    android:padding="10dp">
+    android:padding="8dp">
 
     <!-- Main content -->
     <LinearLayout
@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Project"
-            android:textColor="#888888"
+            android:textColor="#CCCCCC"
             android:textSize="9sp"
             android:maxLines="1"
             android:ellipsize="end"
@@ -31,13 +31,13 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="2dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="24h"
-                android:textColor="#666666"
+                android:textColor="#AAAAAA"
                 android:textSize="8sp" />
 
             <TextView
@@ -56,18 +56,19 @@
         <View
             android:id="@+id/widget_chart"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="4dp" />
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="4dp" />
 
         <TextView
             android:id="@+id/widget_last_updated"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="—"
-            android:textColor="#444444"
+            android:textColor="#999999"
             android:textSize="7sp"
-            android:gravity="center" />
+            android:gravity="center"
+            android:layout_marginTop="2dp" />
 
     </LinearLayout>
 
@@ -78,7 +79,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="Tap to\nconfigure"
-        android:textColor="#666666"
+        android:textColor="#AAAAAA"
         android:textSize="10sp"
         android:gravity="center"
         android:visibility="gone" />

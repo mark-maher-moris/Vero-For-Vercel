@@ -67,10 +67,10 @@ struct UsersSmallView: View {
     let entry: UsersEntry
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             Text(entry.projectName)
                 .font(.system(size: 8, weight: .medium))
-                .foregroundColor(.veroMuted)
+                .foregroundColor(Color(red: 0.8, green: 0.8, blue: 0.8))
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -79,7 +79,7 @@ struct UsersSmallView: View {
             HStack(spacing: 4) {
                 Text("24h")
                     .font(.system(size: 7))
-                    .foregroundColor(.veroSubtle)
+                    .foregroundColor(Color(red: 0.9, green: 0.9, blue: 0.9))
                 Text(formatNumber(entry.total24h))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.white)
@@ -90,18 +90,17 @@ struct UsersSmallView: View {
                 Spacer()
                 Text("No data")
                     .font(.system(size: 8))
-                    .foregroundColor(.veroSubtle)
+                    .foregroundColor(Color(red: 0.9, green: 0.9, blue: 0.9))
                 Spacer()
             } else {
                 SimpleLineChart(data: entry.timeseries.map { $0.value })
-                    .frame(height: 40)
             }
 
             Text(relativeTime(from: entry.lastUpdated))
                 .font(.system(size: 7))
-                .foregroundColor(.veroMuted)
+                .foregroundColor(Color(red: 0.7, green: 0.7, blue: 0.7))
         }
-        .padding(10)
+        .padding(5)
         .overlay {
             if !entry.isConfigured {
                 ZStack {

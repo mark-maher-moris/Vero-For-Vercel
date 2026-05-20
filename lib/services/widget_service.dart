@@ -36,6 +36,7 @@ class WidgetKeys {
   static const String analyticsSources = 'vero_analytics_sources';
   static const String analyticsProjectName = 'vero_analytics_project_name';
   static const String analyticsEnabled = 'vero_analytics_enabled';
+  static const String analytics30DayTimeseries = 'vero_analytics_30day_timeseries';
 
   // Countries widget data
   static const String countriesData = 'vero_countries_data';
@@ -267,6 +268,7 @@ class WidgetService {
       final now = DateTime.now().toUtc();
       final from24h = now.subtract(const Duration(hours: 24)).toIso8601String();
       final from7d = now.subtract(const Duration(days: 7)).toIso8601String();
+      final from30d = now.subtract(const Duration(days: 30)).toIso8601String();
       final to = now.toIso8601String();
 
       // Check if analytics is available by fetching overview (may throw if not enabled)
@@ -298,6 +300,20 @@ class WidgetService {
           'value': p.devices,
         }).toList();
         await HomeWidget.saveWidgetData<String>(WidgetKeys.analyticsTimeseries, jsonEncode(seriesData));
+      } catch (_) {}
+
+      // Fetch 30-day timeseries for analytics widget chart
+      try {
+        final timeseries30d = await api.getAnalyticsTimeseries(
+          projectId: projectId,
+          from: from30d,
+          to: to,
+        );
+        final seriesData30d = timeseries30d.map((p) => {
+          'date': p.key,
+          'value': p.devices,
+        }).toList();
+        await HomeWidget.saveWidgetData<String>(WidgetKeys.analytics30DayTimeseries, jsonEncode(seriesData30d));
       } catch (_) {}
 
       // Fetch traffic sources (referrers)
@@ -481,6 +497,39 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>(WidgetKeys.analyticsSources, jsonEncode(demoSources));
       await HomeWidget.saveWidgetData<String>(WidgetKeys.analyticsProjectName, 'demo-project');
       await HomeWidget.saveWidgetData<bool>(WidgetKeys.analyticsEnabled, true);
+      final demoAnalytics30DayTimeseries = [
+        {'date': 'Day 1', 'value': 850},
+        {'date': 'Day 2', 'value': 920},
+        {'date': 'Day 3', 'value': 780},
+        {'date': 'Day 4', 'value': 1050},
+        {'date': 'Day 5', 'value': 980},
+        {'date': 'Day 6', 'value': 1200},
+        {'date': 'Day 7', 'value': 1150},
+        {'date': 'Day 8', 'value': 1380},
+        {'date': 'Day 9', 'value': 1250},
+        {'date': 'Day 10', 'value': 1420},
+        {'date': 'Day 11', 'value': 1350},
+        {'date': 'Day 12', 'value': 1580},
+        {'date': 'Day 13', 'value': 1480},
+        {'date': 'Day 14', 'value': 1720},
+        {'date': 'Day 15', 'value': 1650},
+        {'date': 'Day 16', 'value': 1890},
+        {'date': 'Day 17', 'value': 1800},
+        {'date': 'Day 18', 'value': 2050},
+        {'date': 'Day 19', 'value': 1950},
+        {'date': 'Day 20', 'value': 2180},
+        {'date': 'Day 21', 'value': 2100},
+        {'date': 'Day 22', 'value': 2350},
+        {'date': 'Day 23', 'value': 2250},
+        {'date': 'Day 24', 'value': 2480},
+        {'date': 'Day 25', 'value': 2400},
+        {'date': 'Day 26', 'value': 2650},
+        {'date': 'Day 27', 'value': 2550},
+        {'date': 'Day 28', 'value': 2800},
+        {'date': 'Day 29', 'value': 2700},
+        {'date': 'Day 30', 'value': 2950},
+      ];
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.analytics30DayTimeseries, jsonEncode(demoAnalytics30DayTimeseries));
       
       // Push demo countries
       final demoCountries = [

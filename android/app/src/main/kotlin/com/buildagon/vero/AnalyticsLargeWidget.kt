@@ -3,6 +3,7 @@ package com.buildagon.vero
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.graphics.*
 import android.view.View
 import android.widget.RemoteViews
 
@@ -52,6 +53,7 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
             val lastUpdated = VeroWidgetUtils.getString(context, "vero_last_updated")
             val sourcesJson = VeroWidgetUtils.getString(context, "vero_analytics_sources")
             val sources = if (sourcesJson.isNotEmpty()) VeroWidgetUtils.parseJsonArray(sourcesJson) else emptyList()
+            val timeseriesJson = VeroWidgetUtils.getString(context, "vero_analytics_30day_timeseries")
 
             views.setTextViewText(R.id.widget_project_name, projectName)
             views.setTextViewText(R.id.widget_visitors_24h, VeroWidgetUtils.formatNumber(visitors24h))
@@ -85,6 +87,13 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
                         views.setViewVisibility(rowId, View.GONE)
                     }
                 }
+
+                // Draw 30-day chart
+                val timeseries = if (timeseriesJson.isNotEmpty()) VeroWidgetUtils.parseJsonArray(timeseriesJson) else emptyList()
+                if (timeseries.isNotEmpty()) {
+                    val chartBitmap = drawChart(timeseries)
+                    views.setImageViewBitmap(R.id.widget_analytics_chart, chartBitmap)
+                }
             }
 
             views.setViewVisibility(R.id.widget_lock_overlay, View.GONE)
@@ -95,6 +104,74 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+
+        private fun drawChart(data: List<Map<String, Any>>): Bitmap {
+            val width = 400
+            val height = 200
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+
+            // Background
+            canvas.drawColor(Color.TRANSPARENT)
+
+            if (data.isEmpty()) return bitmap
+
+            // Extract values
+            val values = data.mapNotNull { it["value"] as? Number }.map { it.toInt() }
+            if (values.isEmpty()) return bitmap
+
+            val maxValue = values.maxOrNull() ?: 1
+            val minValue = 0
+
+            // Chart dimensions
+            val padding = 8f
+            val chartWidth = width - (padding * 2)
+            val chartHeight = height - (padding * 2)
+
+            // Draw line chart
+            val paint = Paint().apply {
+                color = Color.parseColor("#4A9EFF")
+                style = Paint.Style.STROKE
+                strokeWidth = 3f
+                isAntiAlias = true
+                strokeCap = Paint.Cap.ROUND
+            }
+
+            val fillPaint = Paint().apply {
+                color = Color.parseColor("#4A9EFF")
+                style = Paint.Style.FILL
+                alpha = 30
+                isAntiAlias = true
+            }
+
+            val points = values.mapIndexed { index, value ->
+                val x = padding + (index.toFloat() / (values.size - 1)) * chartWidth
+                val y = padding + chartHeight - ((value.toFloat() - minValue) / (maxValue - minValue)) * chartHeight
+                PointF(x, y)
+            }
+
+            // Draw fill under the line
+            val fillPath = Path().apply {
+                moveTo(padding, padding + chartHeight)
+                points.forEach { point -> lineTo(point.x, point.y) }
+                lineTo(padding + chartWidth, padding + chartHeight)
+                close()
+            }
+            canvas.drawPath(fillPath, fillPaint)
+
+            // Draw the line
+            val linePath = Path().apply {
+                if (points.isNotEmpty()) {
+                    moveTo(points[0].x, points[0].y)
+                    for (i in 1 until points.size) {
+                        lineTo(points[i].x, points[i].y)
+                    }
+                }
+            }
+            canvas.drawPath(linePath, paint)
+
+            return bitmap
         }
     }
 }

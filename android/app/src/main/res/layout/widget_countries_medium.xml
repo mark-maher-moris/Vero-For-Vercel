@@ -44,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="—"
-                android:textColor="#333333"
+                android:textColor="#999999"
                 android:textSize="7sp" />
 
         </LinearLayout>
@@ -59,27 +59,27 @@
             android:visibility="visible">
 
             <LinearLayout android:id="@+id/country_row_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/country_name_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#CCCCCC" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_name_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/country_count_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/country_row_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/country_name_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#AAAAAA" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_name_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/country_count_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/country_row_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/country_name_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#888888" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_name_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/country_count_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/country_row_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/country_name_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#666666" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_name_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/country_count_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/country_row_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/country_name_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#555555" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
+                <TextView android:id="@+id/country_name_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" />
                 <TextView android:id="@+id/country_count_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#4A9EFF" android:textSize="10sp" />
             </LinearLayout>
 
@@ -92,7 +92,7 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:text="Tap to configure widget"
-            android:textColor="#444444"
+            android:textColor="#AAAAAA"
             android:textSize="10sp"
             android:gravity="center"
             android:visibility="gone" />

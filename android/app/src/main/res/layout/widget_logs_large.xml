@@ -64,43 +64,43 @@
             android:visibility="visible">
 
             <LinearLayout android:id="@+id/log_row_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/log_msg_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
-                <TextView android:id="@+id/log_time_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#444444" android:textSize="8sp" android:layout_marginLeft="4dp" />
+                <TextView android:id="@+id/log_msg_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+                <TextView android:id="@+id/log_time_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#AAAAAA" android:textSize="8sp" android:layout_marginLeft="4dp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/log_row_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/log_msg_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
-                <TextView android:id="@+id/log_time_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#444444" android:textSize="8sp" android:layout_marginLeft="4dp" />
+                <TextView android:id="@+id/log_msg_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+                <TextView android:id="@+id/log_time_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#AAAAAA" android:textSize="8sp" android:layout_marginLeft="4dp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/log_row_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/log_msg_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
-                <TextView android:id="@+id/log_time_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#444444" android:textSize="8sp" android:layout_marginLeft="4dp" />
+                <TextView android:id="@+id/log_msg_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+                <TextView android:id="@+id/log_time_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#AAAAAA" android:textSize="8sp" android:layout_marginLeft="4dp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/log_row_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/log_msg_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
-                <TextView android:id="@+id/log_time_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#444444" android:textSize="8sp" android:layout_marginLeft="4dp" />
+                <TextView android:id="@+id/log_msg_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+                <TextView android:id="@+id/log_time_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#AAAAAA" android:textSize="8sp" android:layout_marginLeft="4dp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/log_row_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/log_msg_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
-                <TextView android:id="@+id/log_time_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#444444" android:textSize="8sp" android:layout_marginLeft="4dp" />
+                <TextView android:id="@+id/log_msg_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+                <TextView android:id="@+id/log_time_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#AAAAAA" android:textSize="8sp" android:layout_marginLeft="4dp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/log_row_6" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/log_msg_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
-                <TextView android:id="@+id/log_time_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#444444" android:textSize="8sp" android:layout_marginLeft="4dp" />
+                <TextView android:id="@+id/log_msg_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+                <TextView android:id="@+id/log_time_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#AAAAAA" android:textSize="8sp" android:layout_marginLeft="4dp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/log_row_7" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/log_msg_7" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
-                <TextView android:id="@+id/log_time_7" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#444444" android:textSize="8sp" android:layout_marginLeft="4dp" />
+                <TextView android:id="@+id/log_msg_7" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+                <TextView android:id="@+id/log_time_7" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#AAAAAA" android:textSize="8sp" android:layout_marginLeft="4dp" />
             </LinearLayout>
 
             <LinearLayout android:id="@+id/log_row_8" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/log_msg_8" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
-                <TextView android:id="@+id/log_time_8" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#444444" android:textSize="8sp" android:layout_marginLeft="4dp" />
+                <TextView android:id="@+id/log_msg_8" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#DDDDDD" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+                <TextView android:id="@+id/log_time_8" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#AAAAAA" android:textSize="8sp" android:layout_marginLeft="4dp" />
             </LinearLayout>
 
         </LinearLayout>
@@ -123,7 +123,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="—"
-            android:textColor="#333333"
+            android:textColor="#999999"
             android:textSize="7sp"
             android:gravity="end"
             android:layout_marginTop="4dp" />
@@ -142,7 +142,7 @@
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔒" android:textSize="28sp" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Upgrade to Pro" android:textColor="#FFFFFF" android:textSize="12sp" android:textStyle="bold" android:layout_marginTop="8dp" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Open app to unlock" android:textColor="#888888" android:textSize="10sp" android:layout_marginTop="4dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Open app to unlock" android:textColor="#AAAAAA" android:textSize="10sp" android:layout_marginTop="4dp" />
 
     </LinearLayout>
 

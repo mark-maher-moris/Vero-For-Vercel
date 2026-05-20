@@ -87,7 +87,7 @@ struct CountriesMediumView: View {
                 Spacer()
                 Text(relativeTime(from: entry.lastUpdated))
                     .font(.system(size: 7))
-                    .foregroundColor(.veroSubtle)
+                    .foregroundColor(Color(red: 0.7, green: 0.7, blue: 0.7))
             }
             .padding(.bottom, 8)
 
@@ -95,7 +95,7 @@ struct CountriesMediumView: View {
                 Spacer()
                 Text(entry.isConfigured ? "No traffic data" : "Tap to configure widget")
                     .font(.system(size: 10))
-                    .foregroundColor(.veroSubtle)
+                    .foregroundColor(Color(red: 0.9, green: 0.9, blue: 0.9))
                     .frame(maxWidth: .infinity, alignment: .center)
                 Spacer()
             } else {
@@ -106,7 +106,7 @@ struct CountriesMediumView: View {
 
                         Text(country.name)
                             .font(.system(size: 10))
-                            .foregroundColor(idx == 0 ? .white : .veroOnSurfaceVariant)
+                            .foregroundColor(Color(red: 0.95, green: 0.95, blue: 0.95))
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -117,7 +117,7 @@ struct CountriesMediumView: View {
 
                         Text("\(country.percentage)%")
                             .font(.system(size: 9))
-                            .foregroundColor(.veroSubtle)
+                            .foregroundColor(Color(red: 0.8, green: 0.8, blue: 0.8))
                             .frame(width: 28, alignment: .trailing)
                     }
                     .padding(.vertical, 2)

@@ -9,7 +9,6 @@ import 'theme/app_theme.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
-import 'screens/demo_entry_screen.dart';
 import 'screens/subscription_screen.dart';
 import 'screens/widget_config_screen.dart';
 import 'services/widget_service.dart';
@@ -138,13 +137,9 @@ class _VeroAppState extends State<VeroApp> {
               return const SubscriptionScreen();
             }
             
-            // If the user is subscribed but not authenticated, they can see the login screen
-            // to connect their real Vercel account.
-            if (subscription.hasActiveSubscription) {
-              return const LoginScreen();
-            }
-            
-            return const DemoEntryScreen();
+            // If the user is not authenticated after onboarding, show the login screen.
+            // This is where the 'after_onboarding' paywall will be triggered.
+            return const LoginScreen();
           },
         ),
       ),
