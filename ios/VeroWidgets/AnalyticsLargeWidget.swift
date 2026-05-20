@@ -163,7 +163,7 @@ struct AnalyticsLargeView: View {
                 WidgetLockView()
             }
         }
-        .widgetURL(widgetURL(for: "analytics"))
+        .widgetURL(makeWidgetURL(for: "analytics"))
     }
 
     @ViewBuilder

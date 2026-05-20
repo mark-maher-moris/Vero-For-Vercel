@@ -142,11 +142,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 24),
                 _buildTeamInfo(appState),
                 const SizedBox(height: 24),
-                const ConnectRealAccountBanner(
-                  title: 'Connect with real data',
-                  subtitle: 'You are signed in to the demo. Connect your Vercel account to view your own projects and manage them.',
-                  icon: Icons.vpn_key,
-                ),
+                if (appState.isDemoMode)
+                  const ConnectRealAccountBanner(
+                    title: 'Connect with real data',
+                    subtitle: 'You are signed in to the demo. Connect your Vercel account to view your own projects and manage them.',
+                    icon: Icons.vpn_key,
+                  ),
                 const SizedBox(height: 40),
                 _buildProjectsGrid(appState.projects),
                 const SizedBox(height: 40),

@@ -118,7 +118,7 @@ struct UsersSmallView: View {
                 WidgetLockView(message: "Pro Required", subMessage: "Open Vero")
             }
         }
-        .widgetURL(widgetURL(for: "users"))
+        .widgetURL(makeWidgetURL(for: "users"))
     }
 }
 

@@ -9,6 +9,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/demo_entry_screen.dart';
+import 'screens/subscription_screen.dart';
 import 'services/widget_service.dart';
 import 'widgets/auth_error_handler.dart';
 import 'widgets/app_level_demo_banner.dart';
@@ -68,7 +69,10 @@ class VeroApp extends StatelessWidget {
               );
             }
             if (appState.isAuthenticated) {
-              return const MainScreen();
+              if (subscription.isPro) {
+                return const MainScreen();
+              }
+              return const SubscriptionScreen();
             }
             // Show onboarding first, then demo entry
             if (!appState.hasCompletedOnboarding) {

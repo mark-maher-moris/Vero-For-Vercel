@@ -132,7 +132,7 @@ struct CountriesMediumView: View {
                 WidgetLockView()
             }
         }
-        .widgetURL(widgetURL(for: "countries"))
+        .widgetURL(makeWidgetURL(for: "countries"))
     }
 
     /// Convert ISO 3166-1 alpha-2 code to flag emoji

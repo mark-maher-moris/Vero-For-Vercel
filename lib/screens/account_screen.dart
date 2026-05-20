@@ -112,6 +112,8 @@ class _AccountScreenState extends State<AccountScreen> {
       teamName = team['name'] ?? 'Team';
     }
 
+    final vercelPlan = appState.user?['plan'] ?? 'hobby';
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
@@ -160,65 +162,122 @@ class _AccountScreenState extends State<AccountScreen> {
                 color: AppTheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(2),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppTheme.surfaceContainerHigh,
-                      image: avatarUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(avatarUrl),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: avatarUrl == null
-                        ? const Icon(Icons.person, size: 32, color: AppTheme.onSurfaceVariant)
-                        : null,
+                  Row(
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.surfaceContainerHigh,
+                          image: avatarUrl != null
+                              ? DecorationImage(
+                                  image: NetworkImage(avatarUrl),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: avatarUrl == null
+                            ? const Icon(Icons.person, size: 32, color: AppTheme.onSurfaceVariant)
+                            : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              email,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          email,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: Text(
-                            teamName.toUpperCase(),
-                            style: const TextStyle(
+                  const SizedBox(height: 24),
+                  const Divider(color: AppTheme.outlineVariant, height: 1),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'TEAM',
+                            style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.primary,
+                              color: AppTheme.onSurfaceVariant,
                               letterSpacing: 1,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 4),
+                          Text(
+                            teamName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'VERCEL PLAN',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.onSurfaceVariant,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
+                                  ? Colors.purple.withOpacity(0.2)
+                                  : AppTheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(2),
+                              border: Border.all(
+                                color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
+                                    ? Colors.purple.withOpacity(0.5)
+                                    : AppTheme.primary.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Text(
+                              vercelPlan.toString().toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
+                                    ? Colors.purpleAccent
+                                    : AppTheme.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -371,13 +430,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   icon: Icons.vpn_key,
                   title: 'API Token',
                   subtitle: 'Connect account',
-                  onTap: () {
-                    if (subscriptionProvider.hasActiveSubscription) {
-                      _showChangeTokenDialog(context);
-                    } else {
-                      subscriptionProvider.showPaywall();
-                    }
-                  },
+                  onTap: () => _showChangeTokenDialog(context),
                 ),
                 _buildActionCard(
                   context,
@@ -844,13 +897,7 @@ class _AccountScreenState extends State<AccountScreen> {
               Navigator.pop(context);
               final subscriptionProvider = context.read<SubscriptionProvider>();
               await appState.logout(subscriptionProvider: subscriptionProvider);
-              if (context.mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-                  (route) => false,
-                );
-              }
+              // Navigation handled by Consumer in main.dart
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Sign Out'),
@@ -880,13 +927,7 @@ class _AccountScreenState extends State<AccountScreen> {
               Navigator.pop(context);
               final subscriptionProvider = context.read<SubscriptionProvider>();
               await appState.disconnectFromVercel(subscriptionProvider: subscriptionProvider);
-              if (context.mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-                  (route) => false,
-                );
-              }
+              // Navigation handled by Consumer in main.dart
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Disconnect'),

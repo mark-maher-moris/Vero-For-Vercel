@@ -197,7 +197,7 @@ struct LogsWidgetView: View {
                 WidgetLockView()
             }
         }
-        .widgetURL(widgetURL(for: "logs"))
+        .widgetURL(makeWidgetURL(for: "logs"))
     }
 }
 

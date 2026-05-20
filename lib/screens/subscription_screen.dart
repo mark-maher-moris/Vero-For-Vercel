@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/app_state.dart';
 import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 
@@ -11,6 +12,10 @@ class SubscriptionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+    final appState = context.read<AppState>();
+    final subscriptionProvider = context.read<SubscriptionProvider>();
+    
     // Track subscription screen view
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final subscription = context.read<SubscriptionProvider>();
@@ -32,10 +37,13 @@ class SubscriptionScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: canPop 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            )
+          : null,
+   
       ),
       body: Consumer<SubscriptionProvider>(
         builder: (context, subscription, child) {

@@ -151,6 +151,6 @@ func statusColor(_ state: String) -> Color {
 
 // MARK: - Widget URL scheme for taps (opens app with context)
 
-func widgetURL(for type: String) -> URL {
+func makeWidgetURL(for type: String) -> URL {
     URL(string: "vero://widget/configure?type=\(type)") ?? URL(string: "vero://")!
 }

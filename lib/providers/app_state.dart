@@ -274,10 +274,10 @@ class AppState extends ChangeNotifier {
           'user_id': userId,
           'username': _user!['username'] ?? '',
           'email': _user!['email'] ?? '',
-          'plan': _user!['plan'] ?? 'free',
+          'vercel_plan': _user!['plan'] ?? 'hobby',
           'project_count': _projects.length,
           'team_count': _teams.length,
-          'has_pro': _user!['plan'] == 'pro',
+          'has_vercel_pro': _user!['plan'] == 'pro',
         });
         
         // Track successful login
