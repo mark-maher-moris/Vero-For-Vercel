@@ -3,6 +3,7 @@ package com.buildagon.vero
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 
@@ -13,12 +14,19 @@ class LogsLargeWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        Log.e("LogsLargeWidget", "onUpdate called with ${appWidgetIds.size} widget IDs")
         val pending = goAsync()
         Thread {
             try {
                 for (id in appWidgetIds) {
-                    updateWidget(context, appWidgetManager, id)
+                    try {
+                        updateWidget(context, appWidgetManager, id)
+                    } catch (e: Exception) {
+                        Log.e("LogsLargeWidget", "Error updating widget $id", e)
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("LogsLargeWidget", "Error in onUpdate thread", e)
             } finally {
                 pending.finish()
             }
@@ -42,7 +50,9 @@ class LogsLargeWidget : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            val views = RemoteViews(context.packageName, R.layout.widget_logs_large)
+            try {
+                Log.e("LogsLargeWidget", "updateWidget called for widget ID: $appWidgetId")
+                val views = RemoteViews(context.packageName, R.layout.widget_logs_large)
             val isSubscribed = VeroWidgetUtils.isSubscribed(context)
             val isDemoMode = VeroWidgetUtils.isDemoMode(context)
 
@@ -93,6 +103,10 @@ class LogsLargeWidget : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
+                Log.e("LogsLargeWidget", "Widget $appWidgetId updated successfully")
+            } catch (e: Exception) {
+                Log.e("LogsLargeWidget", "Error in updateWidget for widget $appWidgetId", e)
+            }
         }
     }
 }

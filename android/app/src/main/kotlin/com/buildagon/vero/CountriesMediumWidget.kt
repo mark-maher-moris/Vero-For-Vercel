@@ -3,6 +3,7 @@ package com.buildagon.vero
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 
@@ -13,12 +14,19 @@ class CountriesMediumWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        Log.e("CountriesMediumWidget", "onUpdate called with ${appWidgetIds.size} widget IDs")
         val pending = goAsync()
         Thread {
             try {
                 for (id in appWidgetIds) {
-                    updateWidget(context, appWidgetManager, id)
+                    try {
+                        updateWidget(context, appWidgetManager, id)
+                    } catch (e: Exception) {
+                        Log.e("CountriesMediumWidget", "Error updating widget $id", e)
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("CountriesMediumWidget", "Error in onUpdate thread", e)
             } finally {
                 pending.finish()
             }
@@ -39,7 +47,9 @@ class CountriesMediumWidget : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            val views = RemoteViews(context.packageName, R.layout.widget_countries_medium)
+            try {
+                Log.e("CountriesMediumWidget", "updateWidget called for widget ID: $appWidgetId")
+                val views = RemoteViews(context.packageName, R.layout.widget_countries_medium)
             val isSubscribed = VeroWidgetUtils.isSubscribed(context)
             val isDemoMode = VeroWidgetUtils.isDemoMode(context)
 
@@ -89,6 +99,10 @@ class CountriesMediumWidget : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
+                Log.e("CountriesMediumWidget", "Widget $appWidgetId updated successfully")
+            } catch (e: Exception) {
+                Log.e("CountriesMediumWidget", "Error in updateWidget for widget $appWidgetId", e)
+            }
         }
     }
 }

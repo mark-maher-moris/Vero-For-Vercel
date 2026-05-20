@@ -19,7 +19,7 @@ subprojects {
     afterEvaluate {
         if (project.hasProperty("android")) {
             val android = project.extensions.getByName("android") as com.android.build.gradle.BaseExtension
-            android.compileSdkVersion(35)
+            android.compileSdkVersion(36)
         }
     }
     configurations.all {

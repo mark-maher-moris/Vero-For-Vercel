@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.graphics.*
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 
@@ -14,12 +15,19 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        Log.e("AnalyticsLargeWidget", "onUpdate called with ${appWidgetIds.size} widget IDs")
         val pending = goAsync()
         Thread {
             try {
                 for (id in appWidgetIds) {
-                    updateWidget(context, appWidgetManager, id)
+                    try {
+                        updateWidget(context, appWidgetManager, id)
+                    } catch (e: Exception) {
+                        Log.e("AnalyticsLargeWidget", "Error updating widget $id", e)
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("AnalyticsLargeWidget", "Error in onUpdate thread", e)
             } finally {
                 pending.finish()
             }
@@ -40,7 +48,9 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            val views = RemoteViews(context.packageName, R.layout.widget_analytics_large)
+            try {
+                Log.e("AnalyticsLargeWidget", "updateWidget called for widget ID: $appWidgetId")
+                val views = RemoteViews(context.packageName, R.layout.widget_analytics_large)
             val isSubscribed = VeroWidgetUtils.isSubscribed(context)
             val isDemoMode = VeroWidgetUtils.isDemoMode(context)
             val analyticsEnabled = VeroWidgetUtils.getBoolean(context, "vero_analytics_enabled", true)
@@ -104,6 +114,10 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
+                Log.e("AnalyticsLargeWidget", "Widget $appWidgetId updated successfully")
+            } catch (e: Exception) {
+                Log.e("AnalyticsLargeWidget", "Error in updateWidget for widget $appWidgetId", e)
+            }
         }
 
         private fun drawChart(data: List<Map<String, Any>>): Bitmap {

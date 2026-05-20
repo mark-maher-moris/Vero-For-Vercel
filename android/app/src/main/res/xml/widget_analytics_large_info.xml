@@ -6,6 +6,6 @@
     android:targetCellHeight="4"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_analytics_large"
-    android:resizeMode="both"
+    android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/app_name" />
