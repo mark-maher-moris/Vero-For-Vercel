@@ -106,6 +106,7 @@ class AppState extends ChangeNotifier {
   Future<void> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
     _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+    _isDemoMode = prefs.getBool('is_demo_mode') ?? false;
     notifyListeners();
   }
 
@@ -179,6 +180,10 @@ class AppState extends ChangeNotifier {
       _apiService = DemoVercelApi();
       _isDemoMode = true;
 
+      // Persist demo mode state
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_demo_mode', true);
+
       // Populate user/team/projects from the curated demo dataset.
       _user = DemoData.buildUserResponse();
       _currentTeamId = _user?['defaultTeamId'] as String?;
@@ -190,7 +195,6 @@ class AppState extends ChangeNotifier {
 
       // Mark onboarding as complete so returning to login after demo exit
       // keeps navigation clean.
-      final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_completed_onboarding', true);
       _hasCompletedOnboarding = true;
 
@@ -237,6 +241,10 @@ class AppState extends ChangeNotifier {
     _apiService = VercelApi();
     clearFaviconCache();
 
+    // Persist demo mode state
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_demo_mode', false);
+
     // Keep onboarding flag so Consumer goes straight to LoginScreen.
     _hasCompletedOnboarding = true;
 
@@ -261,6 +269,10 @@ class AppState extends ChangeNotifier {
         _isDemoMode = false;
         _apiService = VercelApi();
         clearFaviconCache();
+        
+        // Persist demo mode state
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_demo_mode', false);
       }
 
       if (kDebugMode) print('[AppState] Token valid, saving...');
@@ -442,13 +454,13 @@ class AppState extends ChangeNotifier {
   /// Push current auth data and project list to home screen widgets.
   /// Also refreshes widget content for all configured widgets.
   Future<void> _pushWidgetData() async {
-    if (_isDemoMode) return;
     try {
       await _widgetService.initialize();
       final isSubscribed = await _superwallService.getCurrentSubscriptionStatus();
       await _widgetService.pushAuthData(
         teamId: _currentTeamId,
         isSubscribed: isSubscribed,
+        isDemoMode: _isDemoMode,
       );
       final projectList = _projects
           .map((p) => <String, String>{'id': p.id, 'name': p.name})

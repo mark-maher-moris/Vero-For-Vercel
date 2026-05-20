@@ -10,6 +10,7 @@ struct UsersEntry: TimelineEntry {
     let lastHour: Int
     let bounceRate: Int
     let isSubscribed: Bool
+    let isDemoMode: Bool
     let lastUpdated: Date?
     let isConfigured: Bool
 }
@@ -19,7 +20,7 @@ struct UsersEntry: TimelineEntry {
 struct UsersProvider: TimelineProvider {
     func placeholder(in context: Context) -> UsersEntry {
         UsersEntry(date: .now, projectName: "my-project", total24h: 1240,
-                   lastHour: 18, bounceRate: 42, isSubscribed: true,
+                   lastHour: 18, bounceRate: 42, isSubscribed: true, isDemoMode: false,
                    lastUpdated: .now, isConfigured: true)
     }
 
@@ -43,6 +44,7 @@ struct UsersProvider: TimelineProvider {
             lastHour: d.veroInt("vero_users_last_hour"),
             bounceRate: d.veroInt("vero_users_bounce_rate"),
             isSubscribed: d.veroBool("vero_is_subscribed"),
+            isDemoMode: d.veroBool("vero_is_demo_mode"),
             lastUpdated: ISO8601DateFormatter().date(from: d.veroString("vero_last_updated")),
             isConfigured: !projectId.isEmpty
         )
@@ -114,7 +116,7 @@ struct UsersSmallView: View {
             }
         }
         .overlay {
-            if !entry.isSubscribed {
+            if !entry.isSubscribed && !entry.isDemoMode {
                 WidgetLockView(message: "Pro Required", subMessage: "Open Vero")
             }
         }

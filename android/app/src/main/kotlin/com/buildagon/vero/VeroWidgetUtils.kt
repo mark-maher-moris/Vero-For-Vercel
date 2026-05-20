@@ -40,6 +40,9 @@ object VeroWidgetUtils {
     fun isSubscribed(context: Context): Boolean =
         getBoolean(context, "vero_is_subscribed", false)
 
+    fun isDemoMode(context: Context): Boolean =
+        getBoolean(context, "vero_is_demo_mode", false)
+
     fun getApiToken(context: Context): String =
         getString(context, "vero_api_token")
 

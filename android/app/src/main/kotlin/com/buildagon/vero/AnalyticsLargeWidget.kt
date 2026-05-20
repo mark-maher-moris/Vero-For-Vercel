@@ -41,6 +41,7 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.widget_analytics_large)
             val isSubscribed = VeroWidgetUtils.isSubscribed(context)
+            val isDemoMode = VeroWidgetUtils.isDemoMode(context)
             val analyticsEnabled = VeroWidgetUtils.getBoolean(context, "vero_analytics_enabled", true)
 
             val projectName = VeroWidgetUtils.getProjectName(
@@ -86,7 +87,7 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
                 }
             }
 
-            if (!isSubscribed) {
+            if (!isSubscribed && !isDemoMode) {
                 views.setViewVisibility(R.id.widget_lock_overlay, View.VISIBLE)
             } else {
                 views.setViewVisibility(R.id.widget_lock_overlay, View.GONE)

@@ -15,6 +15,7 @@ struct AnalyticsWidgetEntry: TimelineEntry {
     let bounceRate: Int
     let sources: [AnalyticsSource]
     let isSubscribed: Bool
+    let isDemoMode: Bool
     let analyticsEnabled: Bool
     let isConfigured: Bool
     let lastUpdated: Date?
@@ -26,7 +27,7 @@ struct AnalyticsLargeProvider: TimelineProvider {
     func placeholder(in context: Context) -> AnalyticsWidgetEntry {
         AnalyticsWidgetEntry(date: .now, projectName: "my-project",
                              visitors24h: 2_840, bounceRate: 38,
-                             sources: demoSources(), isSubscribed: true,
+                             sources: demoSources(), isSubscribed: true, isDemoMode: false,
                              analyticsEnabled: true, isConfigured: true, lastUpdated: .now)
     }
 
@@ -58,6 +59,7 @@ struct AnalyticsLargeProvider: TimelineProvider {
             bounceRate: d.veroInt("vero_analytics_bounce_rate"),
             sources: sources,
             isSubscribed: d.veroBool("vero_is_subscribed"),
+            isDemoMode: d.veroBool("vero_is_demo_mode"),
             analyticsEnabled: d.veroBool("vero_analytics_enabled", default: true),
             isConfigured: !projectId.isEmpty,
             lastUpdated: ISO8601DateFormatter().date(from: d.veroString("vero_last_updated"))
@@ -156,7 +158,7 @@ struct AnalyticsLargeView: View {
         }
         .padding(12)
         .overlay {
-            if !entry.isSubscribed {
+            if !entry.isSubscribed && !entry.isDemoMode {
                 WidgetLockView()
             }
         }

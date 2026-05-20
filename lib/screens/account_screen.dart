@@ -10,7 +10,7 @@ import '../providers/subscription_provider.dart';
 import '../widgets/demo_mode_banners.dart';
 import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
-import 'onboarding_screen.dart';
+import 'widget_config_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -427,6 +427,13 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 _buildActionCard(
                   context,
+                  icon: Icons.widgets_outlined,
+                  title: 'Widgets',
+                  subtitle: 'Edit Home Widgets',
+                  onTap: () => _navigateTo(context, const WidgetConfigScreen()),
+                ),
+                _buildActionCard(
+                  context,
                   icon: Icons.vpn_key,
                   title: 'API Token',
                   subtitle: 'Connect account',
@@ -724,12 +731,7 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _replayOnboarding(BuildContext context) async {
     final appState = context.read<AppState>();
     await appState.resetOnboarding();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-      );
-    }
+    // Consumer in main.dart will handle navigation based on state change
   }
 
   void _showChangeTokenDialog(BuildContext context) {

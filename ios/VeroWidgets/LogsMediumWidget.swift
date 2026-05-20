@@ -15,6 +15,7 @@ struct LogsEntry: TimelineEntry {
     let deployStatus: String
     let logs: [LogEntry]
     let isSubscribed: Bool
+    let isDemoMode: Bool
     let lastUpdated: Date?
     let isConfigured: Bool
     let maxRows: Int
@@ -25,7 +26,7 @@ struct LogsEntry: TimelineEntry {
 struct LogsMediumProvider: TimelineProvider {
     func placeholder(in context: Context) -> LogsEntry {
         LogsEntry(date: .now, projectName: "my-project", deployStatus: "READY",
-                  logs: demoLogs(4), isSubscribed: true,
+                  logs: demoLogs(4), isSubscribed: true, isDemoMode: false,
                   lastUpdated: .now, isConfigured: true, maxRows: 4)
     }
 
@@ -57,6 +58,7 @@ struct LogsMediumProvider: TimelineProvider {
             deployStatus: d.veroString("vero_logs_deployment_status", default: "—"),
             logs: logs,
             isSubscribed: d.veroBool("vero_is_subscribed"),
+            isDemoMode: d.veroBool("vero_is_demo_mode"),
             lastUpdated: ISO8601DateFormatter().date(from: d.veroString("vero_last_updated")),
             isConfigured: !projectId.isEmpty,
             maxRows: maxRows
@@ -69,7 +71,7 @@ struct LogsMediumProvider: TimelineProvider {
 struct LogsLargeProvider: TimelineProvider {
     func placeholder(in context: Context) -> LogsEntry {
         LogsEntry(date: .now, projectName: "my-project", deployStatus: "READY",
-                  logs: demoLogs(8), isSubscribed: true,
+                  logs: demoLogs(8), isSubscribed: true, isDemoMode: false,
                   lastUpdated: .now, isConfigured: true, maxRows: 8)
     }
 
@@ -101,6 +103,7 @@ struct LogsLargeProvider: TimelineProvider {
             deployStatus: d.veroString("vero_logs_deployment_status", default: "—"),
             logs: logs,
             isSubscribed: d.veroBool("vero_is_subscribed"),
+            isDemoMode: d.veroBool("vero_is_demo_mode"),
             lastUpdated: ISO8601DateFormatter().date(from: d.veroString("vero_last_updated")),
             isConfigured: !projectId.isEmpty,
             maxRows: maxRows
@@ -190,7 +193,7 @@ struct LogsWidgetView: View {
         }
         .padding(10)
         .overlay {
-            if !entry.isSubscribed {
+            if !entry.isSubscribed && !entry.isDemoMode {
                 WidgetLockView()
             }
         }

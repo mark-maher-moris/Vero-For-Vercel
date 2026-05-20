@@ -68,15 +68,15 @@ class VeroApp extends StatelessWidget {
                 ),
               );
             }
+            // Show onboarding first (takes priority over authentication)
+            if (!appState.hasCompletedOnboarding) {
+              return const OnboardingScreen();
+            }
             if (appState.isAuthenticated) {
               if (subscription.isPro) {
                 return const MainScreen();
               }
               return const SubscriptionScreen();
-            }
-            // Show onboarding first, then demo entry
-            if (!appState.hasCompletedOnboarding) {
-              return const OnboardingScreen();
             }
             
             // If the user is subscribed but not authenticated, they can see the login screen

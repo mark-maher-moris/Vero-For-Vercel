@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:home_widget/home_widget.dart';
 import '../models/analytics.dart';
+import '../models/deployment.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
 import 'superwall_service.dart';
@@ -12,8 +13,10 @@ class WidgetKeys {
   static const String apiToken = 'vero_api_token';
   static const String teamId = 'vero_team_id';
   static const String isSubscribed = 'vero_is_subscribed';
+  static const String isDemoMode = 'vero_is_demo_mode';
   static const String lastUpdated = 'vero_last_updated';
   static const String projectsJson = 'vero_projects_json';
+  static const String selectedProjectIds = 'vero_selected_project_ids';
 
   // Per-widget selected project IDs
   static const String projectIdLogs = 'vero_project_logs_id';
@@ -77,6 +80,7 @@ class WidgetService {
   Future<void> pushAuthData({
     required String? teamId,
     required bool isSubscribed,
+    required bool isDemoMode,
   }) async {
     try {
       final token = await _authService.getToken();
@@ -86,6 +90,7 @@ class WidgetService {
         await HomeWidget.saveWidgetData<String>(WidgetKeys.teamId, teamId);
       }
       await HomeWidget.saveWidgetData<bool>(WidgetKeys.isSubscribed, isSubscribed);
+      await HomeWidget.saveWidgetData<bool>(WidgetKeys.isDemoMode, isDemoMode);
     } catch (e) {
       if (kDebugMode) print('[WidgetService] pushAuthData error: $e');
     }
@@ -100,6 +105,31 @@ class WidgetService {
       );
     } catch (e) {
       if (kDebugMode) print('[WidgetService] pushProjects error: $e');
+    }
+  }
+
+  /// Save project selections for widgets.
+  Future<void> setSelectedProjectIds(List<String> ids) async {
+    try {
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.selectedProjectIds,
+        jsonEncode(ids),
+      );
+    } catch (e) {
+      if (kDebugMode) print('[WidgetService] setSelectedProjectIds error: $e');
+    }
+  }
+
+  /// Get project selections for widgets.
+  Future<List<String>> getSelectedProjectIds() async {
+    try {
+      final json = await HomeWidget.getWidgetData<String>(WidgetKeys.selectedProjectIds);
+      if (json == null) return [];
+      final List<dynamic> decoded = jsonDecode(json);
+      return decoded.cast<String>();
+    } catch (e) {
+      if (kDebugMode) print('[WidgetService] getSelectedProjectIds error: $e');
+      return [];
     }
   }
 
@@ -123,6 +153,8 @@ class WidgetService {
           .toList());
 
       // Get stored project selections
+      final selectedProjectIds = await getSelectedProjectIds();
+      
       final projectIdLogs = await HomeWidget.getWidgetData<String>(WidgetKeys.projectIdLogs);
       final projectIdAnalytics = await HomeWidget.getWidgetData<String>(WidgetKeys.projectIdAnalytics);
       final projectIdCountries = await HomeWidget.getWidgetData<String>(WidgetKeys.projectIdCountries);
@@ -130,8 +162,7 @@ class WidgetService {
 
       // Fetch data concurrently
       await Future.wait([
-        if (projectIdLogs != null && projectIdLogs.isNotEmpty)
-          _refreshLogs(api, projectIdLogs),
+        _refreshLogs(api, selectedProjectIds, projectIdLogs),
         if (projectIdAnalytics != null && projectIdAnalytics.isNotEmpty)
           _refreshAnalytics(api, projectIdAnalytics),
         if (projectIdCountries != null && projectIdCountries.isNotEmpty)
@@ -146,9 +177,57 @@ class WidgetService {
     }
   }
 
-  Future<void> _refreshLogs(VercelApi api, String projectId) async {
+  Future<void> _refreshLogs(VercelApi api, List<String> selectedProjectIds, String? fallbackProjectId) async {
     try {
-      final deployments = await api.getDeployments(projectId: projectId);
+      String? targetProjectId = fallbackProjectId;
+      
+      // If we have multiple selected projects, we find the latest deployment across all of them
+      if (selectedProjectIds.isNotEmpty) {
+        List<Deployment> allDeployments = [];
+        
+        // Fetch deployments for each selected project to find the absolute latest
+        // We do this in parallel for efficiency
+        final deploymentsResults = await Future.wait(
+          selectedProjectIds.map((id) => api.getDeployments(projectId: id))
+        );
+        
+        for (var deployments in deploymentsResults) {
+          allDeployments.addAll(deployments);
+        }
+        
+        if (allDeployments.isNotEmpty) {
+          // Sort by date descending
+          allDeployments.sort((a, b) => b.created.compareTo(a.created));
+          final latest = allDeployments.first;
+          
+          await HomeWidget.saveWidgetData<String>(WidgetKeys.projectIdLogs, latest.projectId);
+          await HomeWidget.saveWidgetData<String>(WidgetKeys.logsProjectName, latest.name);
+          await HomeWidget.saveWidgetData<String>(WidgetKeys.logsDeploymentStatus, latest.state);
+
+          final events = await api.getDeploymentEvents(latest.uid);
+          final logEntries = events
+              .where((e) => e is Map && e['type'] == 'stdout')
+              .take(10)
+              .map((e) {
+                final created = e['created'] as int? ?? 0;
+                final payload = e['payload'] as Map? ?? {};
+                return {
+                  'message': payload['text'] as String? ?? '',
+                  'level': payload['level'] as String? ?? 'info',
+                  'timestamp': created,
+                };
+              })
+              .toList();
+
+          await HomeWidget.saveWidgetData<String>(WidgetKeys.logsData, jsonEncode(logEntries));
+          return;
+        }
+      }
+
+      // Fallback to single project if no selected projects or no deployments found
+      if (targetProjectId == null || targetProjectId.isEmpty) return;
+      
+      final deployments = await api.getDeployments(projectId: targetProjectId);
       if (deployments.isEmpty) return;
 
       final latest = deployments.first;
@@ -381,6 +460,19 @@ class WidgetService {
 
   /// Listen for widget tap events (when user taps a widget to open the app).
   Stream<Uri?> get widgetClicked => HomeWidget.widgetClicked;
+
+  /// Get the selected project ID for a specific widget type.
+  Future<String?> getProjectForWidget(String widgetType) async {
+    String key;
+    switch (widgetType) {
+      case 'logs': key = WidgetKeys.projectIdLogs; break;
+      case 'analytics': key = WidgetKeys.projectIdAnalytics; break;
+      case 'countries': key = WidgetKeys.projectIdCountries; break;
+      case 'users': key = WidgetKeys.projectIdUsers; break;
+      default: return null;
+    }
+    return await HomeWidget.getWidgetData<String>(key);
+  }
 
   /// Resolve country code to display name
   String _countryName(String code) {

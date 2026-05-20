@@ -25,7 +25,7 @@ class SuperwallService {
 
   /// Temporary free mode flags - set to true to make the app fully free on that platform
   static const bool _isAndroidFullyFree = true;
-  static const bool _isIOSFullyFree = true;
+  static const bool _isIOSFullyFree = false;
 
   /// Whether the app is in fully free mode on the current platform
   bool get isFullyFree {

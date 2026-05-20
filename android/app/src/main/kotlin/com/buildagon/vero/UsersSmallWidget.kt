@@ -33,6 +33,7 @@ class UsersSmallWidget : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.widget_users_small)
             val isSubscribed = VeroWidgetUtils.isSubscribed(context)
+            val isDemoMode = VeroWidgetUtils.isDemoMode(context)
 
             val projectName = VeroWidgetUtils.getProjectName(
                 context, "vero_users_project_name", "No project"
@@ -57,7 +58,7 @@ class UsersSmallWidget : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_data_container, View.VISIBLE)
             }
 
-            if (!isSubscribed) {
+            if (!isSubscribed && !isDemoMode) {
                 views.setViewVisibility(R.id.widget_lock_overlay, View.VISIBLE)
             } else {
                 views.setViewVisibility(R.id.widget_lock_overlay, View.GONE)

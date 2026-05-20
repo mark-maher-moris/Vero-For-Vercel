@@ -15,6 +15,7 @@ struct CountriesEntry: TimelineEntry {
     let projectName: String
     let countries: [CountryItem]
     let isSubscribed: Bool
+    let isDemoMode: Bool
     let isConfigured: Bool
     let lastUpdated: Date?
 }
@@ -24,7 +25,7 @@ struct CountriesEntry: TimelineEntry {
 struct CountriesProvider: TimelineProvider {
     func placeholder(in context: Context) -> CountriesEntry {
         CountriesEntry(date: .now, projectName: "my-project",
-                       countries: demoCountries(), isSubscribed: true,
+                       countries: demoCountries(), isSubscribed: true, isDemoMode: false,
                        isConfigured: true, lastUpdated: .now)
     }
 
@@ -56,6 +57,7 @@ struct CountriesProvider: TimelineProvider {
             projectName: d.veroString("vero_countries_project_name", default: "Select Project"),
             countries: countries,
             isSubscribed: d.veroBool("vero_is_subscribed"),
+            isDemoMode: d.veroBool("vero_is_demo_mode"),
             isConfigured: !projectId.isEmpty,
             lastUpdated: ISO8601DateFormatter().date(from: d.veroString("vero_last_updated"))
         )
@@ -125,7 +127,7 @@ struct CountriesMediumView: View {
         }
         .padding(10)
         .overlay {
-            if !entry.isSubscribed {
+            if !entry.isSubscribed && !entry.isDemoMode {
                 WidgetLockView()
             }
         }

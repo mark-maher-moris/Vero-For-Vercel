@@ -44,6 +44,7 @@ class LogsLargeWidget : AppWidgetProvider() {
         ) {
             val views = RemoteViews(context.packageName, R.layout.widget_logs_large)
             val isSubscribed = VeroWidgetUtils.isSubscribed(context)
+            val isDemoMode = VeroWidgetUtils.isDemoMode(context)
 
             val projectName = VeroWidgetUtils.getProjectName(
                 context, "vero_logs_project_name", "Select Project"
@@ -84,7 +85,7 @@ class LogsLargeWidget : AppWidgetProvider() {
                 }
             }
 
-            if (!isSubscribed) {
+            if (!isSubscribed && !isDemoMode) {
                 views.setViewVisibility(R.id.widget_lock_overlay, View.VISIBLE)
             } else {
                 views.setViewVisibility(R.id.widget_lock_overlay, View.GONE)

@@ -2078,10 +2078,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   ),
                 ),
                 // Scrollable content
-                Expanded(
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
                       const SizedBox(height: 16),
                       // Info rows
@@ -2132,7 +2131,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                       const SizedBox(height: 32),
                     ],
                   ),
-                ),
               ],
             );
           },
