@@ -12,15 +12,22 @@ extension UserDefaults {
     }
 
     func veroString(_ key: String, default d: String = "") -> String {
-        string(forKey: "flutter.\(key)") ?? d
+        // home_widget uses the raw key when an AppGroup is set on iOS, 
+        // but might use "flutter." prefix in other cases or older versions.
+        string(forKey: key) ?? string(forKey: "flutter.\(key)") ?? d
     }
     func veroBool(_ key: String, default d: Bool = false) -> Bool {
-        // home_widget stores bools as 1.0/0.0 doubles or plain Bool
+        // Try raw key first, then with flutter. prefix
+        if let b = object(forKey: key) as? Bool { return b }
+        if let n = object(forKey: key) as? NSNumber { return n.boolValue }
+        
         if let b = object(forKey: "flutter.\(key)") as? Bool { return b }
         if let n = object(forKey: "flutter.\(key)") as? NSNumber { return n.boolValue }
+        
         return d
     }
     func veroInt(_ key: String, default d: Int = 0) -> Int {
+        if let n = object(forKey: key) as? NSNumber { return n.intValue }
         if let n = object(forKey: "flutter.\(key)") as? NSNumber { return n.intValue }
         return d
     }

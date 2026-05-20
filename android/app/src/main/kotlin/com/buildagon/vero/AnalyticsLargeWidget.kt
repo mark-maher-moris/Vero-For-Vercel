@@ -87,11 +87,7 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
                 }
             }
 
-            if (!isSubscribed && !isDemoMode) {
-                views.setViewVisibility(R.id.widget_lock_overlay, View.VISIBLE)
-            } else {
-                views.setViewVisibility(R.id.widget_lock_overlay, View.GONE)
-            }
+            views.setViewVisibility(R.id.widget_lock_overlay, View.GONE)
 
             val openIntent = VeroWidgetUtils.openAppPendingIntent(
                 context, "vero://widget/configure?type=analytics"

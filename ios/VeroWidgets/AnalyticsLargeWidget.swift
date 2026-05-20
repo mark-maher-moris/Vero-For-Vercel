@@ -157,11 +157,6 @@ struct AnalyticsLargeView: View {
                 .padding(.top, 6)
         }
         .padding(12)
-        .overlay {
-            if !entry.isSubscribed && !entry.isDemoMode {
-                WidgetLockView()
-            }
-        }
         .widgetURL(makeWidgetURL(for: "analytics"))
         .applyWidgetBackground(Color.veroSurface)
     }

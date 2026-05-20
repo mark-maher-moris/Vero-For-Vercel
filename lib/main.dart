@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,7 @@ import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/demo_entry_screen.dart';
 import 'screens/subscription_screen.dart';
+import 'screens/widget_config_screen.dart';
 import 'services/widget_service.dart';
 import 'widgets/auth_error_handler.dart';
 import 'widgets/app_level_demo_banner.dart';
@@ -39,8 +41,64 @@ Future<void> main() async {
   );
 }
 
-class VeroApp extends StatelessWidget {
+class VeroApp extends StatefulWidget {
   const VeroApp({super.key});
+
+  @override
+  State<VeroApp> createState() => _VeroAppState();
+}
+
+class _VeroAppState extends State<VeroApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final WidgetService _widgetService = WidgetService();
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToWidgetClicks();
+  }
+
+  void _listenToWidgetClicks() {
+    // Handle clicks when app is in foreground or background
+    _widgetService.widgetClicked.listen((uri) {
+      if (kDebugMode) {
+        print('[WidgetDeepLink] Widget clicked (stream) - URI: $uri');
+      }
+      if (uri != null) {
+        _handleWidgetDeepLink(uri);
+      }
+    });
+  }
+
+  void _handleWidgetDeepLink(Uri uri) {
+    if (kDebugMode) {
+      print('[WidgetDeepLink] Handling deep link: scheme=${uri.scheme}, path=${uri.path}, params=${uri.queryParameters}');
+    }
+    if (uri.scheme == 'vero' && uri.host == 'widget' && uri.path == '/configure') {
+      final widgetType = uri.queryParameters['type'];
+      if (kDebugMode) {
+        print('[WidgetDeepLink] Widget type: $widgetType');
+      }
+      if (widgetType != null && _navigatorKey.currentState != null) {
+        if (kDebugMode) {
+          print('[WidgetDeepLink] Navigating to WidgetConfigScreen');
+        }
+        _navigatorKey.currentState!.push(
+          MaterialPageRoute(
+            builder: (context) => const WidgetConfigScreen(),
+          ),
+        );
+      } else {
+        if (kDebugMode) {
+          print('[WidgetDeepLink] Cannot navigate - widgetType is null or navigator is null');
+        }
+      }
+    } else {
+      if (kDebugMode) {
+        print('[WidgetDeepLink] URI does not match widget configure pattern');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +106,7 @@ class VeroApp extends StatelessWidget {
       title: 'Vero For Vercel',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
+      navigatorKey: _navigatorKey,
       builder: (context, child) {
         return Column(
           children: [

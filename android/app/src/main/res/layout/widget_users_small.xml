@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#1A1A1A"
-    android:padding="12dp">
+    android:padding="10dp">
 
     <!-- Main content -->
     <LinearLayout
@@ -12,7 +12,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:gravity="center_horizontal"
         android:visibility="visible">
 
         <TextView
@@ -26,48 +25,40 @@
             android:ellipsize="end"
             android:gravity="center" />
 
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Numbers section -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="24h"
-            android:textColor="#666666"
-            android:textSize="8sp"
-            android:layout_marginTop="6dp" />
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="4dp">
 
-        <TextView
-            android:id="@+id/widget_total_users"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="—"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="24h"
+                android:textColor="#666666"
+                android:textSize="8sp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="online"
-            android:textColor="#666666"
-            android:textSize="8sp"
-            android:layout_marginTop="4dp" />
+            <TextView
+                android:id="@+id/widget_total_users"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="—"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginStart="4dp" />
 
-        <TextView
-            android:id="@+id/widget_online_users"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="—"
-            android:textColor="#50E3C2"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+        </LinearLayout>
 
-        <TextView
-            android:id="@+id/widget_bounce_rate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="—%"
-            android:textColor="#888888"
-            android:textSize="9sp"
-            android:layout_marginTop="4dp" />
+        <!-- Chart view -->
+        <View
+            android:id="@+id/widget_chart"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp" />
 
         <TextView
             android:id="@+id/widget_last_updated"
@@ -76,8 +67,7 @@
             android:text="—"
             android:textColor="#444444"
             android:textSize="7sp"
-            android:gravity="center"
-            android:layout_marginTop="4dp" />
+            android:gravity="center" />
 
     </LinearLayout>
 

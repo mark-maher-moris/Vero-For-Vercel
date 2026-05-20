@@ -200,6 +200,9 @@ class AppState extends ChangeNotifier {
 
       _isAuthenticated = true;
 
+      // Push demo data to widgets
+      await _widgetService.pushDemoData();
+
       await _superwallService.trackUserAction('enter_demo_mode', context: 'app_state');
     } catch (e) {
       _errorMessage = e.toString();
@@ -472,6 +475,9 @@ class AppState extends ChangeNotifier {
           api: _apiService,
           projects: projectList,
         );
+      } else {
+        // In demo mode, still trigger widget updates so they pick up isDemoMode flag
+        await _widgetService.triggerAllWidgetUpdates();
       }
     } catch (e) {
       if (kDebugMode) print('[AppState] _pushWidgetData error: $e');

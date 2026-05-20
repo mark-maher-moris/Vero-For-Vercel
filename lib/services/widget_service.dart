@@ -43,8 +43,10 @@ class WidgetKeys {
 
   // Users widget data
   static const String usersTotal24h = 'vero_users_total_24h';
+  static const String usersLastHour = 'vero_users_last_hour';
   static const String usersBounceRate = 'vero_users_bounce_rate';
   static const String usersProjectName = 'vero_users_project_name';
+  static const String usersTimeseries = 'vero_users_timeseries';
 }
 
 /// Names of the native widget classes for triggering updates.
@@ -171,7 +173,7 @@ class WidgetService {
           _refreshUsers(api, projectIdUsers),
       ]);
 
-      await _triggerAllWidgetUpdates();
+      await triggerAllWidgetUpdates();
     } catch (e) {
       if (kDebugMode) print('[WidgetService] refreshAll error: $e');
     }
@@ -180,6 +182,7 @@ class WidgetService {
   Future<void> _refreshLogs(VercelApi api, List<String> selectedProjectIds, String? fallbackProjectId) async {
     try {
       String? targetProjectId = fallbackProjectId;
+      String? deploymentId;
       
       // If we have multiple selected projects, we find the latest deployment across all of them
       if (selectedProjectIds.isNotEmpty) {
@@ -200,58 +203,60 @@ class WidgetService {
           allDeployments.sort((a, b) => b.created.compareTo(a.created));
           final latest = allDeployments.first;
           
+          targetProjectId = latest.projectId;
+          deploymentId = latest.uid;
+          
           await HomeWidget.saveWidgetData<String>(WidgetKeys.projectIdLogs, latest.projectId);
           await HomeWidget.saveWidgetData<String>(WidgetKeys.logsProjectName, latest.name);
           await HomeWidget.saveWidgetData<String>(WidgetKeys.logsDeploymentStatus, latest.state);
-
-          final events = await api.getDeploymentEvents(latest.uid);
-          final logEntries = events
-              .where((e) => e is Map && e['type'] == 'stdout')
-              .take(10)
-              .map((e) {
-                final created = e['created'] as int? ?? 0;
-                final payload = e['payload'] as Map? ?? {};
-                return {
-                  'message': payload['text'] as String? ?? '',
-                  'level': payload['level'] as String? ?? 'info',
-                  'timestamp': created,
-                };
-              })
-              .toList();
-
-          await HomeWidget.saveWidgetData<String>(WidgetKeys.logsData, jsonEncode(logEntries));
-          return;
         }
       }
 
       // Fallback to single project if no selected projects or no deployments found
       if (targetProjectId == null || targetProjectId.isEmpty) return;
       
-      final deployments = await api.getDeployments(projectId: targetProjectId);
-      if (deployments.isEmpty) return;
+      // Get the latest deployment if we don't have one yet
+      if (deploymentId == null) {
+        final deployments = await api.getDeployments(projectId: targetProjectId);
+        if (deployments.isEmpty) return;
+        final latest = deployments.first;
+        deploymentId = latest.uid;
+        await HomeWidget.saveWidgetData<String>(WidgetKeys.logsProjectName, latest.name);
+        await HomeWidget.saveWidgetData<String>(WidgetKeys.logsDeploymentStatus, latest.state);
+      }
 
-      final latest = deployments.first;
-      final projectName = latest.name;
+      // Get ownerId (team ID or user ID) for runtime logs API
+      final ownerId = api.teamId;
+      if (ownerId == null) {
+        if (kDebugMode) print('[WidgetService] No teamId available for runtime logs');
+        return;
+      }
 
-      await HomeWidget.saveWidgetData<String>(WidgetKeys.logsProjectName, projectName);
-      await HomeWidget.saveWidgetData<String>(WidgetKeys.logsDeploymentStatus, latest.state);
+      // Fetch runtime logs using the same endpoint as the app
+      final result = await api.getProjectLogs(
+        projectId: targetProjectId,
+        ownerId: ownerId,
+        deploymentId: deploymentId,
+        startDate: '1', // Fetch maximum logs
+      );
 
-      final events = await api.getDeploymentEvents(latest.uid);
-      final logEntries = events
-          .where((e) => e is Map && e['type'] == 'stdout')
-          .take(10)
-          .map((e) {
-            final created = e['created'] as int? ?? 0;
-            final payload = e['payload'] as Map? ?? {};
-            return {
-              'message': payload['text'] as String? ?? '',
-              'level': payload['level'] as String? ?? 'info',
-              'timestamp': created,
-            };
-          })
-          .toList();
+      // Transform Log objects into the simple format widgets expect
+      final logEntries = <Map<String, dynamic>>[];
+      for (final log in result.logs) {
+        // Extract log lines from each Log entry
+        for (final logLine in log.logs) {
+          logEntries.add({
+            'message': logLine.message,
+            'level': logLine.level,
+            'timestamp': logLine.timestamp.millisecondsSinceEpoch,
+          });
+        }
+      }
 
-      await HomeWidget.saveWidgetData<String>(WidgetKeys.logsData, jsonEncode(logEntries));
+      // Take only the first 10 log entries for the widget
+      final widgetLogs = logEntries.take(10).toList();
+
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.logsData, jsonEncode(widgetLogs));
     } catch (e) {
       if (kDebugMode) print('[WidgetService] _refreshLogs error: $e');
     }
@@ -391,6 +396,21 @@ class WidgetService {
         await HomeWidget.saveWidgetData<int>('vero_users_last_hour', recentOverview.devices);
       } catch (_) {}
 
+      // Fetch 24-hour timeseries for the chart
+      try {
+        final from24h = now.subtract(const Duration(hours: 24)).toIso8601String();
+        final timeseries = await api.getAnalyticsTimeseries(
+          projectId: projectId,
+          from: from24h,
+          to: to,
+        );
+        final seriesData = timeseries.map((p) => {
+          'date': p.key,
+          'value': p.devices,
+        }).toList();
+        await HomeWidget.saveWidgetData<String>(WidgetKeys.usersTimeseries, jsonEncode(seriesData));
+      } catch (_) {}
+
       final projects = await api.getProjectsList();
       final project = projects.firstWhere(
         (p) => p.id == projectId,
@@ -402,7 +422,7 @@ class WidgetService {
     }
   }
 
-  Future<void> _triggerAllWidgetUpdates() async {
+  Future<void> triggerAllWidgetUpdates() async {
     final updates = [
       HomeWidget.updateWidget(
         iOSName: WidgetNames.usersSmallIOS,
@@ -426,6 +446,84 @@ class WidgetService {
       ),
     ];
     await Future.wait(updates);
+  }
+
+  /// Push demo data to widgets for demo mode display.
+  Future<void> pushDemoData() async {
+    try {
+      await initialize();
+      
+      // Push auth data with demo mode enabled
+      await HomeWidget.saveWidgetData<bool>(WidgetKeys.isSubscribed, false);
+      await HomeWidget.saveWidgetData<bool>(WidgetKeys.isDemoMode, true);
+      
+      // Push demo logs
+      final demoLogs = [
+        {'message': 'Build started', 'level': 'info', 'timestamp': DateTime.now().millisecondsSinceEpoch - 300000},
+        {'message': 'Installing dependencies', 'level': 'info', 'timestamp': DateTime.now().millisecondsSinceEpoch - 240000},
+        {'message': 'Compiling TypeScript', 'level': 'info', 'timestamp': DateTime.now().millisecondsSinceEpoch - 180000},
+        {'message': 'Build complete', 'level': 'success', 'timestamp': DateTime.now().millisecondsSinceEpoch - 120000},
+      ];
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.logsData, jsonEncode(demoLogs));
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.logsProjectName, 'demo-project');
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.logsDeploymentStatus, 'READY');
+      
+      // Push demo analytics
+      await HomeWidget.saveWidgetData<int>(WidgetKeys.analyticsVisitors24h, 2840);
+      await HomeWidget.saveWidgetData<int>(WidgetKeys.analyticsBounceRate, 38);
+      final demoSources = [
+        {'source': 'Direct', 'visitors': 1200},
+        {'source': 'google.com', 'visitors': 840},
+        {'source': 'twitter.com', 'visitors': 420},
+        {'source': 'github.com', 'visitors': 210},
+        {'source': 'ycombinator.com', 'visitors': 110},
+      ];
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.analyticsSources, jsonEncode(demoSources));
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.analyticsProjectName, 'demo-project');
+      await HomeWidget.saveWidgetData<bool>(WidgetKeys.analyticsEnabled, true);
+      
+      // Push demo countries
+      final demoCountries = [
+        {'code': 'US', 'name': 'United States', 'visitors': 1200, 'percentage': 42},
+        {'code': 'GB', 'name': 'United Kingdom', 'visitors': 430, 'percentage': 15},
+        {'code': 'DE', 'name': 'Germany', 'visitors': 290, 'percentage': 10},
+        {'code': 'IN', 'name': 'India', 'visitors': 210, 'percentage': 7},
+        {'code': 'CA', 'name': 'Canada', 'visitors': 180, 'percentage': 6},
+      ];
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.countriesData, jsonEncode(demoCountries));
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.countriesProjectName, 'demo-project');
+      
+      // Push demo users
+      await HomeWidget.saveWidgetData<int>(WidgetKeys.usersTotal24h, 1240);
+      await HomeWidget.saveWidgetData<int>(WidgetKeys.usersLastHour, 18);
+      await HomeWidget.saveWidgetData<int>(WidgetKeys.usersBounceRate, 42);
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.usersProjectName, 'demo-project');
+      final demoUsersTimeseries = [
+        {'date': '0h', 'value': 120},
+        {'date': '2h', 'value': 145},
+        {'date': '4h', 'value': 132},
+        {'date': '6h', 'value': 180},
+        {'date': '8h', 'value': 165},
+        {'date': '10h', 'value': 210},
+        {'date': '12h', 'value': 195},
+        {'date': '14h', 'value': 240},
+        {'date': '16h', 'value': 225},
+        {'date': '18h', 'value': 280},
+        {'date': '20h', 'value': 265},
+        {'date': '22h', 'value': 310},
+      ];
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.usersTimeseries, jsonEncode(demoUsersTimeseries));
+      
+      // Save last updated timestamp
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.lastUpdated,
+        DateTime.now().toIso8601String(),
+      );
+      
+      await triggerAllWidgetUpdates();
+    } catch (e) {
+      if (kDebugMode) print('[WidgetService] pushDemoData error: $e');
+    }
   }
 
   /// Save a project selection for a specific widget type.
@@ -455,11 +553,16 @@ class WidgetService {
     }
     await HomeWidget.saveWidgetData<String>(key, projectId);
     await HomeWidget.saveWidgetData<String>(nameKey, projectName);
-    await _triggerAllWidgetUpdates();
+    await triggerAllWidgetUpdates();
   }
 
   /// Listen for widget tap events (when user taps a widget to open the app).
-  Stream<Uri?> get widgetClicked => HomeWidget.widgetClicked;
+  Stream<Uri?> get widgetClicked {
+    if (kDebugMode) {
+      print('[WidgetService] widgetClicked stream accessed');
+    }
+    return HomeWidget.widgetClicked;
+  }
 
   /// Get the selected project ID for a specific widget type.
   Future<String?> getProjectForWidget(String widgetType) async {

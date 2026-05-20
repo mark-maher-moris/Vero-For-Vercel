@@ -192,11 +192,6 @@ struct LogsWidgetView: View {
                 .padding(.top, 4)
         }
         .padding(10)
-        .overlay {
-            if !entry.isSubscribed && !entry.isDemoMode {
-                WidgetLockView()
-            }
-        }
         .widgetURL(makeWidgetURL(for: "logs"))
         .applyWidgetBackground(Color.veroSurface)
     }
