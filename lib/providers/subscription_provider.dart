@@ -20,7 +20,7 @@ class SubscriptionProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   
   // Computed properties for UI
-  bool get hasActiveSubscription => isPro;
+  bool get hasActiveSubscription => _isPro || _superwallService.isFullyFree;
   bool get hasError => _errorMessage != null;
   
   StreamSubscription<bool>? _subscriptionStatusSubscription;

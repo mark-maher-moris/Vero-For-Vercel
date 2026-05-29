@@ -112,7 +112,7 @@ class _AccountScreenState extends State<AccountScreen> {
       teamName = team['name'] ?? 'Team';
     }
 
-    final vercelPlan = appState.user?['plan'] ?? 'hobby';
+    final vercelPlan = appState.isDemoMode ? 'hobby' : (appState.user?['plan'] ?? 'hobby');
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
@@ -238,45 +238,46 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                         ],
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text(
-                            'VERCEL PLAN',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.onSurfaceVariant,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
-                                  ? Colors.purple.withOpacity(0.2)
-                                  : AppTheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(2),
-                              border: Border.all(
-                                color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
-                                    ? Colors.purple.withOpacity(0.5)
-                                    : AppTheme.primary.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Text(
-                              vercelPlan.toString().toUpperCase(),
+                      if (!appState.isDemoMode)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text(
+                              'VERCEL PLAN',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
-                                    ? Colors.purpleAccent
-                                    : AppTheme.primary,
+                                color: AppTheme.onSurfaceVariant,
+                                letterSpacing: 1,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
+                                    ? Colors.purple.withOpacity(0.2)
+                                    : AppTheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(2),
+                                border: Border.all(
+                                  color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
+                                      ? Colors.purple.withOpacity(0.5)
+                                      : AppTheme.primary.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                vercelPlan.toString().toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: (vercelPlan.toString().toLowerCase() == 'pro' || vercelPlan.toString().toLowerCase() == 'enterprise')
+                                      ? Colors.purpleAccent
+                                      : AppTheme.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ],

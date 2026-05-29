@@ -18,7 +18,7 @@ class DemoUpgradeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subscription = context.watch<SubscriptionProvider>();
-    if (subscription.isPro) return const SizedBox.shrink();
+    if (subscription.hasActiveSubscription) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(20),
