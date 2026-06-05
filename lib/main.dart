@@ -14,6 +14,7 @@ import 'screens/widget_config_screen.dart';
 import 'services/widget_service.dart';
 import 'widgets/auth_error_handler.dart';
 import 'widgets/app_level_demo_banner.dart';
+import 'screens/demo_entry_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -137,9 +138,11 @@ class _VeroAppState extends State<VeroApp> {
               return const SubscriptionScreen();
             }
             
-            // If the user is not authenticated after onboarding, show the login screen.
-            // This is where the 'after_onboarding' paywall will be triggered.
-            return const LoginScreen();
+            // If the user is not authenticated after onboarding, show the appropriate screen based on subscription status.
+            if (subscription.isPro) {
+              return const LoginScreen();
+            }
+            return const DemoEntryScreen();
           },
         ),
       ),

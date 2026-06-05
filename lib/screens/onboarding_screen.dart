@@ -23,7 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final List<Animation<double>> _fadeAnimations;
   late final List<Animation<double>> _slideAnimations;
 
-  final int _totalPages = 8;
+  final int _totalPages = 7;
 
   @override
   void initState() {
@@ -89,7 +89,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       'features',
       'interactive_logs',
       'home_widgets',
-      'personalization',
       'trust',
       'open_source',
       'github'
@@ -102,7 +101,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _nextPage() async {
-    if (_currentPage == 6) {
+    if (_currentPage == 5) {
       // On OpenSource slide, request review then go to last page
       await _requestReviewThenContinue();
     } else if (_currentPage < _totalPages - 1) {
@@ -113,7 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         );
       }
     } else {
-      // On last page (GitHub slide, index 7), complete onboarding
+      // On last page (GitHub slide, index 6), complete onboarding
       await _showPaywallThenLogin();
     }
   }
@@ -208,24 +207,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         slideAnimation: _slideAnimations[3],
                       );
                     case 4:
-                      return _PersonalizationSlide(
+                      return _TrustSlide(
                         fadeAnimation: _fadeAnimations[4],
                         slideAnimation: _slideAnimations[4],
                       );
                     case 5:
-                      return _TrustSlide(
+                      return _OpenSourceSlide(
                         fadeAnimation: _fadeAnimations[5],
                         slideAnimation: _slideAnimations[5],
                       );
                     case 6:
-                      return _OpenSourceSlide(
+                      return _GitHubSlide(
                         fadeAnimation: _fadeAnimations[6],
                         slideAnimation: _slideAnimations[6],
-                      );
-                    case 7:
-                      return _GitHubSlide(
-                        fadeAnimation: _fadeAnimations[7],
-                        slideAnimation: _slideAnimations[7],
                       );
                     default:
                       return const SizedBox.shrink();
@@ -513,426 +507,6 @@ class _HeroSlideState extends State<_HeroSlide> with SingleTickerProviderStateMi
           ),
         );
       },
-    );
-  }
-}
-
-class WidgetOption {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  WidgetOption({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-}
-
-class _PersonalizationSlide extends StatefulWidget {
-  final Animation<double> fadeAnimation;
-  final Animation<double> slideAnimation;
-
-  const _PersonalizationSlide({
-    required this.fadeAnimation,
-    required this.slideAnimation,
-  });
-
-  @override
-  State<_PersonalizationSlide> createState() => _PersonalizationSlideState();
-}
-
-class _PersonalizationSlideState extends State<_PersonalizationSlide>
-    with SingleTickerProviderStateMixin {
-  bool _realtimeLogs = true;
-  bool _favicons = true;
-  bool _usersWidget = true;
-  bool _logsWidget = true;
-  bool _analyticsWidget = false;
-  bool _geoWidget = false;
-
-  late AnimationController _staggerController;
-  late List<Animation<double>> _cardAnimations;
-  late List<Animation<double>> _widgetAnimations;
-
-  final List<WidgetOption> _widgetOptions = [
-    WidgetOption(
-      icon: Icons.people_outline,
-      title: 'Users Widget',
-      subtitle: '24h visitors & online count',
-    ),
-    WidgetOption(
-      icon: Icons.terminal_outlined,
-      title: 'Logs Widget',
-      subtitle: 'Live build & runtime logs',
-    ),
-    WidgetOption(
-      icon: Icons.analytics_outlined,
-      title: 'Analytics Widget',
-      subtitle: 'Visitors & traffic insights',
-    ),
-    WidgetOption(
-      icon: Icons.public_outlined,
-      title: 'Geo Traffic Widget',
-      subtitle: 'Top countries by traffic',
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _staggerController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    _cardAnimations = List.generate(
-      2,
-      (index) => Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(
-          parent: _staggerController,
-          curve: Interval(
-            0.2 + (index * 0.15),
-            0.5 + (index * 0.15),
-            curve: Curves.easeOut,
-          ),
-        ),
-      ),
-    );
-
-    _widgetAnimations = List.generate(
-      _widgetOptions.length,
-      (index) => Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(
-          parent: _staggerController,
-          curve: Interval(
-            0.5 + (index * 0.08),
-            0.75 + (index * 0.08),
-            curve: Curves.easeOut,
-          ),
-        ),
-      ),
-    );
-
-    _staggerController.forward();
-  }
-
-  @override
-  void dispose() {
-    _staggerController.dispose();
-    super.dispose();
-  }
-
-  bool _getWidgetValue(int index) {
-    switch (index) {
-      case 0:
-        return _usersWidget;
-      case 1:
-        return _logsWidget;
-      case 2:
-        return _analyticsWidget;
-      case 3:
-        return _geoWidget;
-      default:
-        return false;
-    }
-  }
-
-  void _toggleWidget(int index) {
-    setState(() {
-      switch (index) {
-        case 0:
-          _usersWidget = !_usersWidget;
-          break;
-        case 1:
-          _logsWidget = !_logsWidget;
-          break;
-        case 2:
-          _analyticsWidget = !_analyticsWidget;
-          break;
-        case 3:
-          _geoWidget = !_geoWidget;
-          break;
-      }
-    });
-  }
-
-  Widget _buildWidgetOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.surfaceContainerHigh : AppTheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(2),
-          border: Border.all(
-            color: isSelected ? AppTheme.primary : AppTheme.outlineVariant.withOpacity(0.2),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Icon(icon, color: AppTheme.primary, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: AppTheme.primary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: AppTheme.onSurfaceVariant,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primary : AppTheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(2),
-                border: Border.all(
-                  color: isSelected ? AppTheme.primary : AppTheme.outlineVariant.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : null,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.fadeAnimation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: widget.fadeAnimation.value,
-          child: Transform.translate(
-            offset: Offset(0, widget.slideAnimation.value),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 40),
-                    _buildHeader(
-                      icon: Icons.tune,
-                      label: 'PERSONALIZE',
-                      title: 'Make It Yours',
-                      subtitle: 'Customize your experience before we begin.',
-                    ),
-                    const SizedBox(height: 40),
-                    FadeTransition(
-                      opacity: _cardAnimations[0],
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0.3, 0),
-                          end: Offset.zero,
-                        ).animate(_cardAnimations[0]),
-                        child: _buildSettingCard(
-                          title: 'Real-time Console',
-                          subtitle: 'Stream logs directly to your device',
-                          icon: Icons.terminal,
-                          value: _realtimeLogs,
-                          onChanged: (val) => setState(() => _realtimeLogs = val),
-                        ),
-                      ),
-                    ),
-                  
-                    const SizedBox(height: 32),
-                    const Text(
-                      'HOME SCREEN WIDGETS',
-                      style: TextStyle(
-                        color: AppTheme.onSurfaceVariant,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ...List.generate(_widgetOptions.length, (index) {
-                      final option = _widgetOptions[index];
-                      final isSelected = _getWidgetValue(index);
-                      return FadeTransition(
-                        opacity: _widgetAnimations[index],
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.2, 0),
-                            end: Offset.zero,
-                          ).animate(_widgetAnimations[index]),
-                          child: Padding(
-                            padding: EdgeInsets.only(bottom: index < _widgetOptions.length - 1 ? 12 : 0),
-                            child: _buildWidgetOption(
-                              icon: option.icon,
-                              title: option.title,
-                              subtitle: option.subtitle,
-                              isSelected: isSelected,
-                              onTap: () => _toggleWidget(index),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHeader({
-    required IconData icon,
-    required String label,
-    required String title,
-    required String subtitle,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Icon(icon, color: AppTheme.primary, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: AppTheme.onSurfaceVariant,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 40),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                color: AppTheme.onSurface,
-                fontWeight: FontWeight.bold,
-                height: 1.1,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          subtitle,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceVariant,
-                height: 1.6,
-              ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(
-          color: AppTheme.outlineVariant.withOpacity(0.1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: Icon(icon, color: AppTheme.primary, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppTheme.primary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: AppTheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppTheme.primary,
-            activeTrackColor: AppTheme.primary.withOpacity(0.2),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -2005,40 +1579,8 @@ class _TrustSlideState extends State<_TrustSlide>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 48),
-                    Center(
-                      child: FadeTransition(
-                        opacity: _ctaAnimation,
-                        child: ScaleTransition(
-                          scale: Tween<double>(begin: 0.95, end: 1.0).animate(_ctaAnimation),
-                          child: Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: AppTheme.surfaceContainerHigh.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(2),
-                            border: Border.all(
-                              color: AppTheme.primary.withOpacity(0.1),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.star, color: AppTheme.primary, size: 32),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Support the Project',
-                                style: TextStyle(
-                                  color: AppTheme.primary,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                             
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+
+                  
                   ],
                 ),
               ),

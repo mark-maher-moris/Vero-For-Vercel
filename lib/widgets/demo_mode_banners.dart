@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -198,16 +199,30 @@ class ConnectRealAccountBanner extends StatelessWidget {
   Future<void> _handleConnect(BuildContext context) async {
     final subscription = context.read<SubscriptionProvider>();
     
+    if (kDebugMode) {
+      print('--- CONNECT CARD CLICKED (Demo Banner) ---');
+      print('Initial Status - isPro: ${subscription.isPro}');
+    }
+
     // If not subscribed, show paywall instead of allowing them to connect
-    if (!subscription.hasActiveSubscription) {
+    if (!subscription.isPro) {
+      if (kDebugMode) print('User is not Pro. Triggering Paywall...');
       SuperwallService().trackUserAction(
         'demo_connect_real_paywall_trigger',
         context: 'demo_banner',
       );
       await subscription.showPaywall();
-      return;
+      
+      if (kDebugMode) print('Paywall dismissed. New Status - isPro: ${subscription.isPro}');
+      
+      // If still not subscribed after paywall, return
+      if (!subscription.isPro) {
+        if (kDebugMode) print('User is still not Pro. Aborting login screen navigation.');
+        return;
+      }
     }
 
+    if (kDebugMode) print('User is Pro. Navigating to LoginScreen.');
     SuperwallService().trackUserAction(
       'demo_connect_real_tap',
       context: 'demo_banner',

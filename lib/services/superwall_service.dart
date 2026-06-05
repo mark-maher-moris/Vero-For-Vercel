@@ -232,27 +232,49 @@ class SuperwallService {
     }
   }
 
-  /// Present a paywall manually
-  Future<void> presentPaywall() async {
+  /// Present a paywall manually and wait for dismissal
+  Future<bool> presentPaywall() async {
     // Skip paywall presentation in fully free mode
     if (isFullyFree) {
       if (kDebugMode) print('Superwall: Fully free mode enabled, skipping manual paywall');
-      return;
+      return true;
     }
 
     if (!_isInitialized) {
       if (kDebugMode) print('Superwall: Not initialized, cannot present manual paywall');
-      return;
+      return _hasActiveSubscription;
     }
+    
+    final completer = Completer<bool>();
     
     try {
       if (kDebugMode) print('Superwall: Presenting manual paywall');
+      
+      final handler = sw.PaywallPresentationHandler();
+      handler.onDismissHandler = (paywallInfo, result) async {
+        final isPro = await getCurrentSubscriptionStatus();
+        if (!completer.isCompleted) completer.complete(isPro);
+      };
+      handler.onErrorHandler = (error) async {
+        final isPro = await getCurrentSubscriptionStatus();
+        if (!completer.isCompleted) completer.complete(isPro);
+      };
+      handler.onSkipHandler = (reason) async {
+        final isPro = await getCurrentSubscriptionStatus();
+        if (!completer.isCompleted) completer.complete(isPro);
+      };
+      
       // Register a generic placement to trigger paywall presentation
-      await sw.Superwall.shared.registerPlacement('manual_paywall');
+      await sw.Superwall.shared.registerPlacement('manual_paywall', handler: handler);
       if (kDebugMode) print('Superwall: Successfully triggered manual paywall');
     } catch (e) {
       if (kDebugMode) print('Superwall: Present paywall error - $e');
+      if (!completer.isCompleted) {
+        completer.complete(await getCurrentSubscriptionStatus());
+      }
     }
+    
+    return completer.future;
   }
 
   /// Restore purchases

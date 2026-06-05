@@ -11,7 +11,7 @@ import '../widgets/demo_mode_banners.dart';
 import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
 import 'widget_config_screen.dart';
-
+import 'login_screen.dart';
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
@@ -438,7 +438,36 @@ class _AccountScreenState extends State<AccountScreen> {
                   icon: Icons.vpn_key,
                   title: 'API Token',
                   subtitle: 'Connect account',
-                  onTap: () => _showChangeTokenDialog(context),
+                  onTap: () async {
+                    if (kDebugMode) {
+                      print('--- CONNECT CARD CLICKED (Account Settings) ---');
+                      print('Initial Status - isDemoMode: ${appState.isDemoMode}, isPro: $isPro');
+                    }
+                    
+                    if (appState.isDemoMode) {
+                      if (!isPro) {
+                        if (kDebugMode) print('User is not Pro. Triggering Paywall...');
+                        await subscriptionProvider.showPaywall();
+                        
+                        if (kDebugMode) print('Paywall dismissed. New Status - isPro: ${subscriptionProvider.isPro}');
+                        
+                        if (!subscriptionProvider.isPro) {
+                          if (kDebugMode) print('User is still not Pro. Aborting login screen navigation.');
+                          return;
+                        }
+                      }
+                      
+                      if (kDebugMode) print('User is Pro. Navigating to LoginScreen.');
+                      if (context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        );
+                      }
+                    } else {
+                      if (kDebugMode) print('Not in demo mode. Showing Change Token Dialog.');
+                      _showChangeTokenDialog(context);
+                    }
+                  },
                 ),
                 _buildActionCard(
                   context,
