@@ -22,6 +22,7 @@ import '../widgets/project_logo_widget.dart';
 // import '../widgets/traffic_globe.dart'; // Temporarily hidden
 import '../widgets/analytics_metric_card.dart';
 import '../widgets/analytics_chart.dart';
+import '../widgets/country_analysis_card.dart';
 import '../widgets/analytics_breakdown_card.dart';
 import 'file_content_screen.dart';
 import 'deployment_logs_screen.dart';
@@ -1094,17 +1095,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           ],
         ),
         const SizedBox(height: 24),
-        AnalyticsBreakdownCard(
-          title: 'Countries',
-          icon: Icons.public_outlined,
+        CountryAnalysisCard(
           items: _analyticsData.countries,
-          colorPalette: const [
-            Color(0xFFD97706), // Orange
-            Color(0xFFF59E0B), // Light orange
-            Color(0xFFFBBF24), // Lighter orange
-            Color(0xFFFCD34D), // Very light orange
-            Color(0xFFB45309), // Dark orange
-          ],
+          isLoading: _isLoadingAnalytics,
         ),
         const SizedBox(height: 24),
         AnalyticsBreakdownCard(
@@ -2085,10 +2078,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   ),
                 ),
                 // Scrollable content
-                Expanded(
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
                       const SizedBox(height: 16),
                       // Info rows
@@ -2139,7 +2131,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                       const SizedBox(height: 32),
                     ],
                   ),
-                ),
               ],
             );
           },

@@ -104,6 +104,7 @@ class AppState extends ChangeNotifier {
   Future<void> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
     _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+    _isDemoMode = prefs.getBool('is_demo_mode') ?? false;
     notifyListeners();
   }
 
@@ -186,9 +187,12 @@ class AppState extends ChangeNotifier {
 
       clearFaviconCache();
 
+      // Persist demo mode state
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_demo_mode', true);
+
       // Mark onboarding as complete so returning to login after demo exit
       // keeps navigation clean.
-      final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_completed_onboarding', true);
       _hasCompletedOnboarding = true;
 
@@ -234,6 +238,10 @@ class AppState extends ChangeNotifier {
     _currentTeamId = null;
     _apiService = VercelApi();
     clearFaviconCache();
+    
+    // Persist demo mode state
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_demo_mode', false);
 
     // Keep onboarding flag so Consumer goes straight to LoginScreen.
     _hasCompletedOnboarding = true;

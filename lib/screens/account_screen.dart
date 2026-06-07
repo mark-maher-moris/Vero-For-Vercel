@@ -671,12 +671,7 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _replayOnboarding(BuildContext context) async {
     final appState = context.read<AppState>();
     await appState.resetOnboarding();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-      );
-    }
+    // Consumer in main.dart will handle navigation based on state change
   }
 
   void _showChangeTokenDialog(BuildContext context) {
