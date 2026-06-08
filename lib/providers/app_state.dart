@@ -263,6 +263,13 @@ class AppState extends ChangeNotifier {
       }
       if (kDebugMode) print('[AppState] Token valid, saving...');
       await _authService.saveToken(token);
+
+      // Ensure demo mode is disabled and the API service is reset to the real client
+      _isDemoMode = false;
+      _apiService = VercelApi();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_demo_mode', false);
+
       if (kDebugMode) print('[AppState] Fetching initial data...');
       await fetchInitialData();
       if (kDebugMode) print('[AppState] Initial data fetched successfully');

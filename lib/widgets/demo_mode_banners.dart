@@ -203,9 +203,13 @@ class ConnectRealAccountBanner extends StatelessWidget {
         'demo_connect_real_paywall_trigger',
         context: 'demo_banner',
       );
-      await subscription.showPaywall();
-      return;
+      final success = await subscription.showPaywall();
+      if (!success) {
+        return;
+      }
     }
+
+    if (!context.mounted) return;
 
     SuperwallService().trackUserAction(
       'demo_connect_real_tap',

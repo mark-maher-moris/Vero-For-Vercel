@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/project.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import '../screens/project_workspace_screen.dart';
 import 'project_logo_widget.dart';
@@ -74,17 +76,30 @@ class _ProjectCardState extends State<ProjectCard> {
     // Limit to max 3 URLs to prevent overflow
     final displayUrls = urls.take(3).toList();
     final hasMore = urls.length > 3;
+    final isDemoMode = context.read<AppState>().isDemoMode;
+
+    void handleUrlTap(String urlString) async {
+      if (isDemoMode) {
+        widget.onProjectTap?.call();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProjectWorkspaceScreen(project: widget.project),
+          ),
+        );
+        return;
+      }
+      final uri = Uri.parse(!urlString.startsWith('http') ? 'https://$urlString' : urlString);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
 
     if (displayUrls.isEmpty) {
       final defaultUrl = '${widget.project.name}.vercel.app';
       return [
         InkWell(
-          onTap: () async {
-            final uri = Uri.parse('https://$defaultUrl');
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
+          onTap: () => handleUrlTap(defaultUrl),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -108,12 +123,7 @@ class _ProjectCardState extends State<ProjectCard> {
       return Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: InkWell(
-          onTap: () async {
-            final uri = Uri.parse(!url.startsWith('http') ? 'https://$url' : url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
+          onTap: () => handleUrlTap(url),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
