@@ -175,6 +175,8 @@ class DemoVercelApi extends VercelApi {
     required String projectId,
     required String from,
     required String to,
+    String? projectTeamId,
+    String environment = 'production',
   }) async {
     return DemoData.buildAnalyticsOverview(from: from, projectId: projectId);
   }
@@ -184,6 +186,8 @@ class DemoVercelApi extends VercelApi {
     required String projectId,
     required String from,
     required String to,
+    String? projectTeamId,
+    String environment = 'production',
   }) async {
     return DemoData.buildAnalyticsTimeseries(from, to, projectId: projectId);
   }
@@ -194,6 +198,8 @@ class DemoVercelApi extends VercelApi {
     required String from,
     required String to,
     required String groupBy,
+    String? projectTeamId,
+    String environment = 'production',
   }) async {
     return DemoData.buildAnalyticsBreakdown(groupBy, projectId: projectId);
   }

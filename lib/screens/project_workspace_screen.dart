@@ -116,20 +116,25 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       final appState = Provider.of<AppState>(context, listen: false);
       final pid = widget.project.id;
       final range = _selectedTimeRange;
+      
+      String? projectTeamId;
+      if (widget.project.accountId != null && widget.project.accountId!.startsWith('team_')) {
+        projectTeamId = widget.project.accountId;
+      }
 
       // Parallel data fetching for analytics
       final results = await Future.wait([
-        appState.apiService.getAnalyticsOverview(projectId: pid, from: range.from, to: range.to),
-        appState.apiService.getAnalyticsOverview(projectId: pid, from: range.previousFrom, to: range.previousTo),
-        appState.apiService.getAnalyticsTimeseries(projectId: pid, from: range.from, to: range.to),
-        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'path'),
-        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'referrer'),
-        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'country'),
-        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'device_type'),
-        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'client_name'),
-        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'os_name'),
-        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'route'),
-        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'hostname'),
+        appState.apiService.getAnalyticsOverview(projectId: pid, from: range.from, to: range.to, projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsOverview(projectId: pid, from: range.previousFrom, to: range.previousTo, projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsTimeseries(projectId: pid, from: range.from, to: range.to, projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'path', projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'referrer', projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'country', projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'device_type', projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'client_name', projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'os_name', projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'route', projectTeamId: projectTeamId),
+        appState.apiService.getAnalyticsBreakdown(projectId: pid, from: range.from, to: range.to, groupBy: 'hostname', projectTeamId: projectTeamId),
       ]);
 
       if (mounted) {
@@ -151,23 +156,27 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         });
       }
     } on VercelApiException catch (e) {
-      // Analytics not enabled: typically 403/forbidden or 404
-      final isForbidden = e.statusCode == 403 || e.statusCode == 404 ||
-          (e.code != null && (e.code == 'forbidden' || e.code == 'unauthorized' || e.code == 'not_found'));
+      // Analytics not enabled: typically 403/forbidden
+      final isForbidden = e.statusCode == 403 ||
+          (e.code != null && (e.code == 'forbidden' || e.code == 'unauthorized'));
       final messageLower = e.message.toLowerCase();
-      final isNotEnabled = messageLower.contains('not enabled') ||
-          messageLower.contains('analytics') ||
-          messageLower.contains('forbidden') ||
-          messageLower.contains('not found');
+      final isNotEnabled = isForbidden || messageLower.contains('not enabled') ||
+          (e.statusCode == 403 && messageLower.contains('analytics'));
 
       print('[ProjectWorkspace] Analytics error: ${e.statusCode} - ${e.message} (code: ${e.code})');
 
         setState(() {
-          if (isForbidden || isNotEnabled) {
+          if (isNotEnabled) {
             _analyticsLocked = true;
             _analyticsError = null; // suppress error, show locked state instead
           } else {
-            _analyticsError = e.message;
+            _analyticsLocked = false;
+            // Provide a friendly message for 404 empty data
+            if (e.statusCode == 404) {
+              _analyticsError = 'No analytics data available for this period.';
+            } else {
+              _analyticsError = e.message;
+            }
           }
           _isLoadingAnalytics = false;
         });
@@ -930,6 +939,29 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       children: [
         _buildAnalyticsHeader(),
         const SizedBox(height: 24),
+        if (_analyticsError != null) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.redAccent),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _analyticsError!,
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
         _buildMetricCards(),
         const SizedBox(height: 24),
         SizedBox(

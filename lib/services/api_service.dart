@@ -920,9 +920,9 @@ class VercelApi {
 
   // ==================== ANALYTICS API ====================
 
-  Uri _buildAnalyticsUri(String path, [Map<String, String>? queryParameters]) {
+  Uri _buildAnalyticsUri(String path, [Map<String, String>? queryParameters, bool useGlobalTeamId = true]) {
     final params = Map<String, String>.from(queryParameters ?? {});
-    if (teamId != null) {
+    if (useGlobalTeamId && teamId != null && !params.containsKey('teamId')) {
       params['teamId'] = teamId!;
     }
     
@@ -934,13 +934,19 @@ class VercelApi {
     required String projectId,
     required String from,
     required String to,
+    String? projectTeamId,
+    String environment = 'production',
   }) async {
+    final params = {
+      'projectId': projectId,
+      'from': from,
+      'to': to,
+      'environment': environment,
+    };
+    if (projectTeamId != null) params['teamId'] = projectTeamId;
+
     final response = await http.get(
-      _buildAnalyticsUri('/web-analytics/overview', {
-        'projectId': projectId,
-        'from': from,
-        'to': to,
-      }),
+      _buildAnalyticsUri('/web-analytics/v2/overview', params, false),
       headers: await _getHeaders(),
     );
     final data = await _handleResponse(response);
@@ -951,13 +957,19 @@ class VercelApi {
     required String projectId,
     required String from,
     required String to,
+    String? projectTeamId,
+    String environment = 'production',
   }) async {
+    final params = {
+      'projectId': projectId,
+      'from': from,
+      'to': to,
+      'environment': environment,
+    };
+    if (projectTeamId != null) params['teamId'] = projectTeamId;
+
     final response = await http.get(
-      _buildAnalyticsUri('/web-analytics/timeseries', {
-        'projectId': projectId,
-        'from': from,
-        'to': to,
-      }),
+      _buildAnalyticsUri('/web-analytics/v2/timeseries', params, false),
       headers: await _getHeaders(),
     );
     final data = await _handleResponse(response);
@@ -972,29 +984,45 @@ class VercelApi {
     required String from,
     required String to,
     required String groupBy,
+    String? projectTeamId,
+    String environment = 'production',
   }) async {
+    final params = {
+      'projectId': projectId,
+      'from': from,
+      'to': to,
+      'groupBy': groupBy,
+      'environment': environment,
+    };
+    if (projectTeamId != null) params['teamId'] = projectTeamId;
+
     final response = await http.get(
-      _buildAnalyticsUri('/web-analytics/timeseries', {
-        'projectId': projectId,
-        'from': from,
-        'to': to,
-        'groupBy': groupBy,
-      }),
+      _buildAnalyticsUri('/web-analytics/v2/timeseries', params, false),
       headers: await _getHeaders(),
     );
     final data = await _handleResponse(response);
     final dataObj = data['data'] as Map<String, dynamic>?;
     final groups = dataObj?['groups'] as Map<String, dynamic>? ?? {};
     
-    final results = <BreakdownItem>[];
+    final items = <BreakdownItem>[];
     groups.forEach((key, value) {
-      if (key != 'all' && value is List) {
-        results.add(BreakdownItem.fromTimeseriesGroup(key, value));
+      if (key == 'all') return;
+      
+      int visitors = 0;
+      if (value is List) {
+        for (var point in value) {
+          if (point is Map<String, dynamic> && point['devices'] != null) {
+            visitors += (point['devices'] as num).toInt();
+          }
+        }
       }
+      
+      items.add(BreakdownItem(key: key, visitors: visitors));
     });
     
-    results.sort((a, b) => b.visitors.compareTo(a.visitors));
-    return results;
+    // Sort by visitors descending
+    items.sort((a, b) => b.visitors.compareTo(a.visitors));
+    return items;
   }
 
   // ==================== DEPLOYMENT ACTIONS ====================
