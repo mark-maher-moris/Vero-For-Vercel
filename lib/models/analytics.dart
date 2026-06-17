@@ -84,37 +84,41 @@ enum TimeRange {
   final String label;
   const TimeRange(this.value, this.label);
 
+  String _formatDate(DateTime date) {
+    return '${date.toIso8601String().split('.')[0]}Z';
+  }
+
   String get from {
     final now = DateTime.now().toUtc();
     switch (this) {
       case TimeRange.day:
-        return now.subtract(const Duration(hours: 24)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(hours: 24)));
       case TimeRange.week:
-        return now.subtract(const Duration(days: 7)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(days: 7)));
       case TimeRange.month:
-        return now.subtract(const Duration(days: 30)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(days: 30)));
       case TimeRange.quarter:
-        return now.subtract(const Duration(days: 90)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(days: 90)));
       case TimeRange.year:
-        return now.subtract(const Duration(days: 365)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(days: 365)));
     }
   }
 
-  String get to => DateTime.now().toUtc().toIso8601String();
+  String get to => _formatDate(DateTime.now().toUtc());
 
   String get previousFrom {
     final now = DateTime.now().toUtc();
     switch (this) {
       case TimeRange.day:
-        return now.subtract(const Duration(hours: 48)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(hours: 48)));
       case TimeRange.week:
-        return now.subtract(const Duration(days: 14)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(days: 14)));
       case TimeRange.month:
-        return now.subtract(const Duration(days: 60)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(days: 60)));
       case TimeRange.quarter:
-        return now.subtract(const Duration(days: 180)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(days: 180)));
       case TimeRange.year:
-        return now.subtract(const Duration(days: 730)).toIso8601String();
+        return _formatDate(now.subtract(const Duration(days: 730)));
     }
   }
 

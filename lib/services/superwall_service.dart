@@ -195,6 +195,11 @@ class SuperwallService {
       return;
     }
     
+    if (_hasActiveSubscription) {
+      if (kDebugMode) print('Superwall: User has active subscription, skipping paywall placement $placement');
+      return;
+    }
+    
     try {
       // Convert dynamic map to Object map if params provided
       final objectParams = params?.map((key, value) => MapEntry(key, value as Object));
@@ -213,6 +218,11 @@ class SuperwallService {
   Future<void> presentPaywall() async {
     if (!_isInitialized) {
       if (kDebugMode) print('Superwall: Not initialized, cannot present manual paywall');
+      return;
+    }
+    
+    if (_hasActiveSubscription) {
+      if (kDebugMode) print('Superwall: User has active subscription, skipping manual paywall');
       return;
     }
     

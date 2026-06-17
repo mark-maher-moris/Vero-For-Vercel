@@ -169,8 +169,7 @@ class SubscriptionProvider extends ChangeNotifier {
   Future<void> onUserLogout() async {
     try {
       await _superwallService.reset();
-      _isPro = false;
-      notifyListeners();
+      await refresh();
     } catch (e) {
       if (kDebugMode) {
         print('SubscriptionProvider: Logout sync error - $e');

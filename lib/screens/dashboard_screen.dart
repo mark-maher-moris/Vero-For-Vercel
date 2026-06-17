@@ -20,6 +20,23 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _usageData;
   bool _isLoadingUsage = false;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _clearSearch() {
+    if (_searchQuery.isNotEmpty || _searchController.text.isNotEmpty) {
+      _searchController.clear();
+      setState(() {
+        _searchQuery = '';
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -104,6 +121,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.add_circle_outline, color: AppTheme.onSurfaceVariant),
             onPressed: () {
               SuperwallService().trackUserAction('import_github_project', context: 'dashboard');
+              _clearSearch();
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ImportGithubProjectScreen()),
@@ -148,7 +166,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: Icons.vpn_key,
                 ),
                 const SizedBox(height: 40),
-                _buildProjectsGrid(appState.projects),
+                _buildProjectsGrid(_getFilteredProjects(appState.projects)),
                 const SizedBox(height: 40),
                 _buildUsageOverview(),
               ],
@@ -271,17 +289,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppTheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(2),
       ),
-      child: const TextField(
-        style: TextStyle(color: AppTheme.onSurface),
-        decoration: InputDecoration(
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+          });
+        },
+        style: const TextStyle(color: AppTheme.onSurface),
+        decoration: const InputDecoration(
           prefixIcon: Icon(Icons.search, color: AppTheme.onSurfaceVariant),
-          hintText: 'Search projects...',
+          hintText: 'Search projects (name, framework, url)...',
           hintStyle: TextStyle(color: AppTheme.onSurfaceVariant),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 16),
         ),
       ),
     );
+  }
+
+  List<Project> _getFilteredProjects(List<Project> projects) {
+    if (_searchQuery.trim().isEmpty) return projects;
+    
+    final terms = _searchQuery.toLowerCase().split(' ').where((t) => t.isNotEmpty).toList();
+    
+    return projects.where((p) {
+      final searchString = [
+        p.name,
+        p.framework ?? '',
+        p.nodeVersion ?? '',
+        ...p.allUrls,
+        p.id,
+      ].join(' ').toLowerCase();
+
+      // Smart search: every typed word must be present somewhere in the project's data
+      return terms.every((term) => searchString.contains(term));
+    }).toList();
   }
 
   Widget _buildProjectsGrid(List<Project> projects) {
@@ -323,6 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               projectId: projects[index].id,
               properties: {'project_name': projects[index].name}
             );
+            _clearSearch();
           },
         );
       },

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -150,13 +151,14 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         });
       }
     } on VercelApiException catch (e) {
-      // Analytics not enabled: typically 403/forbidden
-      final isForbidden = e.statusCode == 403 ||
-          (e.code != null && (e.code == 'forbidden' || e.code == 'unauthorized'));
+      // Analytics not enabled: typically 403/forbidden or 404
+      final isForbidden = e.statusCode == 403 || e.statusCode == 404 ||
+          (e.code != null && (e.code == 'forbidden' || e.code == 'unauthorized' || e.code == 'not_found'));
       final messageLower = e.message.toLowerCase();
       final isNotEnabled = messageLower.contains('not enabled') ||
           messageLower.contains('analytics') ||
-          messageLower.contains('forbidden');
+          messageLower.contains('forbidden') ||
+          messageLower.contains('not found');
 
       print('[ProjectWorkspace] Analytics error: ${e.statusCode} - ${e.message} (code: ${e.code})');
 
@@ -2078,59 +2080,72 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   ),
                 ),
                 // Scrollable content
-                ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      const SizedBox(height: 16),
-                      // Info rows
-                      _buildBottomSheetInfoRow('Timestamp', Icons.access_time, log.formattedTime),
-                      _buildBottomSheetInfoRow('Domain', Icons.language, log.domain),
-                      _buildBottomSheetInfoRow('Route', Icons.route, log.route.isNotEmpty ? log.route : 'N/A'),
-                      _buildBottomSheetInfoRow('Cache', Icons.save, log.cache.isNotEmpty ? log.cache : 'N/A'),
-                      _buildBottomSheetInfoRow('Environment', Icons.cloud, _capitalizeFirst(log.environment)),
-                      if (log.memoryUsed != null)
-                        _buildBottomSheetInfoRow('Memory', Icons.memory, log.memoryUsed!),
-                      if (log.duration != null)
-                        _buildBottomSheetInfoRow('Duration', Icons.timer, log.duration!),
-                      _buildBottomSheetInfoRow('Region', Icons.map, log.regionLabel ?? log.clientRegion),
-                      if (log.clientUserAgent.isNotEmpty)
-                        _buildBottomSheetInfoRow('Agent', Icons.person, log.clientUserAgent.length > 40
-                            ? '${log.clientUserAgent.substring(0, 40)}...'
-                            : log.clientUserAgent),
-                      const SizedBox(height: 24),
-                      // Console logs section
-                      if (log.logs.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              top: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.3)),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        const SizedBox(height: 16),
+                        // Info rows
+                        _buildBottomSheetInfoRow('Timestamp', Icons.access_time, log.formattedTime),
+                        _buildBottomSheetInfoRow('Domain', Icons.language, log.domain),
+                        _buildBottomSheetInfoRow('Route', Icons.route, log.route.isNotEmpty ? log.route : 'N/A'),
+                        _buildBottomSheetInfoRow('Cache', Icons.save, log.cache.isNotEmpty ? log.cache : 'N/A'),
+                        _buildBottomSheetInfoRow('Environment', Icons.cloud, _capitalizeFirst(log.environment)),
+                        if (log.memoryUsed != null)
+                          _buildBottomSheetInfoRow('Memory', Icons.memory, log.memoryUsed!),
+                        if (log.duration != null)
+                          _buildBottomSheetInfoRow('Duration', Icons.timer, log.duration!),
+                        _buildBottomSheetInfoRow('Region', Icons.map, log.regionLabel ?? log.clientRegion),
+                        if (log.clientUserAgent.isNotEmpty)
+                          _buildBottomSheetInfoRow('Agent', Icons.person, log.clientUserAgent.length > 40
+                              ? '${log.clientUserAgent.substring(0, 40)}...'
+                              : log.clientUserAgent),
+                        const SizedBox(height: 24),
+                        // Console logs section
+                        if (log.logs.isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: AppTheme.outlineVariant.withOpacity(0.3)),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.terminal, size: 18, color: AppTheme.onSurfaceVariant),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Console Logs (${log.logs.length})',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.terminal, size: 18, color: AppTheme.onSurfaceVariant),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Console Logs (${log.logs.length})',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0A0A0A),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: log.logs.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final logLine = entry.value;
+                                return _buildConsoleLogLine(logLine, index);
+                              }).toList(),
+                            ),
                           ),
-                        ),
-                        ...log.logs.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final logLine = entry.value;
-                          return _buildConsoleLogLine(logLine, index);
-                        }),
+                        ],
+                        const SizedBox(height: 32),
                       ],
-                      const SizedBox(height: 32),
-                    ],
-                  ),
+                    ),
+                ),
               ],
             );
           },
@@ -2197,82 +2212,124 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
 
     final level = logLine.level.toLowerCase();
     final levelColor = _getLogLevelColor(level);
-    final levelBgColor = levelColor.withOpacity(0.1);
-    final levelIcon = _getLogLevelIcon(level);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with level badge and timestamp
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: levelBgColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-            ),
-            child: Row(
+          // Timestamp & Level badge
+          SizedBox(
+            width: 65,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(levelIcon, size: 12, color: levelColor),
-                const SizedBox(width: 6),
+                Text(
+                  timeStr,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF666666),
+                    fontFamily: 'monospace',
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
                     color: levelColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                   child: Text(
                     level.toUpperCase(),
                     style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                       color: levelColor,
-                      letterSpacing: 0.5,
                     ),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  timeStr,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: AppTheme.onSurfaceVariant.withOpacity(0.7),
-                    fontFamily: 'monospace',
-                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 12),
           // Log message
-          Container(
-            padding: const EdgeInsets.all(12),
-            child: SelectableText(
+          Expanded(
+            child: _buildColorizedLogMessage(
               logLine.message,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.4,
-                color: _getLogMessageColor(level),
-                fontFamily: 'monospace',
-              ),
+              _getLogMessageColor(level),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildColorizedLogMessage(String message, Color defaultColor) {
+    String textToColorize = message;
+    try {
+      final parsed = jsonDecode(message);
+      textToColorize = const JsonEncoder.withIndent('  ').convert(parsed);
+    } catch (_) {
+      // Keep original message if it's not valid JSON
+    }
+
+    return SelectableText.rich(
+      _colorizeJsonString(textToColorize, defaultColor),
+    );
+  }
+
+  TextSpan _colorizeJsonString(String text, Color defaultColor) {
+    final List<TextSpan> spans = [];
+    final RegExp regex = RegExp(
+      r'("(?:\\[^]|[^"\\])*")(?=\s*:)|("(?:\\[^]|[^"\\])*")|(\b-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)|(\b(?:true|false|null)\b)|([\{\}\[\]:,])',
+    );
+
+    int lastMatchEnd = 0;
+    for (final Match match in regex.allMatches(text)) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastMatchEnd, match.start),
+          style: TextStyle(color: defaultColor, fontFamily: 'monospace'),
+        ));
+      }
+
+      String matchText = match.group(0)!;
+      Color color = defaultColor;
+
+      if (match.group(1) != null) {
+        // Key
+        color = const Color(0xFF9CDCFE); // Light blue for keys
+      } else if (match.group(2) != null) {
+        // String
+        color = const Color(0xFFCE9178); // Orange/Brown for strings
+      } else if (match.group(3) != null) {
+        // Number
+        color = const Color(0xFFB5CEA8); // Light green for numbers
+      } else if (match.group(4) != null) {
+        // Boolean/Null
+        color = const Color(0xFF569CD6); // Blue for booleans
+      } else if (match.group(5) != null) {
+        // Punctuation
+        color = const Color(0xFFD4D4D4); // Light gray for punctuation
+      }
+
+      spans.add(TextSpan(
+        text: matchText,
+        style: TextStyle(color: color, fontFamily: 'monospace'),
+      ));
+
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastMatchEnd),
+        style: TextStyle(color: defaultColor, fontFamily: 'monospace'),
+      ));
+    }
+
+    return TextSpan(children: spans, style: const TextStyle(fontSize: 13, height: 1.4));
   }
 
   Color _getLogLevelColor(String level) {
@@ -2301,7 +2358,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         return const Color(0xFFA78BFA);
       case 'info':
       default:
-        return AppTheme.onSurface;
+        return const Color(0xFFE5E5E5);
     }
   }
 

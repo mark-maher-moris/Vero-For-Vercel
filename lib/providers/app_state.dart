@@ -215,19 +215,9 @@ class AppState extends ChangeNotifier {
     if (kDebugMode) print('[AppState] Exiting demo mode');
     await _superwallService.trackUserAction('exit_demo_mode', context: 'app_state');
 
-    try {
-      await _superwallService.reset();
-    } catch (e) {
-      if (kDebugMode) print('Superwall reset error (demo exit): $e');
-    }
-
-    if (subscriptionProvider != null) {
-      try {
-        await subscriptionProvider.onUserLogout();
-      } catch (e) {
-        if (kDebugMode) print('SubscriptionProvider reset error (demo exit): $e');
-      }
-    }
+    // Do NOT reset Superwall or SubscriptionProvider here. 
+    // Exiting demo mode shouldn't lose the anonymous purchase state.
+    // The purchase will be aliased to the user ID when they log in.
 
     _isDemoMode = false;
     _isAuthenticated = false;
@@ -249,7 +239,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String token) async {
+  Future<void> login(String token, {SubscriptionProvider? subscriptionProvider}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -280,7 +270,12 @@ class AppState extends ChangeNotifier {
       // Sync login with Superwall using user ID
       if (_user != null && _user!['id'] != null) {
         final userId = _user!['id'].toString();
-        await _superwallService.identify(userId);
+        
+        if (subscriptionProvider != null) {
+          await subscriptionProvider.onUserLogin(userId);
+        } else {
+          await _superwallService.identify(userId);
+        }
         
         // Set user attributes for analytics segmentation
         await _superwallService.setUserAttributes({

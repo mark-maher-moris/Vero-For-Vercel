@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/app_state.dart';
+import '../providers/subscription_provider.dart';
 import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 
@@ -19,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   final _tokenController = TextEditingController();
   bool _hasToken = false;
+  bool _obscureText = true;
 
   @override
   void initState() {
@@ -69,7 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
     SuperwallService().trackUserAction('login_attempt', context: 'login');
 
     try {
-      await context.read<AppState>().login(token);
+      final subscriptionProvider = context.read<SubscriptionProvider>();
+      await context.read<AppState>().login(token, subscriptionProvider: subscriptionProvider);
       if (mounted) {
         if (kDebugMode) print('[LoginScreen] Login successful, AppState.isAuthenticated should trigger navigation');
       }
@@ -258,29 +261,30 @@ App: VERO For Vercel''';
           },
         ),
         actions: [
-          IconButton(
-            icon: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.6),
-                    blurRadius: 12,
-                    spreadRadius: 2,
-                  ),
-                ],
+          if (!context.watch<SubscriptionProvider>().isPro)
+            IconButton(
+              icon: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.6),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.workspace_premium,
+                  color: AppTheme.primary,
+                  size: 28,
+                ),
               ),
-              child: Icon(
-                Icons.workspace_premium,
-                color: AppTheme.primary,
-                size: 28,
-              ),
+              tooltip: 'Upgrade',
+              onPressed: () {
+                SuperwallService().presentPaywall();
+              },
             ),
-            tooltip: 'Upgrade',
-            onPressed: () {
-              SuperwallService().presentPaywall();
-            },
-          ),
         ],
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -293,10 +297,17 @@ App: VERO For Vercel''';
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-              Image.asset(
-                'assets/logo.png',
-                height: 80,
-                fit: BoxFit.contain,
+              Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(16.0),
+                child: Image.asset(
+                  'assets/logo.png',
+                  height: 80,
+                  fit: BoxFit.contain,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -317,16 +328,17 @@ App: VERO For Vercel''';
                     borderRadius: BorderRadius.zero,
                   ),
                   suffixIcon: IconButton(
-                    icon: Icon(_hasToken ? Icons.clear : Icons.content_paste),
-                    onPressed: _hasToken
-                        ? () => _tokenController.clear()
-                        : _pasteToken,
+                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
                   ),
                 ),
-                obscureText: true,
+                obscureText: _obscureText,
                 maxLines: 1,
                 enabled: !_isLoading,
-                readOnly: _hasToken,
               ),
               const SizedBox(height: 12),
               Row(

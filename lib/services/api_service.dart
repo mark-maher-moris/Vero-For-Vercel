@@ -125,21 +125,43 @@ class VercelApi {
   }
 
   Future<dynamic> _handleResponse(http.Response response) async {
-    final dynamic data = json.decode(response.body);
+    dynamic data;
+    if (response.body.isNotEmpty) {
+      try {
+        data = json.decode(response.body);
+      } catch (e) {
+        if (kDebugMode) {
+          print('Vercel API JSON Decode Error: $e');
+        }
+      }
+    }
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return data;
+      return data ?? {};
     } else {
       String message = 'An unexpected error occurred';
       String? code;
+
+      // Handle cases where body is empty but status is an error
+      if (response.statusCode == 403) {
+        message = 'Forbidden';
+        code = 'forbidden';
+      } else if (response.statusCode == 401) {
+        message = 'Unauthorized';
+        code = 'unauthorized';
+      }
 
       if (data is Map && data.containsKey('error')) {
         final error = data['error'];
         if (error is Map) {
           message = error['message'] ?? message;
-          code = error['code'];
+          code = error['code'] ?? code;
         } else if (error is String) {
           message = error;
         }
+      } else if (response.body.isNotEmpty && data == null) {
+        // If it's not JSON, use the raw text if available
+        message = response.body.length > 100 ? response.body.substring(0, 100) : response.body;
       }
 
       // Check for authentication errors (401/403) and broadcast them
