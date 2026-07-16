@@ -11,6 +11,7 @@ import '../widgets/demo_mode_banners.dart';
 import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
 import 'onboarding_screen.dart';
+import 'widget_config_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -50,10 +51,7 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   void _navigateTo(BuildContext context, Widget screen) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => screen),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
   }
 
   Widget _buildCopyableInfoRow(String label, String value, VoidCallback onTap) {
@@ -176,7 +174,11 @@ class _AccountScreenState extends State<AccountScreen> {
                           : null,
                     ),
                     child: avatarUrl == null
-                        ? const Icon(Icons.person, size: 32, color: AppTheme.onSurfaceVariant)
+                        ? const Icon(
+                            Icons.person,
+                            size: 32,
+                            color: AppTheme.onSurfaceVariant,
+                          )
                         : null,
                   ),
                   const SizedBox(width: 16),
@@ -202,7 +204,10 @@ class _AccountScreenState extends State<AccountScreen> {
                         ),
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(2),
@@ -290,37 +295,61 @@ class _AccountScreenState extends State<AccountScreen> {
                       onPressed: () async {
                         // Print subscription debug data
                         final supportId = await SuperwallService().getUserId();
-                        final entitlements = await SuperwallService().getEntitlements();
-                        final customerInfo = await SuperwallService().getCustomerInfo();
+                        final entitlements = await SuperwallService()
+                            .getEntitlements();
+                        final customerInfo = await SuperwallService()
+                            .getCustomerInfo();
                         if (kDebugMode) {
-                          print('========== UPGRADE BUTTON CLICKED - DEBUG DATA ==========');
+                          print(
+                            '========== UPGRADE BUTTON CLICKED - DEBUG DATA ==========',
+                          );
                           print('Subscription Status:');
                           print('  - isPro: ${subscriptionProvider.isPro}');
-                          print('  - hasActiveSubscription: ${subscriptionProvider.hasActiveSubscription}');
-                          print('  - isLoading: ${subscriptionProvider.isLoading}');
-                          print('  - errorMessage: ${subscriptionProvider.errorMessage}');
+                          print(
+                            '  - hasActiveSubscription: ${subscriptionProvider.hasActiveSubscription}',
+                          );
+                          print(
+                            '  - isLoading: ${subscriptionProvider.isLoading}',
+                          );
+                          print(
+                            '  - errorMessage: ${subscriptionProvider.errorMessage}',
+                          );
                           print('');
                           print('Superwall Service Data:');
-                          print('  - isInitialized: ${SuperwallService().isInitialized}');
-                          print('  - hasActiveSubscription: ${SuperwallService().hasActiveSubscription}');
+                          print(
+                            '  - isInitialized: ${SuperwallService().isInitialized}',
+                          );
+                          print(
+                            '  - hasActiveSubscription: ${SuperwallService().hasActiveSubscription}',
+                          );
                           print('  - supportId/userId: $supportId');
                           print('');
                           print('Entitlements:');
-                          print('  - active: ${entitlements.active.isEmpty ? "(none)" : entitlements.active.map((e) => "${e.id} (products: ${e.productIds.join(",")})").join(", ")}');
-                          print('  - inactive: ${entitlements.inactive.isEmpty ? "(none)" : entitlements.inactive.map((e) => e.id).join(", ")}');
-                          print('  - all: ${entitlements.all.map((e) => e.id).join(", ")}');
+                          print(
+                            '  - active: ${entitlements.active.isEmpty ? "(none)" : entitlements.active.map((e) => "${e.id} (products: ${e.productIds.join(",")})").join(", ")}',
+                          );
+                          print(
+                            '  - inactive: ${entitlements.inactive.isEmpty ? "(none)" : entitlements.inactive.map((e) => e.id).join(", ")}',
+                          );
+                          print(
+                            '  - all: ${entitlements.all.map((e) => e.id).join(", ")}',
+                          );
                           print('');
                           print('Subscriptions (Products):');
                           if (customerInfo.subscriptions.isEmpty) {
                             print('  (no subscriptions)');
                           } else {
                             for (final sub in customerInfo.subscriptions) {
-                              print('  - ${sub.productId}: active=${sub.isActive}, willRenew=${sub.willRenew}, store=${sub.store}');
+                              print(
+                                '  - ${sub.productId}: active=${sub.isActive}, willRenew=${sub.willRenew}, store=${sub.store}',
+                              );
                             }
                           }
-                          print('=========================================================');
+                          print(
+                            '=========================================================',
+                          );
                         }
-                        
+
                         subscriptionProvider.showPaywall();
                       },
                       style: ElevatedButton.styleFrom(
@@ -353,9 +382,9 @@ class _AccountScreenState extends State<AccountScreen> {
                   icon: Icons.people,
                   title: 'Team',
                   subtitle: 'Members & Access',
-                  onTap: isPro 
-                    ? () => _navigateTo(context, const TeamAccessScreen())
-                    : () => subscriptionProvider.showPaywall(),
+                  onTap: isPro
+                      ? () => _navigateTo(context, const TeamAccessScreen())
+                      : () => subscriptionProvider.showPaywall(),
                 ),
                 _buildActionCard(
                   context,
@@ -363,8 +392,15 @@ class _AccountScreenState extends State<AccountScreen> {
                   title: 'Domains',
                   subtitle: 'DNS & SSL',
                   onTap: isPro
-                    ? () => _navigateTo(context, const DomainsDnsScreen())
-                    : () => subscriptionProvider.showPaywall(),
+                      ? () => _navigateTo(context, const DomainsDnsScreen())
+                      : () => subscriptionProvider.showPaywall(),
+                ),
+                _buildActionCard(
+                  context,
+                  icon: Icons.widgets_outlined,
+                  title: 'Widgets',
+                  subtitle: 'Edit home widgets',
+                  onTap: () => _navigateTo(context, const WidgetConfigScreen()),
                 ),
                 _buildActionCard(
                   context,
@@ -420,13 +456,17 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildCopyableInfoRow('Support ID', _supportId, _copySupportId),
+                  _buildCopyableInfoRow(
+                    'Support ID',
+                    _supportId,
+                    _copySupportId,
+                  ),
                   const Divider(height: 24),
                   _buildRestorePurchasesButton(),
                   const Divider(height: 24),
                   _buildReplayOnboardingButton(context),
-                ]
-                )
+                ],
+              ),
             ),
 
             const SizedBox(height: 32),
@@ -455,11 +495,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Icon(
-                          Icons.email,
-                          color: AppTheme.primary,
-                          size: 24,
-                        ),
+                        Icon(Icons.email, color: AppTheme.primary, size: 24),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -580,18 +616,11 @@ class _AccountScreenState extends State<AccountScreen> {
         children: [
           const Text(
             'Restore Purchases',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant),
           ),
           Row(
             children: [
-              const Icon(
-                Icons.restore,
-                size: 18,
-                color: AppTheme.primary,
-              ),
+              const Icon(Icons.restore, size: 18, color: AppTheme.primary),
               const SizedBox(width: 8),
               Text(
                 'Tap to restore',
@@ -640,18 +669,11 @@ class _AccountScreenState extends State<AccountScreen> {
         children: [
           const Text(
             'Replay Onboarding',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant),
           ),
           Row(
             children: [
-              const Icon(
-                Icons.replay,
-                size: 18,
-                color: AppTheme.primary,
-              ),
+              const Icon(Icons.replay, size: 18, color: AppTheme.primary),
               const SizedBox(width: 8),
               Text(
                 'Debug only',
@@ -732,7 +754,9 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
+                onPressed: isLoading
+                    ? null
+                    : () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
@@ -766,7 +790,9 @@ class _AccountScreenState extends State<AccountScreen> {
                               Navigator.pop(dialogContext);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('API token updated successfully'),
+                                  content: Text(
+                                    'API token updated successfully',
+                                  ),
                                   duration: Duration(seconds: 2),
                                 ),
                               );
@@ -775,7 +801,8 @@ class _AccountScreenState extends State<AccountScreen> {
                         } catch (e) {
                           setDialogState(() {
                             isLoading = false;
-                            errorMessage = 'Invalid token. Please check and try again.';
+                            errorMessage =
+                                'Invalid token. Please check and try again.';
                           });
                         }
                       },
@@ -789,7 +816,9 @@ class _AccountScreenState extends State<AccountScreen> {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.onPrimary),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.onPrimary,
+                          ),
                         ),
                       )
                     : const Text('Update Token'),
@@ -824,7 +853,10 @@ class _AccountScreenState extends State<AccountScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceContainerLow,
-        title: const Text('Sign Out', style: TextStyle(color: AppTheme.primary)),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(color: AppTheme.primary),
+        ),
         content: const Text(
           'Are you sure you want to sign out?',
           style: TextStyle(color: AppTheme.onSurfaceVariant),
@@ -842,7 +874,9 @@ class _AccountScreenState extends State<AccountScreen> {
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const OnboardingScreen(),
+                  ),
                   (route) => false,
                 );
               }
@@ -860,7 +894,10 @@ class _AccountScreenState extends State<AccountScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceContainerLow,
-        title: const Text('Disconnect from Vercel', style: TextStyle(color: AppTheme.primary)),
+        title: const Text(
+          'Disconnect from Vercel',
+          style: TextStyle(color: AppTheme.primary),
+        ),
         content: const Text(
           'Are you sure you want to unlink this app from Vercel? This will remove the connection and you will need to reconnect to manage deployments.',
           style: TextStyle(color: AppTheme.onSurfaceVariant),
@@ -874,11 +911,15 @@ class _AccountScreenState extends State<AccountScreen> {
             onPressed: () async {
               Navigator.pop(context);
               final subscriptionProvider = context.read<SubscriptionProvider>();
-              await appState.disconnectFromVercel(subscriptionProvider: subscriptionProvider);
+              await appState.disconnectFromVercel(
+                subscriptionProvider: subscriptionProvider,
+              );
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const OnboardingScreen(),
+                  ),
                   (route) => false,
                 );
               }

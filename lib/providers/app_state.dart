@@ -1,17 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/demo_api_service.dart';
 import '../services/demo_data.dart';
 import '../services/superwall_service.dart';
+import '../services/widget_service.dart';
 import '../models/project.dart';
 import 'subscription_provider.dart';
 
 class AppState extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final SuperwallService _superwallService = SuperwallService();
+  final WidgetService _widgetService = WidgetService();
   VercelApi _apiService = VercelApi();
 
   bool _isAuthenticated = false;
@@ -19,16 +20,16 @@ class AppState extends ChangeNotifier {
   bool _hasCompletedOnboarding = false;
   bool _isDemoMode = false;
   String? _errorMessage;
-  
+
   List<Project> _projects = [];
   Project? _selectedProject;
   Map<String, dynamic>? _user;
   List<dynamic> _teams = [];
   String? _currentTeamId;
-  
+
   // Favicon cache: projectId -> faviconUrl
   final Map<String, String?> _faviconCache = {};
-  
+
   // In-flight favicon requests for deduplication: projectId -> Future
   final Map<String, Future<String?>> _faviconInFlightRequests = {};
 
@@ -63,11 +64,13 @@ class AppState extends ChangeNotifier {
     _faviconInFlightRequests[projectId] = fetchFuture;
 
     // Clean up the in-flight tracking when done
-    fetchFuture.then((_) {
-      _faviconInFlightRequests.remove(projectId);
-    }).catchError((_) {
-      _faviconInFlightRequests.remove(projectId);
-    });
+    fetchFuture
+        .then((_) {
+          _faviconInFlightRequests.remove(projectId);
+        })
+        .catchError((_) {
+          _faviconInFlightRequests.remove(projectId);
+        });
 
     return fetchFuture;
   }
@@ -103,7 +106,8 @@ class AppState extends ChangeNotifier {
 
   Future<void> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+    _hasCompletedOnboarding =
+        prefs.getBool('has_completed_onboarding') ?? false;
     _isDemoMode = prefs.getBool('is_demo_mode') ?? false;
     notifyListeners();
   }
@@ -147,13 +151,17 @@ class AppState extends ChangeNotifier {
     // Clear favicon cache when switching teams (different projects)
     clearFaviconCache();
     notifyListeners();
-    
+
     // Track team switch
-    await _superwallService.trackUserAction('switch_team', context: 'app_state', properties: {
-      'from_team': previousTeamId ?? 'personal',
-      'to_team': teamId ?? 'personal',
-    });
-    
+    await _superwallService.trackUserAction(
+      'switch_team',
+      context: 'app_state',
+      properties: {
+        'from_team': previousTeamId ?? 'personal',
+        'to_team': teamId ?? 'personal',
+      },
+    );
+
     try {
       await fetchProjects();
     } catch (e) {
@@ -198,7 +206,12 @@ class AppState extends ChangeNotifier {
 
       _isAuthenticated = true;
 
-      await _superwallService.trackUserAction('enter_demo_mode', context: 'app_state');
+      await _widgetService.pushDemoData();
+
+      await _superwallService.trackUserAction(
+        'enter_demo_mode',
+        context: 'app_state',
+      );
     } catch (e) {
       _errorMessage = e.toString();
       if (kDebugMode) print('[AppState] enterDemoMode error: $e');
@@ -211,11 +224,16 @@ class AppState extends ChangeNotifier {
   /// Exit demo mode and return the user to the login screen so they can
   /// connect a real Vercel account. Does NOT touch any stored token because
   /// demo mode never saves one.
-  Future<void> exitDemoMode({SubscriptionProvider? subscriptionProvider}) async {
+  Future<void> exitDemoMode({
+    SubscriptionProvider? subscriptionProvider,
+  }) async {
     if (kDebugMode) print('[AppState] Exiting demo mode');
-    await _superwallService.trackUserAction('exit_demo_mode', context: 'app_state');
+    await _superwallService.trackUserAction(
+      'exit_demo_mode',
+      context: 'app_state',
+    );
 
-    // Do NOT reset Superwall or SubscriptionProvider here. 
+    // Do NOT reset Superwall or SubscriptionProvider here.
     // Exiting demo mode shouldn't lose the anonymous purchase state.
     // The purchase will be aliased to the user ID when they log in.
 
@@ -228,7 +246,7 @@ class AppState extends ChangeNotifier {
     _currentTeamId = null;
     _apiService = VercelApi();
     clearFaviconCache();
-    
+
     // Persist demo mode state
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_demo_mode', false);
@@ -239,7 +257,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String token, {SubscriptionProvider? subscriptionProvider}) async {
+  Future<void> login(
+    String token, {
+    SubscriptionProvider? subscriptionProvider,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -249,7 +270,9 @@ class AppState extends ChangeNotifier {
       if (kDebugMode) print('[AppState] Validating token...');
       final isValid = await _authService.validateToken(token);
       if (!isValid) {
-        throw Exception('Invalid token. Please check your token and try again.');
+        throw Exception(
+          'Invalid token. Please check your token and try again.',
+        );
       }
       if (kDebugMode) print('[AppState] Token valid, saving...');
       await _authService.saveToken(token);
@@ -263,20 +286,20 @@ class AppState extends ChangeNotifier {
       if (kDebugMode) print('[AppState] Fetching initial data...');
       await fetchInitialData();
       if (kDebugMode) print('[AppState] Initial data fetched successfully');
-      
+
       // Only set authenticated AFTER all data is fetched successfully
       _isAuthenticated = true;
-      
+
       // Sync login with Superwall using user ID
       if (_user != null && _user!['id'] != null) {
         final userId = _user!['id'].toString();
-        
+
         if (subscriptionProvider != null) {
           await subscriptionProvider.onUserLogin(userId);
         } else {
           await _superwallService.identify(userId);
         }
-        
+
         // Set user attributes for analytics segmentation
         await _superwallService.setUserAttributes({
           'user_id': userId,
@@ -287,10 +310,15 @@ class AppState extends ChangeNotifier {
           'team_count': _teams.length,
           'has_pro': _user!['plan'] == 'pro',
         });
-        
+
         // Track successful login
-        await _superwallService.trackUserAction('login_success', context: 'app_state');
+        await _superwallService.trackUserAction(
+          'login_success',
+          context: 'app_state',
+        );
       }
+
+      await _pushWidgetData();
     } catch (e) {
       _errorMessage = e.toString();
       if (kDebugMode) print('[AppState] Login error: $e');
@@ -346,14 +374,18 @@ class AppState extends ChangeNotifier {
     try {
       // Fetch user info and automatically set team ID
       _user = await _apiService.fetchUserInfoAndSetTeamId();
-      if (kDebugMode) print('[AppState] Team ID automatically set: ${_apiService.teamId}');
-      
+      if (kDebugMode) {
+        print('[AppState] Team ID automatically set: ${_apiService.teamId}');
+      }
+
       // Set currentTeamId from the user's defaultTeamId
       if (_user != null && _user!.containsKey('defaultTeamId')) {
         _currentTeamId = _user!['defaultTeamId'] as String?;
-        if (kDebugMode) print('[AppState] currentTeamId set to: $_currentTeamId');
+        if (kDebugMode) {
+          print('[AppState] currentTeamId set to: $_currentTeamId');
+        }
       }
-      
+
       await fetchTeams();
       await fetchProjects();
     } on VercelApiException catch (e) {
@@ -383,9 +415,14 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> disconnectFromVercel({SubscriptionProvider? subscriptionProvider}) async {
+  Future<void> disconnectFromVercel({
+    SubscriptionProvider? subscriptionProvider,
+  }) async {
     // Track disconnect before resetting
-    await _superwallService.trackUserAction('disconnect_vercel', context: 'app_state');
+    await _superwallService.trackUserAction(
+      'disconnect_vercel',
+      context: 'app_state',
+    );
 
     // Reset Superwall (same as logout)
     try {
@@ -431,9 +468,53 @@ class AppState extends ChangeNotifier {
       } else {
         _selectedProject = null;
       }
+      await _pushWidgetData();
     } catch (e) {
       _errorMessage = e.toString();
       rethrow;
     }
+  }
+
+  Future<void> _pushWidgetData() async {
+    try {
+      await _widgetService.initialize();
+      final isSubscribed = await _superwallService
+          .getCurrentSubscriptionStatus();
+      await _widgetService.pushAuthData(
+        teamId: _currentTeamId,
+        isSubscribed: isSubscribed,
+        isDemoMode: _isDemoMode,
+      );
+      final projectList = _projects
+          .map((p) => <String, String>{'id': p.id, 'name': p.name})
+          .toList();
+      await _widgetService.pushProjects(projectList);
+      if (_isDemoMode) {
+        await _widgetService.triggerAllWidgetUpdates();
+      } else if (_isAuthenticated) {
+        await _widgetService.refreshAll(
+          api: _apiService,
+          projects: projectList,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) print('[AppState] _pushWidgetData error: $e');
+    }
+  }
+
+  Future<void> refreshWidgets() => _pushWidgetData();
+
+  Future<void> setWidgetProject(
+    String widgetType,
+    String projectId,
+    String projectName,
+  ) async {
+    await _widgetService.initialize();
+    await _widgetService.setProjectForWidget(
+      widgetType,
+      projectId,
+      projectName,
+    );
+    await _pushWidgetData();
   }
 }

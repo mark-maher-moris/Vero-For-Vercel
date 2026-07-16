@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -9,23 +10,28 @@ import 'screens/onboarding_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/demo_entry_screen.dart';
+import 'screens/widget_config_screen.dart';
+import 'services/widget_service.dart';
 import 'widgets/auth_error_handler.dart';
 import 'widgets/app_level_demo_banner.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
-  
+
   // Initialize Superwall SDK
   await SuperwallService().initialize();
-  
+
+  await WidgetService().initialize();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppState()),
         ChangeNotifierProxyProvider<AppState, SubscriptionProvider>(
-          create: (context) => SubscriptionProvider(appState: context.read<AppState>()),
-          update: (_, appState, subscriptionProvider) => 
+          create: (context) =>
+              SubscriptionProvider(appState: context.read<AppState>()),
+          update: (_, appState, subscriptionProvider) =>
               subscriptionProvider ?? SubscriptionProvider(appState: appState),
         ),
       ],
@@ -34,8 +40,39 @@ Future<void> main() async {
   );
 }
 
-class VeroApp extends StatelessWidget {
+class VeroApp extends StatefulWidget {
   const VeroApp({super.key});
+
+  @override
+  State<VeroApp> createState() => _VeroAppState();
+}
+
+class _VeroAppState extends State<VeroApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final WidgetService _widgetService = WidgetService();
+
+  @override
+  void initState() {
+    super.initState();
+    _widgetService.widgetClicked.listen((uri) {
+      if (uri != null) {
+        _handleWidgetDeepLink(uri);
+      }
+    });
+  }
+
+  void _handleWidgetDeepLink(Uri uri) {
+    if (kDebugMode) {
+      print('[WidgetDeepLink] $uri');
+    }
+    if (uri.scheme == 'vero' &&
+        uri.host == 'widget' &&
+        uri.path == '/configure') {
+      _navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const WidgetConfigScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +80,7 @@ class VeroApp extends StatelessWidget {
       title: 'Vero For Vercel',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
+      navigatorKey: _navigatorKey,
       builder: (context, child) {
         return Column(
           children: [
@@ -57,28 +95,26 @@ class VeroApp extends StatelessWidget {
             if (appState.isLoading) {
               return const Scaffold(
                 body: Center(
-                  child: CircularProgressIndicator(
-                    color: AppTheme.primary,
-                  ),
+                  child: CircularProgressIndicator(color: AppTheme.primary),
                 ),
               );
             }
-            
+
             // Show onboarding first (takes priority over authentication)
             if (!appState.hasCompletedOnboarding) {
               return const OnboardingScreen();
             }
-            
+
             if (appState.isAuthenticated) {
               return const MainScreen();
             }
-            
+
             // If the user is subscribed but not authenticated, they can see the login screen
             // to connect their real Vercel account.
             if (subscription.hasActiveSubscription) {
               return const LoginScreen();
             }
-            
+
             return const DemoEntryScreen();
           },
         ),
