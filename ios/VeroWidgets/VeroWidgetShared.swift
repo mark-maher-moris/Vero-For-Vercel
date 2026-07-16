@@ -150,10 +150,12 @@ struct WidgetLockView: View {
 
 func logColor(level: String) -> Color {
     switch level.lowercased() {
-    case "error", "err": return .veroError
+    case "error", "err", "fatal": return .veroError
     case "warning", "warn": return .veroWarning
-    case "success": return .veroSuccess
-    default: return Color(red: 0.95, green: 0.95, blue: 0.95)
+    case "success", "ready": return .veroSuccess
+    case "debug", "trace": return Color(hex: "#9B8CFF")
+    case "info": return .veroPrimary
+    default: return Color(hex: "#E6E6E6")
     }
 }
 

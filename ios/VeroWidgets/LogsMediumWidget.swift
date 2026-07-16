@@ -48,7 +48,7 @@ struct LogsMediumProvider: TimelineProvider {
         let logs: [LogEntry] = rawLogs.prefix(maxRows).map { entry in
             LogEntry(
                 message: (entry["message"] as? String ?? "").prefix(90).description,
-                level: entry["level"] as? String ?? "info",
+                level: entry["level"] as? String ?? entry["type"] as? String ?? "info",
                 timestampMs: entry["timestamp"] as? Int ?? 0
             )
         }
@@ -93,7 +93,7 @@ struct LogsLargeProvider: TimelineProvider {
         let logs: [LogEntry] = rawLogs.prefix(maxRows).map { entry in
             LogEntry(
                 message: (entry["message"] as? String ?? "").prefix(100).description,
-                level: entry["level"] as? String ?? "info",
+                level: entry["level"] as? String ?? entry["type"] as? String ?? "info",
                 timestampMs: entry["timestamp"] as? Int ?? 0
             )
         }

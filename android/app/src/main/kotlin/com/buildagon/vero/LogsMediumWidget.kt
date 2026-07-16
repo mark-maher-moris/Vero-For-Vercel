@@ -35,10 +35,10 @@ class LogsMediumWidget : AppWidgetProvider() {
 
     companion object {
         private val LOG_IDS = listOf(
-            Triple(R.id.log_row_1, R.id.log_msg_1, R.id.log_time_1),
-            Triple(R.id.log_row_2, R.id.log_msg_2, R.id.log_time_2),
-            Triple(R.id.log_row_3, R.id.log_msg_3, R.id.log_time_3),
-            Triple(R.id.log_row_4, R.id.log_msg_4, R.id.log_time_4),
+            Pair(R.id.log_row_1, R.id.log_msg_1),
+            Pair(R.id.log_row_2, R.id.log_msg_2),
+            Pair(R.id.log_row_3, R.id.log_msg_3),
+            Pair(R.id.log_row_4, R.id.log_msg_4),
         )
 
         fun updateWidget(
@@ -77,14 +77,14 @@ class LogsMediumWidget : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_logs_container, View.VISIBLE)
 
                 for ((rowIndex, ids) in LOG_IDS.withIndex()) {
-                    val (rowId, msgId, timeId) = ids
+                    val (rowId, msgId) = ids
                     if (rowIndex < logs.size) {
                         val entry = logs[rowIndex]
                         val message = (entry["message"] as? String ?: "").take(60)
-                        val timestamp = (entry["timestamp"] as? Int ?: 0).toLong()
+                        val level = entry["level"] as? String ?: entry["type"] as? String ?: "info"
                         views.setViewVisibility(rowId, View.VISIBLE)
                         views.setTextViewText(msgId, message.ifEmpty { "—" })
-                        views.setTextViewText(timeId, VeroWidgetUtils.formatTimestamp(timestamp))
+                        views.setTextColor(msgId, VeroWidgetUtils.logLevelColor(level))
                     } else {
                         views.setViewVisibility(rowId, View.GONE)
                     }

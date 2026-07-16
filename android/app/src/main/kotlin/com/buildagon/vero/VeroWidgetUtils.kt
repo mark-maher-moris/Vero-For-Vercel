@@ -113,10 +113,12 @@ object VeroWidgetUtils {
     }
 
     fun logLevelColor(level: String): Int = when (level.lowercase()) {
-        "error", "fatal" -> android.graphics.Color.parseColor("#FF4F4F")
+        "error", "err", "fatal" -> android.graphics.Color.parseColor("#FF4F4F")
         "warn", "warning" -> android.graphics.Color.parseColor("#F5A623")
+        "success", "ready" -> android.graphics.Color.parseColor("#50E3C2")
+        "debug", "trace" -> android.graphics.Color.parseColor("#9B8CFF")
         "info" -> android.graphics.Color.parseColor("#4A9EFF")
-        else -> android.graphics.Color.parseColor("#A0A0A0")
+        else -> android.graphics.Color.parseColor("#E6E6E6")
     }
 
     fun statusColor(state: String): Int = when (state.uppercase()) {
