@@ -106,7 +106,10 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
                 }
             }
 
-            views.setViewVisibility(R.id.widget_lock_overlay, View.GONE)
+            views.setViewVisibility(
+                R.id.widget_lock_overlay,
+                if (!isSubscribed && !isDemoMode) View.VISIBLE else View.GONE
+            )
 
             val openIntent = VeroWidgetUtils.openAppPendingIntent(
                 context, "vero://widget/configure?type=analytics"
@@ -137,6 +140,8 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
 
             val maxValue = values.maxOrNull() ?: 1
             val minValue = 0
+            val range = (maxValue - minValue).takeIf { it > 0 } ?: 1
+            val denominator = (values.size - 1).takeIf { it > 0 } ?: 1
 
             // Chart dimensions
             val padding = 8f
@@ -160,8 +165,8 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
             }
 
             val points = values.mapIndexed { index, value ->
-                val x = padding + (index.toFloat() / (values.size - 1)) * chartWidth
-                val y = padding + chartHeight - ((value.toFloat() - minValue) / (maxValue - minValue)) * chartHeight
+                val x = padding + (index.toFloat() / denominator) * chartWidth
+                val y = padding + chartHeight - ((value.toFloat() - minValue) / range) * chartHeight
                 PointF(x, y)
             }
 

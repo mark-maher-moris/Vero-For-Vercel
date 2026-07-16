@@ -91,7 +91,10 @@ class CountriesMediumWidget : AppWidgetProvider() {
                 }
             }
 
-            views.setViewVisibility(R.id.widget_lock_overlay, View.GONE)
+            views.setViewVisibility(
+                R.id.widget_lock_overlay,
+                if (!isSubscribed && !isDemoMode) View.VISIBLE else View.GONE
+            )
 
             val openIntent = VeroWidgetUtils.openAppPendingIntent(
                 context, "vero://widget/configure?type=countries"

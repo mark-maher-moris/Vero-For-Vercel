@@ -481,6 +481,7 @@ class AppState extends ChangeNotifier {
       final isSubscribed = await _superwallService
           .getCurrentSubscriptionStatus();
       await _widgetService.pushAuthData(
+        userId: _user?['id']?.toString(),
         teamId: _currentTeamId,
         isSubscribed: isSubscribed,
         isDemoMode: _isDemoMode,

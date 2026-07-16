@@ -47,18 +47,36 @@ class VeroApp extends StatefulWidget {
   State<VeroApp> createState() => _VeroAppState();
 }
 
-class _VeroAppState extends State<VeroApp> {
+class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final WidgetService _widgetService = WidgetService();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _widgetService.widgetClicked.listen((uri) {
       if (uri != null) {
         _handleWidgetDeepLink(uri);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+    final appState = context.read<AppState>();
+    if (appState.isAuthenticated || appState.isDemoMode) {
+      appState.refreshWidgets();
+    }
   }
 
   void _handleWidgetDeepLink(Uri uri) {

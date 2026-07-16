@@ -14,6 +14,7 @@ class WidgetKeys {
   static const String teamId = 'vero_team_id';
   static const String isSubscribed = 'vero_is_subscribed';
   static const String isDemoMode = 'vero_is_demo_mode';
+  static const String userId = 'vero_user_id';
   static const String lastUpdated = 'vero_last_updated';
   static const String projectsJson = 'vero_projects_json';
   static const String selectedProjectIds = 'vero_selected_project_ids';
@@ -84,6 +85,7 @@ class WidgetService {
   /// Push auth token and subscription status to native widgets.
   /// Call this after login and on app resume.
   Future<void> pushAuthData({
+    required String? userId,
     required String? teamId,
     required bool isSubscribed,
     required bool isDemoMode,
@@ -92,6 +94,9 @@ class WidgetService {
       final token = await _authService.getToken();
       if (token == null) return;
       await HomeWidget.saveWidgetData<String>(WidgetKeys.apiToken, token);
+      if (userId != null && userId.isNotEmpty) {
+        await HomeWidget.saveWidgetData<String>(WidgetKeys.userId, userId);
+      }
       if (teamId != null) {
         await HomeWidget.saveWidgetData<String>(WidgetKeys.teamId, teamId);
       }
@@ -124,6 +129,13 @@ class WidgetService {
         WidgetKeys.selectedProjectIds,
         jsonEncode(ids),
       );
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.projectIdLogs,
+        ids.isNotEmpty ? ids.first : '',
+      );
+      if (ids.isEmpty) {
+        await HomeWidget.saveWidgetData<String>(WidgetKeys.logsData, '[]');
+      }
     } catch (e) {
       if (kDebugMode) print('[WidgetService] setSelectedProjectIds error: $e');
     }
@@ -156,10 +168,6 @@ class WidgetService {
       await HomeWidget.saveWidgetData<bool>(
         WidgetKeys.isSubscribed,
         isSubscribed,
-      );
-      await HomeWidget.saveWidgetData<String>(
-        WidgetKeys.lastUpdated,
-        DateTime.now().toIso8601String(),
       );
 
       // Save projects list so native config screens can read them
@@ -196,6 +204,10 @@ class WidgetService {
           _refreshUsers(api, projectIdUsers),
       ]);
 
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.lastUpdated,
+        DateTime.now().toUtc().toIso8601String(),
+      );
       await triggerAllWidgetUpdates();
     } catch (e) {
       if (kDebugMode) print('[WidgetService] refreshAll error: $e');
@@ -269,12 +281,13 @@ class WidgetService {
         );
       }
 
-      // Get ownerId (team ID or user ID) for runtime logs API
-      final ownerId = api.teamId;
-      if (ownerId == null) {
+      // Get ownerId (project account ID, team ID, or user ID) for runtime logs API.
+      final ownerId = await _resolveOwnerId(api, targetProjectId);
+      if (ownerId == null || ownerId.isEmpty) {
         if (kDebugMode) {
-          print('[WidgetService] No teamId available for runtime logs');
+          print('[WidgetService] No ownerId available for runtime logs');
         }
+        await HomeWidget.saveWidgetData<String>(WidgetKeys.logsData, '[]');
         return;
       }
 
@@ -403,49 +416,16 @@ class WidgetService {
         );
       } catch (_) {}
 
-      // Fetch countries for analytics widget
-      try {
-        final countries = await api.getAnalyticsBreakdown(
-          projectId: projectId,
-          from: from7d,
-          to: to,
-          groupBy: 'country',
-        );
-        final total = countries.fold<int>(0, (sum, c) => sum + c.visitors);
-        final countriesData = countries
-            .take(5)
-            .map(
-              (c) => {
-                'code': c.key,
-                'name': _countryName(c.key),
-                'visitors': c.visitors,
-                'percentage': total > 0
-                    ? ((c.visitors / total) * 100).round()
-                    : 0,
-              },
-            )
-            .toList();
-        await HomeWidget.saveWidgetData<String>(
-          WidgetKeys.countriesData,
-          jsonEncode(countriesData),
-        );
-      } catch (_) {}
+      await _saveProjectName(api, projectId, WidgetKeys.analyticsProjectName);
     } catch (e) {
+      await HomeWidget.saveWidgetData<bool>(WidgetKeys.analyticsEnabled, false);
       if (kDebugMode) print('[WidgetService] _refreshAnalytics error: $e');
     }
   }
 
   Future<void> _refreshCountries(VercelApi api, String projectId) async {
     try {
-      final projects = await api.getProjectsList();
-      final project = projects.firstWhere(
-        (p) => p.id == projectId,
-        orElse: () => projects.first,
-      );
-      await HomeWidget.saveWidgetData<String>(
-        WidgetKeys.countriesProjectName,
-        project.name,
-      );
+      await _saveProjectName(api, projectId, WidgetKeys.countriesProjectName);
 
       final now = DateTime.now().toUtc();
       final from7d = now.subtract(const Duration(days: 7)).toIso8601String();
@@ -476,6 +456,7 @@ class WidgetService {
         jsonEncode(countriesData),
       );
     } catch (e) {
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.countriesData, '[]');
       if (kDebugMode) print('[WidgetService] _refreshCountries error: $e');
     }
   }
@@ -537,16 +518,11 @@ class WidgetService {
         );
       } catch (_) {}
 
-      final projects = await api.getProjectsList();
-      final project = projects.firstWhere(
-        (p) => p.id == projectId,
-        orElse: () => projects.first,
-      );
-      await HomeWidget.saveWidgetData<String>(
-        WidgetKeys.usersProjectName,
-        project.name,
-      );
+      await _saveProjectName(api, projectId, WidgetKeys.usersProjectName);
     } catch (e) {
+      await HomeWidget.saveWidgetData<int>(WidgetKeys.usersTotal24h, 0);
+      await HomeWidget.saveWidgetData<int>(WidgetKeys.usersLastHour, 0);
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.usersTimeseries, '[]');
       if (kDebugMode) print('[WidgetService] _refreshUsers error: $e');
     }
   }
@@ -738,7 +714,7 @@ class WidgetService {
       // Save last updated timestamp
       await HomeWidget.saveWidgetData<String>(
         WidgetKeys.lastUpdated,
-        DateTime.now().toIso8601String(),
+        DateTime.now().toUtc().toIso8601String(),
       );
 
       await triggerAllWidgetUpdates();
@@ -874,5 +850,41 @@ class WidgetService {
       'AE': 'UAE',
     };
     return names[code.toUpperCase()] ?? code;
+  }
+
+  Future<String?> _resolveOwnerId(VercelApi api, String projectId) async {
+    try {
+      final projects = await api.getProjectsList();
+      for (final project in projects) {
+        if (project.id == projectId && project.accountId != null) {
+          return project.accountId;
+        }
+      }
+    } catch (_) {}
+
+    if (api.teamId != null && api.teamId!.isNotEmpty) return api.teamId;
+
+    final storedTeamId = await HomeWidget.getWidgetData<String>(
+      WidgetKeys.teamId,
+    );
+    if (storedTeamId != null && storedTeamId.isNotEmpty) return storedTeamId;
+
+    return HomeWidget.getWidgetData<String>(WidgetKeys.userId);
+  }
+
+  Future<void> _saveProjectName(
+    VercelApi api,
+    String projectId,
+    String key,
+  ) async {
+    try {
+      final projects = await api.getProjectsList();
+      for (final project in projects) {
+        if (project.id == projectId) {
+          await HomeWidget.saveWidgetData<String>(key, project.name);
+          return;
+        }
+      }
+    } catch (_) {}
   }
 }

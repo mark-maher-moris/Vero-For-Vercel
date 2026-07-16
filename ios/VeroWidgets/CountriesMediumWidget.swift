@@ -126,6 +126,11 @@ struct CountriesMediumView: View {
             }
         }
         .padding(10)
+        .overlay {
+            if !entry.isSubscribed && !entry.isDemoMode {
+                WidgetLockView()
+            }
+        }
         .widgetURL(makeWidgetURL(for: "countries"))
         .applyWidgetBackground(Color.veroSurface)
     }

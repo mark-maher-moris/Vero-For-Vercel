@@ -117,6 +117,11 @@ struct UsersSmallView: View {
                 }
             }
         }
+        .overlay {
+            if !entry.isSubscribed && !entry.isDemoMode {
+                WidgetLockView()
+            }
+        }
         .widgetURL(makeWidgetURL(for: "users"))
         .applyWidgetBackground(Color.veroSurface)
     }
