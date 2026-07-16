@@ -12,7 +12,7 @@ import 'domains_dns_screen.dart';
 import 'team_access_screen.dart';
 import 'onboarding_screen.dart';
 import 'widget_config_screen.dart';
-import 'video_player_screen.dart';
+import '../widgets/video_player_sheet.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -155,12 +155,12 @@ class _AccountScreenState extends State<AccountScreen> {
             // Home Widgets Video Button
             GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const VideoPlayerScreen(
-                      videoPath: 'assets/home_widgets.mp4',
-                    ),
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => const VideoPlayerSheet(
+                    videoPath: 'assets/home_widgets.mp4',
                   ),
                 );
               },

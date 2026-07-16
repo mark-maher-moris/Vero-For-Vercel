@@ -112,7 +112,7 @@ class AnalyticsLargeWidget : AppWidgetProvider() {
             )
 
             val openIntent = VeroWidgetUtils.openAppPendingIntent(
-                context, "vero://widget/configure?type=analytics"
+                context, "vero://widget/configure?type=analytics&homeWidget=true"
             )
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 

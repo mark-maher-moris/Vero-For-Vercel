@@ -97,7 +97,7 @@ class CountriesMediumWidget : AppWidgetProvider() {
             )
 
             val openIntent = VeroWidgetUtils.openAppPendingIntent(
-                context, "vero://widget/configure?type=countries"
+                context, "vero://widget/configure?type=countries&homeWidget=true"
             )
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 

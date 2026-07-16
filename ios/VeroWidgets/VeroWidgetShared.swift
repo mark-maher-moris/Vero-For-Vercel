@@ -160,7 +160,7 @@ func statusColor(_ state: String) -> Color {
 // MARK: - Widget URL scheme for taps (opens app with context)
 
 func makeWidgetURL(for type: String) -> URL {
-    URL(string: "vero://widget/configure?type=\(type)") ?? URL(string: "vero://")!
+    URL(string: "vero://widget/configure?type=\(type)&homeWidget=true") ?? URL(string: "vero://")!
 }
 
 // MARK: - iOS 17 Container Background Helper

@@ -51,6 +51,8 @@ class VeroApp extends StatefulWidget {
 class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final WidgetService _widgetService = WidgetService();
+  Uri? _pendingWidgetConfigUri;
+  bool _isFlushingWidgetConfigRoute = false;
 
   @override
   void initState() {
@@ -90,28 +92,47 @@ class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
     }
   }
 
-  void _handleWidgetDeepLink(Uri uri, {int attempt = 0}) {
+  void _handleWidgetDeepLink(Uri uri) {
     if (kDebugMode) {
       print('[WidgetDeepLink] $uri');
     }
     if (uri.scheme == 'vero' &&
         uri.host == 'widget' &&
         uri.path == '/configure') {
+      _pendingWidgetConfigUri = uri;
+      _flushPendingWidgetConfigRoute();
+    }
+  }
+
+  void _flushPendingWidgetConfigRoute() {
+    if (_pendingWidgetConfigUri == null || _isFlushingWidgetConfigRoute) {
+      return;
+    }
+
+    _isFlushingWidgetConfigRoute = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isFlushingWidgetConfigRoute = false;
+      final pendingUri = _pendingWidgetConfigUri;
+      if (pendingUri == null) return;
+
       final navigator = _navigatorKey.currentState;
       final context = _navigatorKey.currentContext;
-      final isLoading = context?.read<AppState>().isLoading ?? true;
-
-      if ((navigator == null || isLoading) && attempt < 20) {
-        Future.delayed(const Duration(milliseconds: 150), () {
-          _handleWidgetDeepLink(uri, attempt: attempt + 1);
-        });
+      if (navigator == null || context == null) {
+        _flushPendingWidgetConfigRoute();
         return;
       }
 
-      navigator?.push(
+      final appState = context.read<AppState>();
+      if (appState.isLoading) {
+        _flushPendingWidgetConfigRoute();
+        return;
+      }
+
+      _pendingWidgetConfigUri = null;
+      navigator.push(
         MaterialPageRoute(builder: (_) => const WidgetConfigScreen()),
       );
-    }
+    });
   }
 
   @override
@@ -132,6 +153,7 @@ class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
       home: AuthErrorHandler(
         child: Consumer2<AppState, SubscriptionProvider>(
           builder: (context, appState, subscription, child) {
+            _flushPendingWidgetConfigRoute();
             if (appState.isLoading) {
               return const Scaffold(
                 body: Center(

@@ -101,7 +101,7 @@ class LogsLargeWidget : AppWidgetProvider() {
             )
 
             val openIntent = VeroWidgetUtils.openAppPendingIntent(
-                context, "vero://widget/configure?type=logs"
+                context, "vero://widget/configure?type=logs&homeWidget=true"
             )
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 

@@ -81,7 +81,7 @@ class UsersSmallWidget : AppWidgetProvider() {
                 )
 
                 val openIntent = VeroWidgetUtils.openAppPendingIntent(
-                    context, "vero://widget/configure?type=users"
+                    context, "vero://widget/configure?type=users&homeWidget=true"
                 )
                 views.setOnClickPendingIntent(R.id.widget_root, openIntent)
 
