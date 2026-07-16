@@ -28,6 +28,7 @@ dependencies:
   fl_chart: ^1.2.0
   home_widget: ^0.9.1
   countries_world_map: ^1.3.0
+  video_player: ^2.13.0
 
 dev_dependencies:
   flutter_test:
@@ -41,4 +42,5 @@ flutter:
     - assets/small-visitors-widgets.png
     - assets/large-analysis-widget.png
     - assets/countries-widget.png
+    - assets/home_widgets.mp4
     - .env

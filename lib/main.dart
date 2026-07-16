@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart';
 import 'providers/app_state.dart';
 import 'providers/subscription_provider.dart';
@@ -60,6 +61,9 @@ class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
         _handleWidgetDeepLink(uri);
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkInitialWidgetLaunch();
+    });
   }
 
   @override
@@ -79,14 +83,32 @@ class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
     }
   }
 
-  void _handleWidgetDeepLink(Uri uri) {
+  Future<void> _checkInitialWidgetLaunch() async {
+    final uri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+    if (uri != null) {
+      _handleWidgetDeepLink(uri);
+    }
+  }
+
+  void _handleWidgetDeepLink(Uri uri, {int attempt = 0}) {
     if (kDebugMode) {
       print('[WidgetDeepLink] $uri');
     }
     if (uri.scheme == 'vero' &&
         uri.host == 'widget' &&
         uri.path == '/configure') {
-      _navigatorKey.currentState?.push(
+      final navigator = _navigatorKey.currentState;
+      final context = _navigatorKey.currentContext;
+      final isLoading = context?.read<AppState>().isLoading ?? true;
+
+      if ((navigator == null || isLoading) && attempt < 20) {
+        Future.delayed(const Duration(milliseconds: 150), () {
+          _handleWidgetDeepLink(uri, attempt: attempt + 1);
+        });
+        return;
+      }
+
+      navigator?.push(
         MaterialPageRoute(builder: (_) => const WidgetConfigScreen()),
       );
     }
