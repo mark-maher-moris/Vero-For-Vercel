@@ -130,7 +130,11 @@ class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
 
       _pendingWidgetConfigUri = null;
       navigator.push(
-        MaterialPageRoute(builder: (_) => const WidgetConfigScreen()),
+        MaterialPageRoute(
+          builder: (_) => WidgetConfigScreen(
+            initialWidgetType: pendingUri.queryParameters['type'],
+          ),
+        ),
       );
     });
   }

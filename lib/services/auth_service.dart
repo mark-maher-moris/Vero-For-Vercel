@@ -20,21 +20,12 @@ class AuthService {
     // Try secure storage first
     String? token = await _secureStorage.read(key: _tokenKey);
     if (token != null) {
-      if (kDebugMode) print('[AuthService] Token found in secure storage');
       return token;
     }
 
     // If not found, try to migrate from shared preferences
-    if (kDebugMode) print('[AuthService] Token not in secure storage, checking for migration...');
     await _migrateFromSharedPreferences();
     token = await _secureStorage.read(key: _tokenKey);
-    if (kDebugMode) {
-      if (token != null) {
-        print('[AuthService] Token retrieved after migration');
-      } else {
-        print('[AuthService] No token found after migration check');
-      }
-    }
     return token;
   }
 
@@ -59,7 +50,6 @@ class AuthService {
       // This ensures that after logout, no old tokens can be restored
       await prefs.setBool(_migrationKey, true);
     } catch (e) {
-      if (kDebugMode) print('Error deleting token: $e');
       rethrow;
     }
   }
@@ -101,15 +91,13 @@ class AuthService {
 
         // Remove from shared preferences
         await prefs.remove(_tokenKey);
-
-        if (kDebugMode) print('Successfully migrated API token to secure storage');
       }
 
       // Mark as migrated even if no token was found
       // This prevents repeated migration checks
       await prefs.setBool(_migrationKey, true);
     } catch (e) {
-      if (kDebugMode) print('Error during token migration: $e');
+      // Ignored
     }
   }
 

@@ -267,14 +267,12 @@ class AppState extends ChangeNotifier {
     if (kDebugMode) print('[AppState] Login started');
     try {
       // Validate token before saving
-      if (kDebugMode) print('[AppState] Validating token...');
       final isValid = await _authService.validateToken(token);
       if (!isValid) {
         throw Exception(
           'Invalid token. Please check your token and try again.',
         );
       }
-      if (kDebugMode) print('[AppState] Token valid, saving...');
       await _authService.saveToken(token);
 
       // Ensure demo mode is disabled and the API service is reset to the real client

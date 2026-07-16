@@ -53,9 +53,7 @@ class VercelApi {
   VercelApi({this.teamId});
 
   Future<Map<String, String>> _getHeaders() async {
-    if (kDebugMode) print('[VercelApi] _getHeaders called - fetching token...');
     final token = await _authService.getToken();
-    if (kDebugMode) print('[VercelApi] token retrieved: ${token != null ? 'present' : 'null'}');
     if (token == null) throw VercelApiException('No access token found', statusCode: 401);
     return {
       'Authorization': 'Bearer $token',
