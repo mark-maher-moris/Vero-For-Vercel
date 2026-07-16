@@ -7,17 +7,18 @@ import '../models/project.dart';
 import '../widgets/video_player_sheet.dart';
 
 enum _WidgetKind {
-  logs('logs', 'Logs', Icons.terminal, false),
-  analytics('analytics', 'Analytics', Icons.analytics_outlined, true),
-  countries('countries', 'Countries', Icons.public, true),
-  users('users', 'Users', Icons.people_alt_outlined, true);
+  logs('logs', 'Logs', Icons.terminal, false, 'assets/logs-widget.png'),
+  analytics('analytics', 'Analytics', Icons.analytics_outlined, true, 'assets/large-analysis-widget.png'),
+  countries('countries', 'Countries', Icons.public, true, 'assets/countries-widget.png'),
+  users('users', 'Users', Icons.people_alt_outlined, true, 'assets/small-visitors-widgets.png');
 
-  const _WidgetKind(this.key, this.label, this.icon, this.requiresAnalytics);
+  const _WidgetKind(this.key, this.label, this.icon, this.requiresAnalytics, this.imagePath);
 
   final String key;
   final String label;
   final IconData icon;
   final bool requiresAnalytics;
+  final String? imagePath;
 
   static _WidgetKind fromKey(String? key) {
     return _WidgetKind.values.firstWhere(
@@ -153,32 +154,6 @@ class _WidgetConfigScreenState extends State<WidgetConfigScreen> {
     return 'Selected project unavailable';
   }
 
-  bool _projectHasAnyWidget(Project project) {
-    return _logsProjectIds.contains(project.id) ||
-        _analyticsProjectId == project.id ||
-        _countriesProjectId == project.id ||
-        _usersProjectId == project.id;
-  }
-
-  List<Project> _suggestedAnalyticsProjects(List<Project> projects) {
-    return projects
-        .where((project) {
-          return _hasVercelAnalytics(project) && !_projectHasAnyWidget(project);
-        })
-        .take(2)
-        .toList();
-  }
-
-  void _openWidgetInstructions() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) =>
-          const VideoPlayerSheet(videoPath: 'assets/home_widgets.mp4'),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
@@ -203,6 +178,76 @@ class _WidgetConfigScreenState extends State<WidgetConfigScreen> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const VideoPlayerSheet(
+                          videoPath: 'assets/home_widgets.mp4',
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF8A2BE2), Color(0xFF4B0082)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF8A2BE2).withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'How to use Widgets',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Watch the instructions video',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: Colors.white, size: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 _buildWidgetChooser(projects),
                 const Divider(height: 1, color: AppTheme.outlineVariant),
                 Expanded(child: _buildProjectPicker(projects)),
@@ -213,7 +258,7 @@ class _WidgetConfigScreenState extends State<WidgetConfigScreen> {
 
   Widget _buildWidgetChooser(List<Project> projects) {
     return SizedBox(
-      height: 116,
+      height: 180,
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         scrollDirection: Axis.horizontal,
@@ -226,64 +271,101 @@ class _WidgetConfigScreenState extends State<WidgetConfigScreen> {
 
           return InkWell(
             onTap: () => setState(() => _selectedKind = kind),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
-              width: 148,
-              padding: const EdgeInsets.all(12),
+              width: 160,
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppTheme.surfaceContainerHigh
                     : AppTheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
+                  width: isSelected ? 2 : 1,
                   color: isSelected
                       ? AppTheme.primary
                       : AppTheme.outlineVariant.withValues(alpha: 0.45),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Icon(kind.icon, color: AppTheme.primary, size: 18),
-                      const Spacer(),
-                      if (isSelected)
-                        const Icon(
-                          Icons.check_circle,
-                          color: AppTheme.primary,
-                          size: 16,
+                      Expanded(
+                        child: kind.imagePath != null
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.asset(
+                                    kind.imagePath!,
+                                    fit: BoxFit.contain,
+                                    alignment: Alignment.bottomCenter,
+                                  ),
+                                ),
+                              )
+                            : Padding(
+                                padding: const EdgeInsets.only(top: 12, left: 12, right: 12),
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Icon(kind.icon, color: AppTheme.primary, size: 28),
+                                ),
+                              ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              kind.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppTheme.onSurfaceVariant.withValues(alpha: 0.75),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
                     ],
                   ),
-                  const Spacer(),
-                  Text(
-                    kind.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                  if (isSelected)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.surface,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle,
+                          color: AppTheme.primary,
+                          size: 20,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.75),
-                      fontSize: 11,
-                    ),
-                  ),
                 ],
               ),
             ),
           );
         },
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
+        separatorBuilder: (context, index) => const SizedBox(width: 12),
         itemCount: _WidgetKind.values.length,
       ),
     );
@@ -322,7 +404,6 @@ class _WidgetConfigScreenState extends State<WidgetConfigScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        ..._buildSuggestionCards(projects),
         if (projects.isEmpty)
           _buildEmptyState()
         else
@@ -364,27 +445,6 @@ class _WidgetConfigScreenState extends State<WidgetConfigScreen> {
           }),
       ],
     );
-  }
-
-  List<Widget> _buildSuggestionCards(List<Project> projects) {
-    if (!_selectedKind.requiresAnalytics) return const [];
-
-    final suggestions = _suggestedAnalyticsProjects(projects);
-    if (suggestions.isEmpty) return const [];
-
-    return [
-      ...suggestions.map(
-        (project) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _WidgetSuggestionCard(
-            projectName: project.name,
-            widgetLabel: _selectedKind.label,
-            onTap: _openWidgetInstructions,
-          ),
-        ),
-      ),
-      const SizedBox(height: 4),
-    ];
   }
 
   Widget _buildProjectRow({
@@ -513,82 +573,6 @@ class _StatusPill extends StatelessWidget {
           color: AppTheme.onSurfaceVariant.withValues(alpha: 0.8),
           fontSize: 11,
           fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-class _WidgetSuggestionCard extends StatelessWidget {
-  const _WidgetSuggestionCard({
-    required this.projectName,
-    required this.widgetLabel,
-    required this.onTap,
-  });
-
-  final String projectName;
-  final String widgetLabel;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.32)),
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.asset(
-                'assets/large-analysis-widget.png',
-                width: 92,
-                height: 70,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Suggested for $projectName',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'This project supports Vercel Analytics. Add a $widgetLabel widget for quick home screen stats.',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.82),
-                      fontSize: 12,
-                      height: 1.25,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Icon(
-              Icons.play_circle_outline,
-              color: AppTheme.primary,
-              size: 26,
-            ),
-          ],
         ),
       ),
     );

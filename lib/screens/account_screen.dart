@@ -152,18 +152,9 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Home Widgets Video Button
+            // Home Widgets Card
             GestureDetector(
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => const VideoPlayerSheet(
-                    videoPath: 'assets/home_widgets.mp4',
-                  ),
-                );
-              },
+              onTap: () => _navigateTo(context, const WidgetConfigScreen()),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 decoration: BoxDecoration(
@@ -206,7 +197,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Watch the instructions video',
+                            'Configure your home widgets',
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: 14,
