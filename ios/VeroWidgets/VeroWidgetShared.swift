@@ -146,7 +146,16 @@ struct WidgetLockView: View {
     }
 }
 
-// MARK: - Status badge colour
+// MARK: - Status badge & log colours
+
+func logColor(level: String) -> Color {
+    switch level.lowercased() {
+    case "error", "err": return .veroError
+    case "warning", "warn": return .veroWarning
+    case "success": return .veroSuccess
+    default: return Color(red: 0.95, green: 0.95, blue: 0.95)
+    }
+}
 
 func statusColor(_ state: String) -> Color {
     switch state.uppercased() {

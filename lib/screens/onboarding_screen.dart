@@ -87,8 +87,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final pageNames = [
       'privacy',
       'opensource',
-      'github_support',
       'home_widgets',
+      'github_support',
       'features',
     ];
     SuperwallService().trackUserAction(
@@ -103,7 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _nextPage() async {
-    if (_currentPage == 2) {
+    if (_currentPage == 3) {
       // On Support slide, request review then go to Features
       await _requestReviewThenContinue();
     } else if (_currentPage < _totalPages - 1) {
@@ -190,12 +190,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         slideAnimation: _slideAnimations[1],
                       );
                     case 2:
-                      return _GitHubSlide(
+                      return _HomeWidgetsSlide(
                         fadeAnimation: _fadeAnimations[2],
                         slideAnimation: _slideAnimations[2],
                       );
                     case 3:
-                      return _HomeWidgetsSlide(
+                      return _GitHubSlide(
                         fadeAnimation: _fadeAnimations[3],
                         slideAnimation: _slideAnimations[3],
                       );

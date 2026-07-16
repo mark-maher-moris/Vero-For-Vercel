@@ -26,16 +26,16 @@ struct LogsEntry: TimelineEntry {
 struct LogsMediumProvider: TimelineProvider {
     func placeholder(in context: Context) -> LogsEntry {
         LogsEntry(date: .now, projectName: "my-project", deployStatus: "READY",
-                  logs: demoLogs(4), isSubscribed: true, isDemoMode: false,
-                  lastUpdated: .now, isConfigured: true, maxRows: 4)
+                  logs: demoLogs(6), isSubscribed: true, isDemoMode: false,
+                  lastUpdated: .now, isConfigured: true, maxRows: 6)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (LogsEntry) -> Void) {
-        completion(loadEntry(maxRows: 4))
+        completion(loadEntry(maxRows: 6))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<LogsEntry>) -> Void) {
-        let entry = loadEntry(maxRows: 4)
+        let entry = loadEntry(maxRows: 6)
         let next = Calendar.current.date(byAdding: .minute, value: 30, to: .now)!
         completion(Timeline(entries: [entry], policy: .after(next)))
     }
@@ -71,16 +71,16 @@ struct LogsMediumProvider: TimelineProvider {
 struct LogsLargeProvider: TimelineProvider {
     func placeholder(in context: Context) -> LogsEntry {
         LogsEntry(date: .now, projectName: "my-project", deployStatus: "READY",
-                  logs: demoLogs(8), isSubscribed: true, isDemoMode: false,
-                  lastUpdated: .now, isConfigured: true, maxRows: 8)
+                  logs: demoLogs(14), isSubscribed: true, isDemoMode: false,
+                  lastUpdated: .now, isConfigured: true, maxRows: 14)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (LogsEntry) -> Void) {
-        completion(loadEntry(maxRows: 8))
+        completion(loadEntry(maxRows: 14))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<LogsEntry>) -> Void) {
-        let entry = loadEntry(maxRows: 8)
+        let entry = loadEntry(maxRows: 14)
         let next = Calendar.current.date(byAdding: .minute, value: 30, to: .now)!
         completion(Timeline(entries: [entry], policy: .after(next)))
     }
@@ -169,15 +169,10 @@ struct LogsWidgetView: View {
                     HStack(alignment: .top, spacing: 6) {
                         Text(log.message.isEmpty ? "—" : log.message)
                             .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(Color(red: 0.95, green: 0.95, blue: 0.95))
+                            .foregroundColor(logColor(level: log.level))
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        if log.timestampMs > 0 {
-                            Text(formatTimestamp(log.timestampMs))
-                                .font(.system(size: 8))
-                                .foregroundColor(Color(red: 0.9, green: 0.9, blue: 0.9))
-                        }
                     }
                     .padding(.vertical, 1)
                 }
@@ -212,7 +207,7 @@ struct LogsMediumWidget: Widget {
             LogsWidgetView(entry: entry)
         }
         .configurationDisplayName("Vero Logs")
-        .description("Monitor the last 4 log entries from your latest deployment.")
+        .description("Monitor the last 6 log entries from your latest deployment.")
         .supportedFamilies([.systemMedium])
     }
 }
@@ -225,7 +220,7 @@ struct LogsLargeWidget: Widget {
             LogsWidgetView(entry: entry)
         }
         .configurationDisplayName("Vero Logs (Large)")
-        .description("Monitor the last 8 log entries from your latest deployment.")
+        .description("Monitor the last 14 log entries from your latest deployment.")
         .supportedFamilies([.systemLarge])
     }
 }
