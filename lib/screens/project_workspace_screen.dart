@@ -635,20 +635,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             onPressed: _isRedeploying ? null : _redeployProject,
             tooltip: 'Redeploy',
           ),
-          IconButton(
-            icon: _isPausingOrUnpausing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
-                  )
-                : Icon(
-                    _isPaused ? Icons.play_circle_outline : Icons.pause_circle_outline,
-                    color: _isPaused ? Colors.orangeAccent : AppTheme.onSurfaceVariant,
-                  ),
-            onPressed: _isPausingOrUnpausing ? null : _handlePauseToggle,
-            tooltip: _isPaused ? 'Resume Project' : 'Pause Project',
-          ),
         ],
         bottom: TabBar(
           controller: _tabController,
