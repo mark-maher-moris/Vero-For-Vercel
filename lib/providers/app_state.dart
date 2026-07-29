@@ -473,6 +473,17 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> pauseProject(String projectId) async {
+    await _apiService.pauseProject(projectId);
+    await fetchProjects();
+  }
+
+  Future<void> unpauseProject(String projectId) async {
+    await _apiService.unpauseProject(projectId);
+    await fetchProjects();
+  }
+
+
   Future<void> _pushWidgetData() async {
     try {
       await _widgetService.initialize();

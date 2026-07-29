@@ -399,6 +399,16 @@ class DemoVercelApi extends VercelApi {
   }
 
   @override
+  Future<void> pauseProject(String projectId) async {
+    throw DemoModeException();
+  }
+
+  @override
+  Future<void> unpauseProject(String projectId) async {
+    throw DemoModeException();
+  }
+
+  @override
   Future<Deployment> createDeployment({
     required String projectId,
     String? target,

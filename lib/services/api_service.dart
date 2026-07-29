@@ -444,6 +444,27 @@ class VercelApi {
     return projectsJson.map((json) => Project.fromJson(json)).toList();
   }
 
+  /// Pause a project
+  /// [projectId] - The project ID or name
+  Future<void> pauseProject(String projectId) async {
+    final response = await http.post(
+      _buildUri('/v1/projects/$projectId/pause'),
+      headers: await _getHeaders(),
+    );
+    await _handleResponse(response);
+  }
+
+  /// Unpause (resume) a project
+  /// [projectId] - The project ID or name
+  Future<void> unpauseProject(String projectId) async {
+    final response = await http.post(
+      _buildUri('/v1/projects/$projectId/unpause'),
+      headers: await _getHeaders(),
+    );
+    await _handleResponse(response);
+  }
+
+
   Future<List<Deployment>> getDeployments({String? projectId}) async {
     final params = <String, String>{};
     if (projectId != null) params['projectId'] = projectId;
