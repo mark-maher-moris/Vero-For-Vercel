@@ -497,7 +497,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     final dialogTitle = currentlyPaused ? 'Resume Project?' : 'Pause Project?';
     final dialogMessage = currentlyPaused
         ? 'Are you sure you want to resume "${widget.project.name}"?\n\nResuming this project will re-enable deployments and restore traffic.'
-        : 'Are you sure you want to pause "${widget.project.name}"?\n\nPausing this project will immediately disable all deployments and serve 503 errors to visitors.';
+        : 'Are you sure you want to pause "${widget.project.name}"?\n\nPausing this project will immediately disable all deployments and serve 503 errors to visitors. You can enable or resume this project again at any time later.';
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -924,7 +924,71 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             const SizedBox(height: 32),
             _buildWidgetSuggestionCard(),
           ],
+          const SizedBox(height: 32),
+          _buildPauseProjectCard(),
           const SizedBox(height: 48),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPauseProjectCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _isPaused ? Colors.orange.withOpacity(0.08) : AppTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: _isPaused ? Colors.orange.withOpacity(0.4) : AppTheme.surfaceContainerHigh,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _isPaused ? Icons.pause_circle_filled : Icons.pause_circle_outline,
+            color: _isPaused ? Colors.orange : AppTheme.onSurfaceVariant,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isPaused ? 'Project is Paused' : 'Project Active',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: _isPaused ? Colors.orange : AppTheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _isPaused
+                      ? 'Deployments disabled. Visitors see 503 error.'
+                      : 'Project is running and handling traffic.',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isPaused ? AppTheme.primary : AppTheme.error.withOpacity(0.9),
+              foregroundColor: _isPaused ? Colors.black : Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            ),
+            onPressed: _isPausingOrUnpausing ? null : _handlePauseToggle,
+            icon: _isPausingOrUnpausing
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : Icon(_isPaused ? Icons.play_arrow : Icons.pause, size: 16),
+            label: Text(_isPaused ? 'Resume Project' : 'Pause Project'),
+          ),
         ],
       ),
     );
@@ -997,67 +1061,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                 tooltip: 'Open project',
               ),
           ],
-        ),
-        const SizedBox(height: 16),
-        // Pause / Resume Project Action Card
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: _isPaused ? Colors.orange.withOpacity(0.08) : AppTheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: _isPaused ? Colors.orange.withOpacity(0.4) : AppTheme.surfaceContainerHigh,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                _isPaused ? Icons.pause_circle_filled : Icons.pause_circle_outline,
-                color: _isPaused ? Colors.orange : AppTheme.onSurfaceVariant,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _isPaused ? 'Project is Paused' : 'Project Active',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: _isPaused ? Colors.orange : AppTheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _isPaused
-                          ? 'Deployments disabled. Visitors see 503 error.'
-                          : 'Project is running and handling traffic.',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isPaused ? AppTheme.primary : AppTheme.error.withOpacity(0.9),
-                  foregroundColor: _isPaused ? Colors.black : Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                ),
-                onPressed: _isPausingOrUnpausing ? null : _handlePauseToggle,
-                icon: _isPausingOrUnpausing
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : Icon(_isPaused ? Icons.play_arrow : Icons.pause, size: 16),
-                label: Text(_isPaused ? 'Resume Project' : 'Pause Project'),
-              ),
-            ],
-          ),
         ),
         const SizedBox(height: 24),
         // Project Stats Row
