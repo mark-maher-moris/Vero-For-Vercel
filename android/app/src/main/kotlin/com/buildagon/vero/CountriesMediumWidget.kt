@@ -34,12 +34,20 @@ class CountriesMediumWidget : AppWidgetProvider() {
     }
 
     companion object {
+        private data class CountryRowIds(
+            val rowId: Int,
+            val flagId: Int,
+            val nameId: Int,
+            val countId: Int,
+            val percentageId: Int,
+        )
+
         private val COUNTRY_IDS = listOf(
-            Triple(R.id.country_row_1, R.id.country_name_1, R.id.country_count_1),
-            Triple(R.id.country_row_2, R.id.country_name_2, R.id.country_count_2),
-            Triple(R.id.country_row_3, R.id.country_name_3, R.id.country_count_3),
-            Triple(R.id.country_row_4, R.id.country_name_4, R.id.country_count_4),
-            Triple(R.id.country_row_5, R.id.country_name_5, R.id.country_count_5),
+            CountryRowIds(R.id.country_row_1, R.id.country_flag_1, R.id.country_name_1, R.id.country_count_1, R.id.country_percentage_1),
+            CountryRowIds(R.id.country_row_2, R.id.country_flag_2, R.id.country_name_2, R.id.country_count_2, R.id.country_percentage_2),
+            CountryRowIds(R.id.country_row_3, R.id.country_flag_3, R.id.country_name_3, R.id.country_count_3, R.id.country_percentage_3),
+            CountryRowIds(R.id.country_row_4, R.id.country_flag_4, R.id.country_name_4, R.id.country_count_4, R.id.country_percentage_4),
+            CountryRowIds(R.id.country_row_5, R.id.country_flag_5, R.id.country_name_5, R.id.country_count_5, R.id.country_percentage_5),
         )
 
         fun updateWidget(
@@ -76,15 +84,18 @@ class CountriesMediumWidget : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_countries_container, View.VISIBLE)
 
                 for ((idx, ids) in COUNTRY_IDS.withIndex()) {
-                    val (rowId, nameId, countId) = ids
+                    val rowId = ids.rowId
                     if (idx < countries.size) {
                         val entry = countries[idx]
                         val name = (entry["name"] as? String ?: entry["code"] as? String ?: "Unknown").take(18)
+                        val code = entry["code"] as? String ?: ""
                         val visitors = entry["visitors"]?.toString()?.toIntOrNull() ?: 0
                         val pct = entry["percentage"]?.toString() ?: "0"
                         views.setViewVisibility(rowId, View.VISIBLE)
-                        views.setTextViewText(nameId, name)
-                        views.setTextViewText(countId, "${VeroWidgetUtils.formatNumber(visitors)} ($pct%)")
+                        views.setTextViewText(ids.flagId, VeroWidgetUtils.flagEmoji(code))
+                        views.setTextViewText(ids.nameId, name)
+                        views.setTextViewText(ids.countId, VeroWidgetUtils.formatNumber(visitors))
+                        views.setTextViewText(ids.percentageId, "$pct%")
                     } else {
                         views.setViewVisibility(rowId, View.GONE)
                     }

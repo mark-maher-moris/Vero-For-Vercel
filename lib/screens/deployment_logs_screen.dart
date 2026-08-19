@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../models/deployment.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import '../widgets/connect_account_dialog.dart';
 
 class DeploymentLogsScreen extends StatefulWidget {
   final Deployment deployment;
@@ -125,17 +126,115 @@ class _DeploymentLogsScreenState extends State<DeploymentLogsScreen> {
                 ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
                 : _errorMessage != null
                   ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
-                          const SizedBox(height: 16),
-                          const Text('Failed to load logs', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
-                          const SizedBox(height: 24),
-                          ElevatedButton(onPressed: _fetchLogs, child: const Text('Retry')),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Builder(
+                          builder: (context) {
+                            final isPermissionIssue = _errorMessage!.toLowerCase().contains('403') ||
+                                _errorMessage!.toLowerCase().contains('forbidden') ||
+                                _errorMessage!.toLowerCase().contains('permission') ||
+                                _errorMessage!.toLowerCase().contains('access denied') ||
+                                _errorMessage!.toLowerCase().contains('unauthorized');
+                            return Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: (isPermissionIssue ? Colors.amber : AppTheme.error)
+                                        .withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    isPermissionIssue
+                                        ? Icons.lock_outline_rounded
+                                        : Icons.error_outline_rounded,
+                                    color: isPermissionIssue ? Colors.amber : AppTheme.error,
+                                    size: 32,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  isPermissionIssue
+                                      ? 'Permission Denied'
+                                      : 'Failed to load logs',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 440),
+                                  child: Text(
+                                    isPermissionIssue
+                                        ? 'Your current token does not have permission to access logs for this deployment.\n\nConnect a full-access Personal Access Token to view logs.'
+                                        : _errorMessage!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: [
+                                    OutlinedButton(
+                                      onPressed: _fetchLogs,
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        side: const BorderSide(color: Colors.white24),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                      child: const Text('Retry'),
+                                    ),
+                                    if (isPermissionIssue)
+                                      ElevatedButton.icon(
+                                        onPressed: () async {
+                                          final accountId = context
+                                              .read<AppState>()
+                                              .activeAccount
+                                              ?.id;
+                                          if (accountId == null) return;
+                                          final result = await ConnectAccountDialog.show(
+                                            context,
+                                            replaceAccountId: accountId,
+                                            customTitle: 'Update Vercel Token',
+                                            customSubtitle:
+                                                'Replace the current limited token with a full-access token to access logs',
+                                            customButtonText: 'Update Token',
+                                          );
+                                          if (result == true && mounted) {
+                                            _fetchLogs();
+                                          }
+                                        },
+                                        icon: const Icon(Icons.vpn_key_outlined, size: 16),
+                                        label: const Text('Connect Full Token'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.primary,
+                                          foregroundColor: AppTheme.onPrimary,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 12,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     )
                   : (_logs == null || _logs!.isEmpty)

@@ -2,39 +2,65 @@ package com.buildagon.vero
 
 import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Date
 import java.util.Locale
 
 object VeroWidgetUtils {
 
-    private const val PREFS_NAME = "FlutterSharedPreferences"
+    // home_widget stores saveWidgetData values in this preferences file using
+    // the exact key passed from Dart (without the SharedPreferences
+    // `flutter.` prefix). Keep the Flutter preferences fallback for data
+    // written by older app versions.
+    private const val HOME_WIDGET_PREFS_NAME = "HomeWidgetPreferences"
+    private const val FLUTTER_PREFS_NAME = "FlutterSharedPreferences"
 
     fun getPrefs(context: Context): SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        context.getSharedPreferences(HOME_WIDGET_PREFS_NAME, Context.MODE_PRIVATE)
+
+    private fun getRawValue(context: Context, key: String): Any? {
+        val candidates = arrayOf(key, "flutter.$key")
+        val preferenceFiles = arrayOf(
+            getPrefs(context),
+            context.getSharedPreferences(FLUTTER_PREFS_NAME, Context.MODE_PRIVATE),
+        )
+
+        for (preferences in preferenceFiles) {
+            for (candidate in candidates) {
+                if (preferences.contains(candidate)) {
+                    return preferences.all[candidate]
+                }
+            }
+        }
+        return null
+    }
 
     fun getString(context: Context, key: String, default: String = ""): String =
-        getPrefs(context).getString("flutter.$key", default) ?: default
+        when (val value = getRawValue(context, key)) {
+            is String -> value
+            null -> default
+            else -> value.toString()
+        }
 
     fun getBoolean(context: Context, key: String, default: Boolean = false): Boolean =
-        getPrefs(context).getBoolean("flutter.$key", default)
+        when (val value = getRawValue(context, key)) {
+            is Boolean -> value
+            is Number -> value.toInt() != 0
+            is String -> value.equals("true", ignoreCase = true)
+            else -> default
+        }
 
     fun getInt(context: Context, key: String, default: Int = 0): Int {
-        val prefs = getPrefs(context)
-        return try {
-            prefs.getInt("flutter.$key", default)
-        } catch (_: ClassCastException) {
-            try {
-                prefs.getLong("flutter.$key", default.toLong()).toInt()
-            } catch (_: Exception) {
-                default
-            }
+        return when (val value = getRawValue(context, key)) {
+            is Number -> value.toInt()
+            is String -> value.toIntOrNull() ?: default
+            else -> default
         }
     }
 
@@ -83,10 +109,8 @@ object VeroWidgetUtils {
     fun relativeTime(isoString: String): String {
         if (isoString.isEmpty()) return "Just now"
         return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-            sdf.isLenient = true
-            val date = sdf.parse(isoString) ?: return "Recently"
-            val diff = System.currentTimeMillis() - date.time
+            val date = Instant.parse(isoString)
+            val diff = System.currentTimeMillis() - date.toEpochMilli()
             when {
                 diff < 60_000 -> "Just now"
                 diff < 3_600_000 -> "${diff / 60_000}m ago"
@@ -102,6 +126,16 @@ object VeroWidgetUtils {
         n >= 1_000_000 -> "${n / 1_000_000}M"
         n >= 1_000 -> "${n / 1_000}K"
         else -> n.toString()
+    }
+
+    fun flagEmoji(countryCode: String): String {
+        val code = countryCode.trim().uppercase(Locale.US)
+        if (code.length != 2 || code.any { it !in 'A'..'Z' }) return ""
+        val result = StringBuilder()
+        code.forEach { character ->
+            result.append(Character.toChars(127397 + character.code))
+        }
+        return result.toString()
     }
 
     fun openAppPendingIntent(context: Context, uri: String): PendingIntent {
@@ -124,8 +158,18 @@ object VeroWidgetUtils {
     fun statusColor(state: String): Int = when (state.uppercase()) {
         "READY" -> android.graphics.Color.parseColor("#50E3C2")
         "ERROR", "CANCELED" -> android.graphics.Color.parseColor("#FF4F4F")
-        "BUILDING", "INITIALIZING" -> android.graphics.Color.parseColor("#F5A623")
+        "BUILDING", "INITIALIZING", "QUEUED" -> android.graphics.Color.parseColor("#F5A623")
         else -> android.graphics.Color.parseColor("#888888")
+    }
+
+    fun statusBackgroundColor(state: String): Int {
+        val color = statusColor(state)
+        return android.graphics.Color.argb(
+            31,
+            android.graphics.Color.red(color),
+            android.graphics.Color.green(color),
+            android.graphics.Color.blue(color),
+        )
     }
 
     fun getProjectName(context: Context, key: String, fallback: String): String {

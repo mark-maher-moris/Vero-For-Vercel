@@ -4,9 +4,36 @@ import 'package:flutter/material.dart';
 int? _parseInt(dynamic value) {
   if (value == null) return null;
   if (value is int) return value;
+  if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value);
   return null;
 }
+
+DateTime _parseDateTime(dynamic value) {
+  if (value is DateTime) return value;
+  if (value is num) {
+    final numericValue = value.toInt();
+    // Accept both Unix seconds and Unix milliseconds.
+    final milliseconds = numericValue.abs() < 100000000000
+        ? numericValue * 1000
+        : numericValue;
+    return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+  }
+  if (value is String) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed != null) return parsed;
+    final numericValue = int.tryParse(value);
+    if (numericValue != null) {
+      final milliseconds = numericValue.abs() < 100000000000
+          ? numericValue * 1000
+          : numericValue;
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+    }
+  }
+  return DateTime.now();
+}
+
+String _stringValue(dynamic value) => value?.toString() ?? '';
 
 /// Model for Vercel request logs
 /// Based on the /logs/request-logs endpoint response (Revcel-style)
@@ -56,51 +83,73 @@ class Log {
   });
 
   factory Log.fromJson(Map<String, dynamic> json) {
-    // Parse timestamp - handle both ISO string and Date
-    DateTime parsedTimestamp;
-    final ts = json['timestamp'];
-    if (ts is String) {
-      parsedTimestamp = DateTime.parse(ts);
-    } else if (ts is int) {
-      parsedTimestamp = DateTime.fromMillisecondsSinceEpoch(ts);
-    } else {
-      parsedTimestamp = DateTime.now();
-    }
+    final parsedTimestamp = _parseDateTime(json['timestamp']);
 
     // Parse request search params
-    final params = json['requestSearchParams'] as Map<String, dynamic>?;
     final searchParams = <String, String>{};
-    if (params != null) {
-      for (final entry in params.entries) {
-        searchParams[entry.key] = entry.value.toString();
+    final rawParams = json['requestSearchParams'];
+    if (rawParams is Map) {
+      for (final entry in rawParams.entries) {
+        searchParams[entry.key.toString()] = entry.value.toString();
       }
     }
 
     // Parse events
-    final eventsList = json['events'] as List<dynamic>? ?? [];
-    final parsedEvents = eventsList
-        .map((e) => LogEvent.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final eventsList = json['events'];
+    final parsedEvents = eventsList is List
+        ? eventsList
+              .whereType<Map>()
+              .map((e) => LogEvent.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+        : <LogEvent>[];
 
     // Parse log lines (console logs)
-    final logsList = json['logs'] as List<dynamic>? ?? [];
-    final parsedLogs = logsList
-        .map((l) => LogLine.fromJson(l as Map<String, dynamic>))
-        .toList();
+    final logsList = json['logs'];
+    final parsedLogs = logsList is List
+        ? logsList
+              .whereType<Map>()
+              .map((l) => LogLine.fromJson(Map<String, dynamic>.from(l)))
+              .toList()
+        : <LogLine>[];
+
+    // Runtime streaming endpoints may return one flat log line instead of a
+    // request row containing a nested `logs` array.
+    if (parsedLogs.isEmpty && json['message'] != null) {
+      parsedLogs.add(
+        LogLine(
+          source: _stringValue(json['source']),
+          level: _stringValue(json['level']).isEmpty
+              ? 'info'
+              : _stringValue(json['level']),
+          message: _stringValue(json['message']),
+          timestamp: parsedTimestamp,
+        ),
+      );
+    }
 
     // Parse request tags
-    final tagsList = json['requestTags'] as List<dynamic>? ?? [];
-    final parsedTags = tagsList.map((t) => t.toString()).toList();
+    final tagsList = json['requestTags'];
+    final parsedTags = tagsList is List
+        ? tagsList.map((t) => t.toString()).toList()
+        : <String>[];
 
     // Extract geo data from headers if available
-    final headers = json['proxyHeaders'] as Map<String, dynamic>? ?? 
-                   json['headers'] as Map<String, dynamic>? ?? {};
-    
-    double? lat = double.tryParse(headers['x-vercel-ip-latitude']?.toString() ?? '');
-    double? lng = double.tryParse(headers['x-vercel-ip-longitude']?.toString() ?? '');
+    final rawHeaders = json['proxyHeaders'] ?? json['headers'];
+    final headers = rawHeaders is Map
+        ? Map<String, dynamic>.from(rawHeaders)
+        : <String, dynamic>{};
+
+    double? lat = double.tryParse(
+      headers['x-vercel-ip-latitude']?.toString() ?? '',
+    );
+    double? lng = double.tryParse(
+      headers['x-vercel-ip-longitude']?.toString() ?? '',
+    );
 
     // Fallback to region-based coordinates if headers are missing
-    final region = json['clientRegion'] as String? ?? '';
+    final region = _stringValue(
+      json['clientRegion'] ?? json['executionRegion'] ?? json['region'],
+    );
     if ((lat == null || lng == null) && region.isNotEmpty) {
       final coords = COORDINATES_FOR_REGION[region];
       if (coords != null) {
@@ -110,21 +159,34 @@ class Log {
     }
 
     return Log(
-      requestId: json['requestId'] as String? ?? json['id'] as String? ?? '',
+      requestId: _stringValue(json['requestId'] ?? json['id']),
       timestamp: parsedTimestamp,
-      branch: json['branch'] as String? ?? '',
-      deploymentId: json['deploymentId'] as String? ?? '',
-      domain: json['domain'] as String? ?? json['host'] as String? ?? '',
-      deploymentDomain: json['deploymentDomain'] as String? ?? '',
-      environment: json['environment'] as String? ?? 'production',
-      requestPath: json['requestPath'] as String? ?? json['path'] as String? ?? '',
-      route: json['route'] as String? ?? '',
-      clientUserAgent: json['clientUserAgent'] as String? ?? '',
+      branch: _stringValue(json['branch']),
+      deploymentId: _stringValue(json['deploymentId']),
+      domain: _stringValue(json['domain'] ?? json['host']),
+      deploymentDomain: _stringValue(json['deploymentDomain']),
+      environment: _stringValue(json['environment']).isEmpty
+          ? 'production'
+          : _stringValue(json['environment']),
+      requestPath: _stringValue(
+        json['requestPath'] ?? json['path'] ?? json['url'],
+      ),
+      route: _stringValue(json['route']),
+      clientUserAgent: _stringValue(
+        json['clientUserAgent'] ?? json['userAgent'],
+      ),
       clientRegion: region,
       requestSearchParams: searchParams,
-      requestMethod: json['requestMethod'] as String? ?? json['method'] as String? ?? 'GET',
-      cache: json['cache'] as String? ?? '',
-      statusCode: _parseInt(json['statusCode']) ?? 0,
+      requestMethod:
+          _stringValue(json['requestMethod'] ?? json['method']).isEmpty
+          ? 'GET'
+          : _stringValue(json['requestMethod'] ?? json['method']).toUpperCase(),
+      cache: _stringValue(json['cache']),
+      statusCode:
+          _parseInt(
+            json['statusCode'] ?? json['status'] ?? json['httpStatus'],
+          ) ??
+          0,
       events: parsedEvents,
       logs: parsedLogs,
       requestTags: parsedTags,
@@ -186,7 +248,9 @@ class Log {
   /// Get memory usage from the first event
   String? get memoryUsed {
     final event = mainEvent;
-    if (event != null && event.source != 'static' && event.functionMaxMemoryUsed > 0) {
+    if (event != null &&
+        event.source != 'static' &&
+        event.functionMaxMemoryUsed > 0) {
       return '${event.functionMaxMemoryUsed} MB';
     }
     return null;
@@ -216,7 +280,9 @@ class Log {
   /// Get search params as query string
   String get searchParamsString {
     if (requestSearchParams.isEmpty) return 'NONE';
-    return requestSearchParams.entries.map((e) => '${e.key}=${e.value}').join('&');
+    return requestSearchParams.entries
+        .map((e) => '${e.key}=${e.value}')
+        .join('&');
   }
 }
 
@@ -247,24 +313,16 @@ class LogEvent {
   });
 
   factory LogEvent.fromJson(Map<String, dynamic> json) {
-    DateTime parsedTimestamp;
-    final ts = json['timestamp'];
-    if (ts is String) {
-      parsedTimestamp = DateTime.parse(ts);
-    } else if (ts is int) {
-      parsedTimestamp = DateTime.fromMillisecondsSinceEpoch(ts);
-    } else {
-      parsedTimestamp = DateTime.now();
-    }
+    final parsedTimestamp = _parseDateTime(json['timestamp']);
 
     return LogEvent(
-      source: json['source'] as String?,
-      route: json['route'] as String? ?? '',
-      pathType: json['pathType'] as String? ?? '',
+      source: json['source']?.toString(),
+      route: _stringValue(json['route']),
+      pathType: _stringValue(json['pathType']),
       timestamp: parsedTimestamp,
       httpStatus: _parseInt(json['httpStatus']) ?? 0,
-      region: json['region'] as String? ?? '',
-      cache: json['cache'] as String? ?? '',
+      region: _stringValue(json['region']),
+      cache: _stringValue(json['cache']),
       functionMaxMemoryUsed: _parseInt(json['functionMaxMemoryUsed']) ?? 0,
       functionMemorySize: _parseInt(json['functionMemorySize']) ?? 0,
       durationMs: _parseInt(json['durationMs']) ?? 0,
@@ -302,20 +360,14 @@ class LogLine {
   });
 
   factory LogLine.fromJson(Map<String, dynamic> json) {
-    DateTime parsedTimestamp;
-    final ts = json['timestamp'];
-    if (ts is String) {
-      parsedTimestamp = DateTime.parse(ts);
-    } else if (ts is int) {
-      parsedTimestamp = DateTime.fromMillisecondsSinceEpoch(ts);
-    } else {
-      parsedTimestamp = DateTime.now();
-    }
+    final parsedTimestamp = _parseDateTime(json['timestamp']);
 
     return LogLine(
-      source: json['source'] as String? ?? '',
-      level: json['level'] as String? ?? 'info',
-      message: json['message'] as String? ?? '',
+      source: _stringValue(json['source']),
+      level: _stringValue(json['level']).isEmpty
+          ? 'info'
+          : _stringValue(json['level']),
+      message: _stringValue(json['message'] ?? json['text']),
       timestamp: parsedTimestamp,
     );
   }
@@ -371,21 +423,21 @@ const LABEL_FOR_REGION = {
 const COORDINATES_FOR_REGION = {
   'arn1': {'lat': 59.3293, 'lng': 18.0686}, // Stockholm, Sweden
   'bom1': {'lat': 19.0760, 'lng': 72.8777}, // Mumbai, India
-  'cdg1': {'lat': 48.8566, 'lng': 2.3522},  // Paris, France
+  'cdg1': {'lat': 48.8566, 'lng': 2.3522}, // Paris, France
   'cle1': {'lat': 41.4993, 'lng': -81.6944}, // Cleveland, USA
   'cpt1': {'lat': -33.9249, 'lng': 18.4241}, // Cape Town, South Africa
-  'dub1': {'lat': 53.3498, 'lng': -6.2603},  // Dublin, Ireland
-  'fra1': {'lat': 50.1109, 'lng': 8.6821},   // Frankfurt, Germany
+  'dub1': {'lat': 53.3498, 'lng': -6.2603}, // Dublin, Ireland
+  'fra1': {'lat': 50.1109, 'lng': 8.6821}, // Frankfurt, Germany
   'gru1': {'lat': -23.5505, 'lng': -46.6333}, // São Paulo, Brazil
   'hkg1': {'lat': 22.3193, 'lng': 114.1694}, // Hong Kong
   'hnd1': {'lat': 35.6762, 'lng': 139.6503}, // Tokyo, Japan
   'iad1': {'lat': 38.9072, 'lng': -77.0369}, // Washington, D.C., USA
   'icn1': {'lat': 37.4563, 'lng': 126.7052}, // Seoul, South Korea
   'kix1': {'lat': 34.6937, 'lng': 135.5023}, // Osaka, Japan
-  'lhr1': {'lat': 51.5074, 'lng': -0.1278},  // London, United Kingdom
+  'lhr1': {'lat': 51.5074, 'lng': -0.1278}, // London, United Kingdom
   'pdx1': {'lat': 45.5152, 'lng': -122.6784}, // Portland, USA
   'sfo1': {'lat': 37.7749, 'lng': -122.4194}, // San Francisco, USA
-  'sin1': {'lat': 1.3521, 'lng': 103.8198},  // Singapore
+  'sin1': {'lat': 1.3521, 'lng': 103.8198}, // Singapore
   'syd1': {'lat': -33.8688, 'lng': 151.2093}, // Sydney, Australia
 };
 
@@ -407,10 +459,7 @@ class LogFilterValue {
   final String attributeValue;
   final int total;
 
-  LogFilterValue({
-    required this.attributeValue,
-    required this.total,
-  });
+  LogFilterValue({required this.attributeValue, required this.total});
 
   factory LogFilterValue.fromJson(Map<String, dynamic> json) {
     // Handle total as either int or string (API returns both)
@@ -423,7 +472,7 @@ class LogFilterValue {
     } else {
       total = 0;
     }
-    
+
     return LogFilterValue(
       attributeValue: json['attributeValue']?.toString() ?? '',
       total: total,

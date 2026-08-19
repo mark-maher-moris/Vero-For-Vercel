@@ -6,11 +6,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/app_state.dart';
 import '../providers/subscription_provider.dart';
+import '../services/auth_service.dart';
 import '../services/superwall_service.dart';
 import '../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool isAdditionalAccount;
+
+  const LoginScreen({super.key, this.isAdditionalAccount = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -19,7 +22,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   final _tokenController = TextEditingController();
-  bool _hasToken = false;
+  final _teamController = TextEditingController();
+  final _teamFocusNode = FocusNode();
+  bool _showTeamField = false;
   bool _obscureText = true;
 
   @override
@@ -28,13 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
     // Track login screen view
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SuperwallService().trackScreenView('login');
-    });
-    _tokenController.addListener(_onTokenChanged);
-  }
-
-  void _onTokenChanged() {
-    setState(() {
-      _hasToken = _tokenController.text.isNotEmpty;
     });
   }
 
@@ -47,21 +45,45 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _tokenController.removeListener(_onTokenChanged);
     _tokenController.dispose();
+    _teamController.dispose();
+    _teamFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _handleTokenLogin() async {
     final token = _tokenController.text.trim();
     if (token.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a token'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a token')));
       return;
     }
+
+    final subscriptionProvider = context.read<SubscriptionProvider>();
+    final appState = context.read<AppState>();
+
+    if (widget.isAdditionalAccount) {
+      final canConnect = await subscriptionProvider.authorizeAdditionalAccount(
+        currentAccountCount: appState.accountCount,
+      );
+      if (!canConnect) {
+        if (mounted) {
+          _showProRequiredDialog(forAdditionalAccount: true);
+        }
+        return;
+      }
+    } else if (!subscriptionProvider.hasActiveSubscription) {
+      final isPro = await subscriptionProvider.showPaywall();
+      if (!isPro && !subscriptionProvider.hasActiveSubscription) {
+        if (mounted) {
+          _showProRequiredDialog();
+        }
+        return;
+      }
+    }
+
+    if (!mounted) return;
 
     setState(() {
       _isLoading = true;
@@ -71,10 +93,46 @@ class _LoginScreenState extends State<LoginScreen> {
     SuperwallService().trackUserAction('login_attempt', context: 'login');
 
     try {
-      final subscriptionProvider = context.read<SubscriptionProvider>();
-      await context.read<AppState>().login(token, subscriptionProvider: subscriptionProvider);
+      await appState.login(
+        token,
+        subscriptionProvider: subscriptionProvider,
+        isAdditionalAccount: widget.isAdditionalAccount,
+        teamId: _showTeamField && _teamController.text.trim().isNotEmpty
+            ? _teamController.text.trim()
+            : null,
+      );
       if (mounted) {
-        if (kDebugMode) print('[LoginScreen] Login successful, AppState.isAuthenticated should trigger navigation');
+        if (widget.isAdditionalAccount) {
+          final messenger = ScaffoldMessenger.of(context);
+          Navigator.of(context).pop(true);
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Vercel account connected successfully.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else if (kDebugMode) {
+          print(
+            '[LoginScreen] Login successful, AppState.isAuthenticated should trigger navigation',
+          );
+        }
+      }
+    } on TeamScopeRequiredException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _showTeamField = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Colors.amber.shade900,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) _teamFocusNode.requestFocus();
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -91,13 +149,79 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showProRequiredDialog({bool forAdditionalAccount = false}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surfaceContainerLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: AppTheme.outlineVariant.withValues(alpha: 0.2),
+            ),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.workspace_premium, color: Colors.amber),
+              const SizedBox(width: 8),
+              Text(
+                forAdditionalAccount
+                    ? 'Additional Account Required'
+                    : 'Pro Required',
+                style: const TextStyle(color: AppTheme.primary, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Text(
+            forAdditionalAccount
+                ? 'Connecting a second Vercel account requires Pro plus the one-time Additional Account purchase. If you already bought it, restore purchases and try again.'
+                : 'Connecting a live Vercel account requires an active Pro subscription. You can explore all features using curated demo data or upgrade to Pro to connect your real projects.',
+            style: const TextStyle(
+              color: AppTheme.onSurfaceVariant,
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _handleTryDemo();
+              },
+              child: const Text(
+                'Try Demo Mode',
+                style: TextStyle(color: AppTheme.primary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                final subscriptionProvider = context
+                    .read<SubscriptionProvider>();
+                await subscriptionProvider.showPaywall();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: AppTheme.onPrimary,
+              ),
+              child: const Text('Upgrade to Pro'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _handleTryDemo() async {
     setState(() => _isLoading = true);
     SuperwallService().trackUserAction('try_demo_mode', context: 'login');
     try {
       await context.read<AppState>().enterDemoMode();
       if (mounted && kDebugMode) {
-        print('[LoginScreen] Entered demo mode, navigation handled by Consumer');
+        print(
+          '[LoginScreen] Entered demo mode, navigation handled by Consumer',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -114,7 +238,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showErrorDialog({required String error, required String location}) {
-    final fullErrorDetails = '''Error: $error
+    final fullErrorDetails =
+        '''Error: $error
 Location: Login Screen - $location
 Time: ${DateTime.now().toIso8601String()}
 App: VERO For Vercel''';
@@ -162,8 +287,8 @@ App: VERO For Vercel''';
                 Text(
                   'Tap and hold the error above to copy it, or use the Copy button below.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.onSurfaceVariant,
-                      ),
+                    color: AppTheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -211,7 +336,8 @@ App: VERO For Vercel''';
       path: 'hi@buildagon.com',
       queryParameters: {
         'subject': 'VERO App - Authentication Error Report',
-        'body': "Hello VERO Support Team,\n\nI encountered an error while trying to connect my Vercel account. Here are the details:\n\n$errorDetails\n\nPlease assist me with resolving this issue.\n\nThank you!",
+        'body':
+            "Hello VERO Support Team,\n\nI encountered an error while trying to connect my Vercel account. Here are the details:\n\n$errorDetails\n\nPlease assist me with resolving this issue.\n\nThank you!",
       },
     );
 
@@ -222,7 +348,9 @@ App: VERO For Vercel''';
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Could not open email app. Please copy the error and email us at hi@buildagon.com'),
+              content: Text(
+                'Could not open email app. Please copy the error and email us at hi@buildagon.com',
+              ),
               duration: Duration(seconds: 4),
             ),
           );
@@ -249,7 +377,12 @@ App: VERO For Vercel''';
           onPressed: () {
             final navigator = Navigator.of(context);
             final canPop = navigator.canPop();
-            
+
+            if (widget.isAdditionalAccount) {
+              if (canPop) navigator.pop();
+              return;
+            }
+
             if (canPop) {
               // Pop first to avoid race condition with Consumer rebuild
               navigator.pop();
@@ -292,68 +425,222 @@ App: VERO For Vercel''';
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 32.0,
+              vertical: 24.0,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-              Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Image.asset(
+                    'assets/logo.png',
+                    height: 80,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-                padding: const EdgeInsets.all(16.0),
-                child: Image.asset(
-                  'assets/logo.png',
-                  height: 80,
-                  fit: BoxFit.contain,
+                const SizedBox(height: 16),
+                Text(
+                  widget.isAdditionalAccount
+                      ? 'Connect Another Vercel Account'
+                      : 'Connect Your Vercel Account',
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 4,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Connect Your Vercel Account',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
+                const SizedBox(height: 64),
+                TextField(
+                  controller: _tokenController,
+                  decoration: InputDecoration(
+                    labelText: 'Personal Access Token',
+                    hintText:
+                        'Paste token from vercel.com/account/settings/tokens',
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.zero,
                     ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 64),
-              TextField(
-                controller: _tokenController,
-                decoration: InputDecoration(
-                  labelText: 'Personal Access Token',
-                  hintText: 'Paste token from vercel.com/account/settings/tokens',
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.zero,
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            _obscureText
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureText = !_obscureText;
+                            });
+                          },
+                          tooltip: _obscureText ? 'Show token' : 'Hide token',
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.content_paste,
+                            color: AppTheme.primary,
+                          ),
+                          onPressed: _pasteToken,
+                          tooltip: 'Paste from clipboard',
+                        ),
+                      ],
+                    ),
                   ),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
-                  ),
+                  obscureText: _obscureText,
+                  maxLines: 1,
+                  enabled: !_isLoading,
                 ),
-                obscureText: _obscureText,
-                maxLines: 1,
-                enabled: !_isLoading,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: InkWell(
-                      onTap: () async {
-                        final uri = Uri.parse('https://vercel.com/account/settings/tokens');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
+                const SizedBox(height: 12),
+                if (_showTeamField) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'TEAM ID OR SLUG',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.0,
+                            ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _showTeamField = false;
+                            _teamController.clear();
+                          });
+                        },
+                        child: Text(
+                          'Hide',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.onSurfaceVariant.withOpacity(0.7),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _teamController,
+                    focusNode: _teamFocusNode,
+                    decoration: const InputDecoration(
+                      labelText: 'Team ID or slug',
+                      hintText: 'e.g. team_... or my-team',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.zero,
+                      ),
+                    ),
+                    enabled: !_isLoading,
+                    autocorrect: false,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _isLoading ? null : _handleTokenLogin(),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Connected to this specific team only.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  ),
+                ] else ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _showTeamField = true;
+                        });
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (mounted) _teamFocusNode.requestFocus();
+                        });
                       },
-                      onLongPress: () {
-                        Clipboard.setData(const ClipboardData(text: 'https://vercel.com/account/settings/tokens'));
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.group_work_outlined,
+                              size: 16,
+                              color: AppTheme.primary.withOpacity(0.85),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Using a team-scoped token?',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.primary.withOpacity(0.85),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: InkWell(
+                        onTap: () async {
+                          final uri = Uri.parse(
+                            'https://vercel.com/account/settings/tokens',
+                          );
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                        onLongPress: () {
+                          Clipboard.setData(
+                            const ClipboardData(
+                              text:
+                                  'https://vercel.com/account/settings/tokens',
+                            ),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Link copied to clipboard'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Get your token from vercel.com/account/settings/tokens',
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontSize: 12,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 16),
+                      color: AppTheme.primary,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        Clipboard.setData(
+                          const ClipboardData(
+                            text: 'https://vercel.com/account/settings/tokens',
+                          ),
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Link copied to clipboard'),
@@ -361,169 +648,165 @@ App: VERO For Vercel''';
                           ),
                         );
                       },
-                      child: Text(
-                        'Get your token from vercel.com/account/settings/tokens',
-                        style: TextStyle(
-                          color: AppTheme.primary,
-                          fontSize: 12,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.copy, size: 16),
-                    color: AppTheme.primary,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      Clipboard.setData(const ClipboardData(text: 'https://vercel.com/account/settings/tokens'));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Link copied to clipboard'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.share, size: 16),
-                    color: AppTheme.primary,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      Share.share('https://vercel.com/account/settings/tokens');
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _handleTokenLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: AppTheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
-                  ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.onPrimary,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.login, size: 20),
-                          const SizedBox(width: 12),
-                          Text(
-                            'CONNECT',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: AppTheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                ),
-                          ),
-                        ],
-                      ),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: _isLoading ? null : _handleTryDemo,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.primary,
-                  side: BorderSide(
-                    color: AppTheme.primary.withOpacity(0.5),
-                    width: 1.5,
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.play_circle_outline, size: 20),
-                    const SizedBox(width: 12),
-                    Text(
-                      'TRY WITH DEMO DATA',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.share, size: 16),
+                      color: AppTheme.primary,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        Share.share(
+                          'https://vercel.com/account/settings/tokens',
+                        );
+                      },
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Explore the app with realistic demo projects. No token required.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.onSurfaceVariant,
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _handleTokenLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: AppTheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
                     ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.onPrimary,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.login, size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              'CONNECT',
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    color: AppTheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                            ),
+                          ],
+                        ),
                 ),
-                child: GestureDetector(
-                  onTap: () async {
-                    final uri = Uri.parse('https://github.com/mark-maher-moris/Vero-For-Vercel');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                const SizedBox(height: 16),
+                if (!widget.isAdditionalAccount) ...[
+                  OutlinedButton(
+                    onPressed: _isLoading ? null : _handleTryDemo,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      side: BorderSide(
+                        color: AppTheme.primary.withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.zero,
+                      ),
+                    ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.network(
-                          'https://cdn-icons-png.flaticon.com/512/25/25231.png',
-                          height: 20,
-                          width: 20,
-                          color: AppTheme.primary,
-                        ),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.play_circle_outline, size: 20),
+                        const SizedBox(width: 12),
                         Text(
-                          'Review the app code',
-                          style: TextStyle(
-                            color: AppTheme.primary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          'TRY WITH DEMO DATA',
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                "Your Vercel token doesn't leave your device. It is stored locally only.",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  const SizedBox(height: 8),
+                  Text(
+                    'Explore the app with realistic demo projects. No token required.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.onSurfaceVariant,
                     ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+                const SizedBox(height: 24),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: GestureDetector(
+                    onTap: () async {
+                      final uri = Uri.parse(
+                        'https://github.com/mark-maher-moris/Vero-For-Vercel',
+                      );
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.network(
+                            'https://cdn-icons-png.flaticon.com/512/25/25231.png',
+                            height: 20,
+                            width: 20,
+                            color: AppTheme.primary,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.code,
+                                  size: 20,
+                                  color: AppTheme.primary,
+                                ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Review the app code',
+                            style: TextStyle(
+                              color: AppTheme.primary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Your Vercel token doesn't leave your device. It is stored locally only.",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
-      ),)
+      ),
     );
   }
 }

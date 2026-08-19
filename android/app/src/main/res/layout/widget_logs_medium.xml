@@ -71,6 +71,14 @@
                 <TextView android:id="@+id/log_msg_4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
             </LinearLayout>
 
+            <LinearLayout android:id="@+id/log_row_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/log_msg_5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/log_row_6" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/log_msg_6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="" android:textColor="#B0B0B0" android:textSize="9sp" android:maxLines="1" android:ellipsize="end" android:fontFamily="monospace" />
+            </LinearLayout>
+
         </LinearLayout>
 
         <!-- No logs placeholder -->

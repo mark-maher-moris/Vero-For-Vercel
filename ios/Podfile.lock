@@ -1,11 +1,15 @@
 PODS:
   - Flutter (1.0.0)
+  - flutter_local_notifications (0.0.1):
+    - Flutter
   - flutter_secure_storage_darwin (10.0.0):
     - Flutter
     - FlutterMacOS
   - home_widget (0.0.1):
     - Flutter
   - in_app_review (2.0.0):
+    - Flutter
+  - package_info_plus (0.4.5):
     - Flutter
   - share_plus (0.0.1):
     - Flutter
@@ -29,9 +33,11 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_secure_storage_darwin (from `.symlinks/plugins/flutter_secure_storage_darwin/darwin`)
   - home_widget (from `.symlinks/plugins/home_widget/ios`)
   - in_app_review (from `.symlinks/plugins/in_app_review/ios`)
+  - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - superwallkit_flutter (from `.symlinks/plugins/superwallkit_flutter/ios`)
@@ -47,12 +53,16 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  flutter_local_notifications:
+    :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_secure_storage_darwin:
     :path: ".symlinks/plugins/flutter_secure_storage_darwin/darwin"
   home_widget:
     :path: ".symlinks/plugins/home_widget/ios"
   in_app_review:
     :path: ".symlinks/plugins/in_app_review/ios"
+  package_info_plus:
+    :path: ".symlinks/plugins/package_info_plus/ios"
   share_plus:
     :path: ".symlinks/plugins/share_plus/ios"
   shared_preferences_foundation:
@@ -68,9 +78,11 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_local_notifications: a5a732f069baa862e728d839dd2ebb904737effb
   flutter_secure_storage_darwin: acdb3f316ed05a3e68f856e0353b133eec373a23
   home_widget: 54b4f6b36ed8d64cfee594a476225c35c3e45091
   in_app_review: 7dd1ea365263f834b8464673f9df72c80c17c937
+  package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
   Superscript: bcb4099b41bed108ab7e88cfc56af0ed1170b582

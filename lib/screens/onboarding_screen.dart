@@ -1105,21 +1105,18 @@ class _HomeWidgetsSlideState extends State<_HomeWidgetsSlide>
         ),
       ),
       child: Center(
-        child: Transform.rotate(
-          angle: 10 * 3.14159 / 180,
-          child: Image.asset(
-            assetPath,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Center(
-                child: Icon(
-                  Icons.broken_image,
-                  color: AppTheme.onSurfaceVariant.withOpacity(0.3),
-                  size: 32,
-                ),
-              );
-            },
-          ),
+        child: Image.asset(
+          assetPath,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Icon(
+                Icons.broken_image,
+                color: AppTheme.onSurfaceVariant.withOpacity(0.3),
+                size: 32,
+              ),
+            );
+          },
         ),
       ),
     );

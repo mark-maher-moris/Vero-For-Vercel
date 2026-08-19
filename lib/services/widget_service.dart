@@ -7,8 +7,8 @@ import 'api_service.dart';
 import 'auth_service.dart';
 import 'superwall_service.dart';
 
-/// Keys used to store widget data in SharedPreferences (Android) / UserDefaults (iOS).
-/// Native widgets read these keys with the "flutter." prefix added by home_widget.
+/// Keys used to store widget data in HomeWidgetPreferences (Android) /
+/// UserDefaults (iOS).
 class WidgetKeys {
   static const String apiToken = 'vero_api_token';
   static const String teamId = 'vero_team_id';
@@ -92,8 +92,9 @@ class WidgetService {
   }) async {
     try {
       final token = await _authService.getToken();
-      if (token == null) return;
-      await HomeWidget.saveWidgetData<String>(WidgetKeys.apiToken, token);
+      if (token != null) {
+        await HomeWidget.saveWidgetData<String>(WidgetKeys.apiToken, token);
+      }
       if (userId != null && userId.isNotEmpty) {
         await HomeWidget.saveWidgetData<String>(WidgetKeys.userId, userId);
       }
@@ -107,6 +108,71 @@ class WidgetService {
       await HomeWidget.saveWidgetData<bool>(WidgetKeys.isDemoMode, isDemoMode);
     } catch (e) {
       if (kDebugMode) print('[WidgetService] pushAuthData error: $e');
+    }
+  }
+
+  /// Clear all auth, token, and cached project data from native widgets (called on logout/expiration).
+  Future<void> clearAuthData() async {
+    try {
+      await initialize();
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.apiToken, '');
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.userId, '');
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.teamId, '');
+      await HomeWidget.saveWidgetData<bool>(WidgetKeys.isSubscribed, false);
+      await HomeWidget.saveWidgetData<bool>(WidgetKeys.isDemoMode, false);
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.projectsJson, '[]');
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.selectedProjectIds,
+        '[]',
+      );
+
+      // Clear every per-widget selection and cached display value so a logged
+      // out account can never leave stale project data on the home screen.
+      for (final key in [
+        WidgetKeys.projectIdLogs,
+        WidgetKeys.projectIdAnalytics,
+        WidgetKeys.projectIdCountries,
+        WidgetKeys.projectIdUsers,
+        WidgetKeys.logsProjectName,
+        WidgetKeys.logsDeploymentStatus,
+        WidgetKeys.analyticsProjectName,
+        WidgetKeys.countriesProjectName,
+        WidgetKeys.usersProjectName,
+        WidgetKeys.lastUpdated,
+      ]) {
+        await HomeWidget.saveWidgetData<String>(key, '');
+      }
+
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.logsData, '[]');
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.analyticsSources,
+        '[]',
+      );
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.analyticsTimeseries,
+        '[]',
+      );
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.analytics30DayTimeseries,
+        '[]',
+      );
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.countriesData, '[]');
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.analyticsVisitors24h,
+        '0',
+      );
+      await HomeWidget.saveWidgetData<String>(
+        WidgetKeys.analyticsBounceRate,
+        '0',
+      );
+      await HomeWidget.saveWidgetData<bool>(WidgetKeys.analyticsEnabled, true);
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.usersTotal24h, '0');
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.usersLastHour, '0');
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.usersBounceRate, '0');
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.usersTimeseries, '[]');
+      await triggerAllWidgetUpdates();
+    } catch (e) {
+      if (kDebugMode) print('[WidgetService] clearAuthData error: $e');
     }
   }
 
@@ -291,12 +357,20 @@ class WidgetService {
         return;
       }
 
-      // Fetch runtime logs using the same endpoint as the app
+      final now = DateTime.now();
+      final startDate = now
+          .subtract(const Duration(hours: 1))
+          .millisecondsSinceEpoch
+          .toString();
+      final endDate = now.millisecondsSinceEpoch.toString();
+
+      // Fetch runtime logs using the same Hobby-safe window as the app
       final result = await api.getProjectLogs(
         projectId: targetProjectId,
         ownerId: ownerId,
         deploymentId: deploymentId,
-        startDate: '1', // Fetch maximum logs
+        startDate: startDate,
+        endDate: endDate,
       );
 
       // Transform Log objects into the simple format widgets expect
@@ -312,8 +386,9 @@ class WidgetService {
         }
       }
 
-      // Take only the first 10 log entries for the widget
-      final widgetLogs = logEntries.take(10).toList();
+      // The large widget supports 14 rows; the medium widget will display
+      // the first 6 of the same shared payload.
+      final widgetLogs = logEntries.take(14).toList();
 
       await HomeWidget.saveWidgetData<String>(
         WidgetKeys.logsData,

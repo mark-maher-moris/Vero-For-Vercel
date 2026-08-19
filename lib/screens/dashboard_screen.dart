@@ -8,7 +8,8 @@ import '../models/project.dart';
 import '../theme/app_theme.dart';
 import '../widgets/project_card.dart';
 import '../widgets/demo_mode_banners.dart';
-import 'import_github_project_screen.dart';
+import '../widgets/account_switcher_bottom_sheet.dart';
+import '../widgets/connect_account_dialog.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -44,10 +45,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _fetchUsageData();
     // Track dashboard screen view and trigger paywall
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      SuperwallService().trackScreenView('dashboard', additionalProps: {
-        'project_count': context.read<AppState>().projects.length,
-        'has_teams': context.read<AppState>().teams.isNotEmpty,
-      });
+      SuperwallService().trackScreenView(
+        'dashboard',
+        additionalProps: {
+          'project_count': context.read<AppState>().projects.length,
+          'has_teams': context.read<AppState>().teams.isNotEmpty,
+        },
+      );
       SuperwallService().registerPlacement('dashboard_view');
     });
   }
@@ -55,12 +59,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _fetchUsageData() async {
     final appState = Provider.of<AppState>(context, listen: false);
     if (!appState.isAuthenticated) return;
-    
+
     setState(() => _isLoadingUsage = true);
     try {
       final now = DateTime.now();
       final from = DateTime(now.year, now.month, 1);
-      
+
       final usage = await appState.apiService.getUsage(
         from: from.toUtc().toIso8601String(),
         to: now.toUtc().toIso8601String(),
@@ -90,50 +94,111 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (gb >= 1) return '${gb.toStringAsFixed(1)} GB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
+
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppTheme.surfaceContainerLow,
         elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.surfaceContainerHigh,
+        title: GestureDetector(
+          onTap: () {
+            SuperwallService().trackUserAction(
+              'open_account_switcher',
+              context: 'dashboard_app_bar_title',
+            );
+            AccountSwitcherBottomSheet.show(context);
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.surfaceContainerHigh,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(6.0),
+                  child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(6.0),
-                child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            appState.activeAccount != null
+                                ? '@${appState.activeAccount!.username}'
+                                : 'Vero',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.primary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: AppTheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                    if (appState.activeAccount != null)
+                      Text(
+                        appState.currentTeamId != null
+                            ? (appState.teams.firstWhere(
+                                    (t) => t['id'] == appState.currentTeamId,
+                                    orElse: () => {'name': 'Team'},
+                                  )['name'] ??
+                                  'Team')
+                            : 'Personal Account',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            const Text('Vero', style: TextStyle(fontWeight: FontWeight.w900)),
-          ],
+            ],
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppTheme.onSurfaceVariant),
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(
+                Icons.swap_horiz,
+                size: 20,
+                color: AppTheme.primary,
+              ),
+            ),
+            tooltip: 'Switch Account & Workspace',
             onPressed: () {
-              SuperwallService().trackUserAction('import_github_project', context: 'dashboard');
-              _clearSearch();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ImportGithubProjectScreen()),
+              SuperwallService().trackUserAction(
+                'switch_account_app_bar_button',
+                context: 'dashboard',
               );
-            },
-            tooltip: 'Import GitHub Project',
-          ),
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: AppTheme.onSurfaceVariant),
-            onPressed: () {
-              SuperwallService().trackUserAction('switch_team', context: 'dashboard');
-              _showTeamPicker(context, appState);
+              AccountSwitcherBottomSheet.show(context);
             },
           ),
           IconButton(
@@ -151,26 +216,115 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: RefreshIndicator(
         onRefresh: appState.fetchInitialData,
         color: AppTheme.primary,
-        child: appState.errorMessage != null 
-          ? _buildErrorView(appState)
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 100),
-              children: [
-                _buildSearchField(),
-                const SizedBox(height: 24),
-                _buildTeamInfo(appState),
-                const SizedBox(height: 24),
-                const ConnectRealAccountBanner(
-                  title: 'Connect with real data',
-                  subtitle: 'You are signed in to the demo. Connect your Vercel account to view your own projects and manage them.',
-                  icon: Icons.vpn_key,
+        child: appState.errorMessage != null
+            ? _buildErrorView(appState)
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 100),
+                children: [
+                  if (appState.accessWarning != null) ...[
+                    _buildLimitedAccessNotice(context, appState.accessWarning!),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildSearchField(),
+                  const SizedBox(height: 24),
+                  _buildTeamInfo(appState),
+                  const SizedBox(height: 24),
+                  const ConnectRealAccountBanner(
+                    title: 'Connect with real data',
+                    subtitle:
+                        'You are signed in to the demo. Connect your Vercel account to view your own projects and manage them.',
+                    icon: Icons.vpn_key,
+                  ),
+                  const SizedBox(height: 40),
+                  _buildProjectsGrid(_getFilteredProjects(appState.projects)),
+                  const SizedBox(height: 40),
+                  _buildUsageOverview(),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildLimitedAccessNotice(BuildContext context, String message) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerHigh,
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 20,
+                color: Colors.amber,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Limited Scoped Token',
+                      style: TextStyle(
+                        color: AppTheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        color: AppTheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 40),
-                _buildProjectsGrid(_getFilteredProjects(appState.projects)),
-                const SizedBox(height: 40),
-                _buildUsageOverview(),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () {
+                final accountId = context.read<AppState>().activeAccount?.id;
+                if (accountId == null) return;
+                ConnectAccountDialog.show(
+                  context,
+                  replaceAccountId: accountId,
+                  customTitle: 'Update Vercel Token',
+                  customSubtitle:
+                      'Replace the current limited token with a full-access token',
+                  customButtonText: 'Update Token',
+                );
+              },
+              icon: const Icon(Icons.vpn_key_outlined, size: 16),
+              label: const Text(
+                'Connect Full Token',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.primary,
+                backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
             ),
+          ),
+        ],
       ),
     );
   }
@@ -215,71 +369,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
       teamName = team['name'] ?? 'Team';
     }
 
-    return Row(
-      children: [
-        const Icon(Icons.account_tree_outlined, size: 16, color: AppTheme.onSurfaceVariant),
-        const SizedBox(width: 8),
-        Text(
-          teamName.toUpperCase(),
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppTheme.onSurfaceVariant,
-            letterSpacing: 1.2,
+    final activeUsername = appState.activeAccount?.username;
+
+    return GestureDetector(
+      onTap: () {
+        SuperwallService().trackUserAction(
+          'open_account_switcher_pill',
+          context: 'dashboard',
+        );
+        AccountSwitcherBottomSheet.show(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: AppTheme.outlineVariant.withValues(alpha: 0.15),
           ),
         ),
-      ],
-    );
-  }
-
-  void _showTeamPicker(BuildContext context, AppState appState) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surfaceContainerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.account_tree_outlined,
+              size: 14,
+              color: AppTheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              activeUsername != null
+                  ? '@${activeUsername.toUpperCase()} • ${teamName.toUpperCase()}'
+                  : teamName.toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppTheme.primary,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.unfold_more,
+              size: 14,
+              color: AppTheme.onSurfaceVariant,
+            ),
+          ],
+        ),
       ),
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Switch Account',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ),
-              const Divider(),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: AppTheme.surfaceContainerHigh,
-                  child: Icon(Icons.person, color: AppTheme.onSurfaceVariant),
-                ),
-                title: const Text('Personal Account'),
-                trailing: appState.currentTeamId == null ? const Icon(Icons.check, color: AppTheme.primary) : null,
-                onTap: () {
-                  appState.switchTeam(null);
-                  Navigator.pop(context);
-                },
-              ),
-              ...appState.teams.map((team) {
-                return ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppTheme.surfaceContainerHigh,
-                    child: Icon(Icons.group, color: AppTheme.onSurfaceVariant),
-                  ),
-                  title: Text(team['name'] ?? 'Team'),
-                  trailing: appState.currentTeamId == team['id'] ? const Icon(Icons.check, color: AppTheme.primary) : null,
-                  onTap: () {
-                    appState.switchTeam(team['id']);
-                    Navigator.pop(context);
-                  },
-                );
-              }),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -310,9 +446,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<Project> _getFilteredProjects(List<Project> projects) {
     if (_searchQuery.trim().isEmpty) return projects;
-    
-    final terms = _searchQuery.toLowerCase().split(' ').where((t) => t.isNotEmpty).toList();
-    
+
+    final terms = _searchQuery
+        .toLowerCase()
+        .split(' ')
+        .where((t) => t.isNotEmpty)
+        .toList();
+
     return projects.where((p) {
       final searchString = [
         p.name,
@@ -330,7 +470,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildProjectsGrid(List<Project> projects) {
     if (projects.isEmpty) {
       return const Center(
-        child: Text('No projects found.', style: TextStyle(color: AppTheme.onSurfaceVariant)),
+        child: Text(
+          'No projects found.',
+          style: TextStyle(color: AppTheme.onSurfaceVariant),
+        ),
       );
     }
 
@@ -340,15 +483,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isPro = subscription.hasActiveSubscription;
     final isDemo = appState.isDemoMode;
     final isAuthenticated = appState.isAuthenticated;
-    
+
     // Lock for authenticated non-subscribers (not demo users)
     final shouldLock = isAuthenticated && !isPro && !isDemo;
-    
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 1, // Let's make it list-like on mobile, or grid on tablet
+        crossAxisCount:
+            1, // Let's make it list-like on mobile, or grid on tablet
         mainAxisSpacing: 24,
         crossAxisSpacing: 24,
         childAspectRatio: 1.5,
@@ -362,9 +506,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           isBlurred: isBlurred,
           onSubscribeTap: () => _showPaywall(context),
           onProjectTap: () {
-            SuperwallService().trackProjectAction('view_project', 
+            SuperwallService().trackProjectAction(
+              'view_project',
               projectId: projects[index].id,
-              properties: {'project_name': projects[index].name}
+              properties: {'project_name': projects[index].name},
             );
             _clearSearch();
           },
@@ -377,7 +522,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await SuperwallService().presentPaywall();
     // Refresh subscription status after paywall closes
     if (mounted) {
-      final subscription = Provider.of<SubscriptionProvider>(context, listen: false);
+      final subscription = Provider.of<SubscriptionProvider>(
+        context,
+        listen: false,
+      );
       subscription.refresh();
     }
   }
@@ -385,7 +533,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildUsageOverview() {
     final requests = _usageData?['total']?['requests'] as num?;
     final bandwidth = _usageData?['total']?['bandwidth'] as num?;
-    
+
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -395,10 +543,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'USAGE SUMMARY',
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
+          Text('USAGE SUMMARY', style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: 24),
           Row(
             children: [

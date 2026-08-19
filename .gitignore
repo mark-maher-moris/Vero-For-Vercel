@@ -50,3 +50,7 @@ app.*.map.json
 
 /competitor
 /competitor2
+
+# Agent & Superwall configurations
+.agents/
+.superwall/

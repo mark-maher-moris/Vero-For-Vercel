@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'dart:convert';
 
@@ -29,6 +30,30 @@ import '../widgets/analytics_breakdown_card.dart';
 import 'file_content_screen.dart';
 import 'deployment_logs_screen.dart';
 import 'widget_config_screen.dart';
+import '../widgets/connect_account_dialog.dart';
+
+enum _LogsTimeRange {
+  hour('1h', 'Last 1 hour', Duration(hours: 1)),
+  day('24h', 'Last 24 hours', Duration(hours: 24)),
+  threeDays('3d', 'Last 3 days', Duration(days: 3)),
+  fourteenDays('14d', 'Last 14 days', Duration(days: 14)),
+  custom('Custom', 'Custom range', null);
+
+  final String shortLabel;
+  final String label;
+  final Duration? duration;
+
+  const _LogsTimeRange(this.shortLabel, this.label, this.duration);
+}
+
+enum _LogsDeploymentScope {
+  current('Current deployment'),
+  all('All deployments');
+
+  final String label;
+
+  const _LogsDeploymentScope(this.label);
+}
 
 class ProjectWorkspaceScreen extends StatefulWidget {
   final Project project;
@@ -66,11 +91,26 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
   String? _widgetCountriesProjectId;
   String? _widgetUsersProjectId;
 
-  // Live deployment logs (request logs like competitor)
+  // Recent runtime logs (request logs like competitor)
   List<Log>? _liveLogs;
   bool _isLoadingLiveLogs = false;
+  bool _isLoadingMoreLiveLogs = false;
+  bool _liveLogsHasMoreRows = false;
+  int _liveLogsCurrentPage = 0;
   String? _liveLogsError;
+  DateTime? _lastLiveLogsRefreshAt;
+  Timer? _logsRefreshTimer;
+  Timer? _liveStreamReconnectTimer;
+  StreamSubscription<Map<String, dynamic>>? _liveLogSubscription;
+  bool _isRefreshingLiveLogs = false;
+  int _logsRequestGeneration = 0;
+  int _liveStreamGeneration = 0;
+  bool _logsAutoRefresh = true;
   String _logsFilter = 'all';
+  _LogsTimeRange _logsTimeRange = _LogsTimeRange.hour;
+  _LogsDeploymentScope _logsDeploymentScope = _LogsDeploymentScope.current;
+  DateTime? _customLogsStart;
+  DateTime? _customLogsEnd;
 
   // Pause Project state
   bool _isPausingOrUnpausing = false;
@@ -115,8 +155,12 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     });
   }
 
+  int _lastTrackedTabIndex = 0;
+
   void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
+    if (!_tabController.indexIsChanging &&
+        _tabController.index != _lastTrackedTabIndex) {
+      _lastTrackedTabIndex = _tabController.index;
       final tabNames = [
         'overview',
         'logs',
@@ -137,11 +181,11 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         },
       );
     }
-    // Lazy load live logs when switching to logs tab
+    // Lazy load recent logs when switching to logs tab
     if (_tabController.index == 1 && !_tabController.indexIsChanging) {
-      _fetchLiveDeploymentLogs();
+      unawaited(_fetchLiveDeploymentLogs());
     }
-    // Rebuild to update TabBarView physics based on current tab
+    _updateLogsRefreshTimer();
     if (mounted) {
       setState(() {});
     }
@@ -304,28 +348,49 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     }
   }
 
-  Future<void> _fetchLiveDeploymentLogs() async {
+  Future<void> _fetchLiveDeploymentLogs({
+    bool loadMore = false,
+    bool silent = false,
+  }) async {
     print('[ProjectWorkspace] _fetchLiveDeploymentLogs called');
     final liveDeployment = _getLatestLiveDeployment();
     print(
       '[ProjectWorkspace] Live deployment: ${liveDeployment?.uid} (state: ${liveDeployment?.state})',
     );
-    if (liveDeployment == null) {
-      print('[ProjectWorkspace] No live deployment found');
+    if (_logsDeploymentScope == _LogsDeploymentScope.current &&
+        liveDeployment == null) {
+      print('[ProjectWorkspace] No ready deployment found');
+      return;
+    }
+    if (_isLoadingLiveLogs || _isLoadingMoreLiveLogs || _isRefreshingLiveLogs) {
       return;
     }
 
+    // A manual refresh or a changed query must not leave an old stream
+    // writing into the new result set.
+    if (!loadMore && !silent) _cancelLiveLogStream();
+
+    final queryGeneration = loadMore
+        ? _logsRequestGeneration
+        : ++_logsRequestGeneration;
+
     setState(() {
-      _isLoadingLiveLogs = true;
-      _liveLogsError = null;
+      if (loadMore) {
+        _isLoadingMoreLiveLogs = true;
+      } else if (!silent) {
+        _isLoadingLiveLogs = true;
+      } else {
+        _isRefreshingLiveLogs = true;
+      }
+      if (!loadMore) {
+        _liveLogsError = null;
+      }
     });
 
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       // Use getProjectLogs (request-logs endpoint) like the competitor app - this works reliably
-      print(
-        '[ProjectWorkspace] Fetching request logs for deployment: ${liveDeployment.uid}',
-      );
+      print('[ProjectWorkspace] Fetching request logs');
       // Get ownerId from team or user
       final ownerId =
           appState.currentTeamId ?? appState.user?['id']?.toString();
@@ -335,49 +400,466 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         );
       }
 
-      final result = await appState.apiService.getProjectLogs(
-        projectId: widget.project.id,
-        ownerId: ownerId,
-        deploymentId: liveDeployment.uid,
-      );
+      final range = _getSelectedLogsDateRange();
+      final page = loadMore ? _liveLogsCurrentPage + 1 : 0;
+      final targetDeploymentId =
+          _logsDeploymentScope == _LogsDeploymentScope.current
+          ? liveDeployment?.uid
+          : null;
+
+      ProjectLogsResult result;
+      bool isPermissionDenied = false;
+      try {
+        result = await appState.apiService.getProjectLogs(
+          projectId: widget.project.id,
+          ownerId: ownerId,
+          deploymentId: targetDeploymentId,
+          startDate: range.start.millisecondsSinceEpoch.toString(),
+          endDate: range.end.millisecondsSinceEpoch.toString(),
+          page: page,
+        );
+      } catch (logError) {
+        isPermissionDenied = _isAuthOrPermissionError(logError);
+        // Fallback: If request-logs endpoint is forbidden (403/404, e.g. scoped tokens or non-pro plans),
+        // fetch deployment events/build logs instead so the logs view is populated if available.
+        final fallbackDeployments = _getFallbackDeployments(
+          targetDeploymentId,
+          liveDeployment,
+        );
+        if (fallbackDeployments.isEmpty) {
+          rethrow;
+        }
+
+        final fallbackLogs = <Log>[];
+        for (final deployment in fallbackDeployments) {
+          final events = await appState.apiService.getDeploymentEvents(
+            deployment.uid,
+          );
+          for (final event in events) {
+            if (event is! Map || event['text']?.toString().isEmpty != false) {
+              continue;
+            }
+
+            final json = Map<String, dynamic>.from(event);
+            final rawDate =
+                json['date'] ?? json['created'] ?? json['timestamp'];
+            final timestamp = _parseLogTimestamp(rawDate);
+            if (timestamp.isBefore(range.start) ||
+                timestamp.isAfter(range.end)) {
+              continue;
+            }
+
+            final type = json['type']?.toString().toLowerCase() ?? 'event';
+            final isError =
+                type == 'stderr' ||
+                type == 'error' ||
+                type == 'fatal' ||
+                type == 'warning';
+            final text = json['text']?.toString() ?? '';
+            final reqId =
+                json['id']?.toString() ??
+                json['serial']?.toString() ??
+                '${deployment.uid}_${timestamp.microsecondsSinceEpoch}';
+
+            fallbackLogs.add(
+              Log.fromJson({
+                'requestId': reqId,
+                'timestamp': timestamp.toIso8601String(),
+                'requestMethod': 'EVENT',
+                'statusCode': isError ? 500 : 200,
+                'domain': deployment.url,
+                'requestPath': text,
+                'logs': [
+                  {
+                    'message': text,
+                    'level': isError ? 'error' : 'info',
+                    'timestamp': timestamp.toIso8601String(),
+                    'source': type,
+                  },
+                ],
+                'events': [],
+                'branch': deployment.branch,
+                'deploymentId': deployment.uid,
+                'deploymentDomain': deployment.url,
+                'environment': deployment.target ?? 'production',
+                'route': '',
+                'clientUserAgent': '',
+                'clientRegion': '',
+                'requestSearchParams': {},
+                'cache': '',
+              }),
+            );
+          }
+        }
+
+        // If fallback logs are empty, rethrow the original error immediately so permission denial UI is shown
+        if (fallbackLogs.isEmpty) {
+          rethrow;
+        }
+
+        result = ProjectLogsResult(
+          logs: fallbackLogs,
+          hasMoreRows: false,
+          nextPage: null,
+        );
+      }
+
       print(
         '[ProjectWorkspace] Request logs received: ${result.logs.length} entries',
       );
 
-      if (mounted) {
+      if (mounted && queryGeneration == _logsRequestGeneration) {
         setState(() {
           // Store full Log objects for competitor-style display
-          _liveLogs = result.logs;
+          if (loadMore && _liveLogs != null) {
+            _liveLogs = _mergeHistoricalLogs(_liveLogs!, result.logs);
+            _liveLogsCurrentPage = page;
+          } else if (silent && _liveLogs != null) {
+            // Auto-refresh must preserve rows loaded from older pages.
+            _liveLogs = _mergeHistoricalLogs(_liveLogs!, result.logs);
+          } else {
+            _liveLogs = _mergeHistoricalLogs(const [], result.logs);
+            _liveLogsCurrentPage = 0;
+          }
+          _liveLogsHasMoreRows = result.hasMoreRows;
+          _lastLiveLogsRefreshAt = DateTime.now();
+          _liveLogsError = null;
           _isLoadingLiveLogs = false;
+          _isLoadingMoreLiveLogs = false;
+          _isRefreshingLiveLogs = false;
         });
+
+        if (!loadMore &&
+            !isPermissionDenied &&
+            _logsDeploymentScope == _LogsDeploymentScope.current &&
+            _logsAutoRefresh) {
+          unawaited(_startLiveLogStream());
+        }
       }
     } catch (e) {
       print('[ProjectWorkspace] Error fetching request logs: $e');
-      if (mounted) {
+      if (mounted && queryGeneration == _logsRequestGeneration) {
         setState(() {
-          _liveLogsError = e.toString();
+          _liveLogsError = _formatLogsError(e);
+          _liveLogs = null;
           _isLoadingLiveLogs = false;
+          _isLoadingMoreLiveLogs = false;
+          _isRefreshingLiveLogs = false;
         });
       }
     }
   }
 
+  List<Deployment> _getFallbackDeployments(
+    String? targetDeploymentId,
+    Deployment? liveDeployment,
+  ) {
+    if (targetDeploymentId != null) {
+      return _deployments
+              ?.where((deployment) => deployment.uid == targetDeploymentId)
+              .toList() ??
+          (liveDeployment == null ? <Deployment>[] : [liveDeployment]);
+    }
+
+    final deployments = _deployments;
+    if (deployments != null && deployments.isNotEmpty) {
+      return List<Deployment>.from(deployments);
+    }
+    return liveDeployment == null ? <Deployment>[] : [liveDeployment];
+  }
+
+  DateTime _parseLogTimestamp(dynamic value) {
+    if (value is num) {
+      final numericValue = value.toInt();
+      return DateTime.fromMillisecondsSinceEpoch(
+        numericValue.abs() < 100000000000 ? numericValue * 1000 : numericValue,
+      );
+    }
+    return DateTime.tryParse(value?.toString() ?? '') ?? DateTime.now();
+  }
+
+  String _historicalLogKey(Log log) {
+    if (log.requestId.isNotEmpty) return log.requestId;
+    return '${log.timestamp.microsecondsSinceEpoch}|${log.requestMethod}|${log.requestPath}|${log.statusCode}|${log.displayMessage}';
+  }
+
+  List<Log> _mergeHistoricalLogs(
+    Iterable<Log> current,
+    Iterable<Log> incoming,
+  ) {
+    final byKey = <String, Log>{};
+    for (final log in current) {
+      byKey[_historicalLogKey(log)] = log;
+    }
+    for (final log in incoming) {
+      byKey[_historicalLogKey(log)] = log;
+    }
+    final merged = byKey.values.toList()
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return merged;
+  }
+
+  ({DateTime start, DateTime end}) _getSelectedLogsDateRange() {
+    final now = DateTime.now();
+    if (_logsTimeRange == _LogsTimeRange.custom) {
+      final customEnd = _customLogsEnd;
+      final queryEnd = customEnd == null
+          ? now
+          : customEnd.add(const Duration(days: 1)).isAfter(now)
+          ? now
+          : customEnd.add(const Duration(days: 1));
+      return (
+        start: _customLogsStart ?? now.subtract(const Duration(hours: 1)),
+        end: queryEnd,
+      );
+    }
+
+    final duration = _logsTimeRange.duration ?? const Duration(hours: 1);
+    return (start: now.subtract(duration), end: now);
+  }
+
+  String _formatLogsError(Object error) {
+    String message = error.toString();
+    if (error is VercelApiException) {
+      message = error.message;
+    } else if (message.startsWith('Exception: ')) {
+      message = message.substring(11);
+    }
+
+    final normalized = message.toLowerCase();
+    if (_isAuthOrPermissionError(error) || _isLimitedLogsError(message)) {
+      return "You don't have permission to access real-time logs for this project. Connect a full-access Personal Access Token to access logs.";
+    }
+
+    if (_logsTimeRange != _LogsTimeRange.hour &&
+        (normalized.contains('retention') ||
+            normalized.contains('forbidden') ||
+            normalized.contains('403'))) {
+      return '$message\n\nThe selected range may exceed the available runtime-log retention window.';
+    }
+    return message;
+  }
+
+  bool _isAuthOrPermissionError(Object error) {
+    if (error is VercelApiException) {
+      if (error.statusCode == 403 ||
+          error.statusCode == 401 ||
+          error.code == 'forbidden' ||
+          error.code == 'unauthorized') {
+        return true;
+      }
+      final msg = error.message.toLowerCase();
+      if (msg.contains('permission') ||
+          msg.contains('forbidden') ||
+          msg.contains('denied') ||
+          msg.contains('unauthorized')) {
+        return true;
+      }
+    }
+    final str = error.toString().toLowerCase();
+    return str.contains('403') ||
+        str.contains('401') ||
+        str.contains('forbidden') ||
+        str.contains('permission') ||
+        str.contains('access denied') ||
+        str.contains('unauthorized');
+  }
+
+  bool _isLimitedLogsError(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('403') ||
+        normalized.contains('forbidden') ||
+        normalized.contains('permission') ||
+        normalized.contains('access denied') ||
+        normalized.contains('unauthorized') ||
+        normalized.contains('full-access') ||
+        normalized.contains('full access') ||
+        normalized.contains('token') ||
+        normalized.contains('retention') ||
+        normalized.contains('plan may limit');
+  }
+
+  void _updateLogsRefreshTimer() {
+    final shouldRefresh =
+        _logsAutoRefresh && _tabController.index == 1 && mounted;
+    final shouldPollAllDeployments =
+        shouldRefresh && _logsDeploymentScope == _LogsDeploymentScope.all;
+    final shouldStreamCurrentDeployment =
+        shouldRefresh && _logsDeploymentScope == _LogsDeploymentScope.current;
+
+    if (!shouldPollAllDeployments) {
+      _logsRefreshTimer?.cancel();
+      _logsRefreshTimer = null;
+    }
+
+    if (shouldPollAllDeployments && _logsRefreshTimer == null) {
+      _logsRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+        if (!mounted ||
+            _tabController.index != 1 ||
+            !_logsAutoRefresh ||
+            _logsDeploymentScope != _LogsDeploymentScope.all) {
+          _logsRefreshTimer?.cancel();
+          _logsRefreshTimer = null;
+          return;
+        }
+        unawaited(_fetchLiveDeploymentLogs(silent: true));
+      });
+    }
+
+    if (!shouldStreamCurrentDeployment) {
+      _cancelLiveLogStream();
+    } else if (_liveLogs != null) {
+      unawaited(_startLiveLogStream());
+    }
+  }
+
+  Future<void> _startLiveLogStream() async {
+    if (!mounted ||
+        !_logsAutoRefresh ||
+        _tabController.index != 1 ||
+        _logsDeploymentScope != _LogsDeploymentScope.current ||
+        _liveLogSubscription != null) {
+      return;
+    }
+
+    // Do not stream if there is an active permission/auth denial error
+    if (_liveLogsError != null && _isLimitedLogsError(_liveLogsError!)) {
+      return;
+    }
+
+    final deployment = _getLatestLiveDeployment();
+    if (deployment == null) return;
+
+    final appState = Provider.of<AppState>(context, listen: false);
+    if (!appState.apiService.supportsLiveRuntimeLogStreaming) return;
+    final generation = ++_liveStreamGeneration;
+    final since = DateTime.now()
+        .subtract(const Duration(seconds: 5))
+        .millisecondsSinceEpoch;
+
+    try {
+      final stream = appState.apiService.streamDeploymentRuntimeLogs(
+        projectId: widget.project.id,
+        deploymentId: deployment.uid,
+        since: since,
+      );
+      _liveLogSubscription = stream.listen(
+        (rawLog) {
+          if (generation == _liveStreamGeneration) {
+            _appendLiveRuntimeLog(rawLog);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (generation != _liveStreamGeneration || !mounted) return;
+          _liveLogSubscription = null;
+          print('[ProjectWorkspace] Live stream error: $error');
+          final formatted = _formatLogsError(error);
+          setState(() => _liveLogsError = formatted);
+          // Never schedule reconnect for permission or limited access errors
+          if (!_isAuthOrPermissionError(error) && !_isLimitedLogsError(formatted)) {
+            _scheduleLiveStreamReconnect(generation);
+          }
+        },
+        onDone: () {
+          if (generation != _liveStreamGeneration || !mounted) return;
+          _liveLogSubscription = null;
+          if (_liveLogsError == null || !_isLimitedLogsError(_liveLogsError!)) {
+            _scheduleLiveStreamReconnect(generation);
+          }
+        },
+        cancelOnError: false,
+      );
+    } catch (error) {
+      if (generation != _liveStreamGeneration || !mounted) return;
+      _liveLogSubscription = null;
+      print('[ProjectWorkspace] Live stream start error: $error');
+      final formatted = _formatLogsError(error);
+      setState(() => _liveLogsError = formatted);
+      if (!_isAuthOrPermissionError(error) && !_isLimitedLogsError(formatted)) {
+        _scheduleLiveStreamReconnect(generation);
+      }
+    }
+  }
+
+  void _scheduleLiveStreamReconnect(int generation) {
+    if (_liveStreamReconnectTimer != null ||
+        !mounted ||
+        !_logsAutoRefresh ||
+        _tabController.index != 1 ||
+        _logsDeploymentScope != _LogsDeploymentScope.current) {
+      return;
+    }
+
+    _liveStreamReconnectTimer = Timer(const Duration(seconds: 5), () {
+      _liveStreamReconnectTimer = null;
+      if (generation == _liveStreamGeneration) {
+        unawaited(_startLiveLogStream());
+      }
+    });
+  }
+
+  void _appendLiveRuntimeLog(Map<String, dynamic> rawLog) {
+    if (!mounted) return;
+    final log = Log.fromJson(rawLog);
+    final key = log.requestId.isNotEmpty
+        ? '${log.requestId}|${log.timestamp.microsecondsSinceEpoch}|${log.displayMessage}'
+        : _historicalLogKey(log);
+    final existing = _liveLogs ?? <Log>[];
+    final alreadyPresent = existing.any((item) {
+      final itemKey = item.requestId.isNotEmpty
+          ? '${item.requestId}|${item.timestamp.microsecondsSinceEpoch}|${item.displayMessage}'
+          : _historicalLogKey(item);
+      return itemKey == key;
+    });
+    if (alreadyPresent) return;
+
+    setState(() {
+      _liveLogs = _mergeHistoricalLogs(existing, [log]);
+      _liveLogsError = null;
+      _lastLiveLogsRefreshAt = DateTime.now();
+    });
+  }
+
+  void _cancelLiveLogStream() {
+    _liveStreamGeneration++;
+    _liveStreamReconnectTimer?.cancel();
+    _liveStreamReconnectTimer = null;
+    final subscription = _liveLogSubscription;
+    _liveLogSubscription = null;
+    if (subscription != null) unawaited(subscription.cancel());
+  }
+
   Deployment? _getLatestLiveDeployment() {
     if (_deployments == null || _deployments!.isEmpty) return null;
 
-    // Find the latest READY deployment (live)
+    // Only production READY deployments represent the current live site.
+    // Some older API responses omit `target`; use those only when there is no
+    // explicit production deployment, and never treat an explicit preview as
+    // the current production deployment.
     final readyDeployments = _deployments!
-        .where((d) => d.state == 'READY')
+        .where((d) => d.state.toUpperCase() == 'READY')
         .toList();
-    if (readyDeployments.isEmpty) return null;
+    final productionDeployments = readyDeployments
+        .where((d) => d.target?.toLowerCase() == 'production')
+        .toList();
+    final legacyDeployments = readyDeployments
+        .where((d) => d.target == null)
+        .toList();
+    final candidates = productionDeployments.isNotEmpty
+        ? productionDeployments
+        : legacyDeployments;
+    if (candidates.isEmpty) return null;
 
     // Sort by created date descending and return the first
-    readyDeployments.sort((a, b) => b.created.compareTo(a.created));
-    return readyDeployments.first;
+    candidates.sort((a, b) => b.created.compareTo(a.created));
+    return candidates.first;
   }
 
   @override
   void dispose() {
+    _logsRefreshTimer?.cancel();
+    _liveStreamReconnectTimer?.cancel();
+    _cancelLiveLogStream();
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
@@ -434,6 +916,11 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           _envVars = envs;
           _isLoading = false;
         });
+        // The user can select LOGS while the initial project data is loading.
+        // Fetch again once deployments become available.
+        if (_tabController.index == 1) {
+          unawaited(_fetchLiveDeploymentLogs());
+        }
       }
       print('[ProjectWorkspace] _fetchData completed successfully');
     } catch (e) {
@@ -517,15 +1004,23 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.onSurfaceVariant)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.onSurfaceVariant),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: currentlyPaused ? AppTheme.primary : AppTheme.error,
+              backgroundColor: currentlyPaused
+                  ? AppTheme.primary
+                  : AppTheme.error,
               foregroundColor: currentlyPaused ? Colors.black : Colors.white,
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: Text(actionTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+              actionTitle,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -557,7 +1052,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   ? 'Project resumed successfully!'
                   : 'Project paused successfully!',
             ),
-            backgroundColor: currentlyPaused ? AppTheme.success : AppTheme.error,
+            backgroundColor: currentlyPaused
+                ? AppTheme.success
+                : AppTheme.error,
           ),
         );
       }
@@ -719,9 +1216,6 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
           ? _buildErrorView()
           : TabBarView(
               controller: _tabController,
-              physics: _tabController.index == 0
-                  ? const NeverScrollableScrollPhysics()
-                  : const PageScrollPhysics(),
               children: [
                 _buildOverviewTab(),
                 _buildLogsTab(),
@@ -922,10 +1416,14 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _isPaused ? Colors.orange.withOpacity(0.08) : AppTheme.surfaceContainerLowest,
+        color: _isPaused
+            ? Colors.orange.withOpacity(0.08)
+            : AppTheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: _isPaused ? Colors.orange.withOpacity(0.4) : AppTheme.surfaceContainerHigh,
+          color: _isPaused
+              ? Colors.orange.withOpacity(0.4)
+              : AppTheme.surfaceContainerHigh,
         ),
       ),
       child: Row(
@@ -953,24 +1451,34 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                   _isPaused
                       ? 'Deployments disabled. Visitors see 503 error.'
                       : 'Project is running and handling traffic.',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: _isPaused ? AppTheme.primary : AppTheme.error.withOpacity(0.9),
+              backgroundColor: _isPaused
+                  ? AppTheme.primary
+                  : AppTheme.error.withOpacity(0.9),
               foregroundColor: _isPaused ? Colors.black : Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
             onPressed: _isPausingOrUnpausing ? null : _handlePauseToggle,
             icon: _isPausingOrUnpausing
                 ? const SizedBox(
                     width: 14,
                     height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : Icon(_isPaused ? Icons.play_arrow : Icons.pause, size: 16),
             label: Text(_isPaused ? 'Resume Project' : 'Pause Project'),
@@ -1019,7 +1527,10 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                       if (_isPaused) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange.withOpacity(0.2),
                             border: Border.all(color: Colors.orange),
@@ -2242,11 +2753,11 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     final liveDeployment = _getLatestLiveDeployment();
 
     return RefreshIndicator(
-      onRefresh: _fetchLiveDeploymentLogs,
+      onRefresh: () => _fetchLiveDeploymentLogs(),
       color: AppTheme.primary,
       child: Column(
         children: [
-          // Header with live deployment info and filters
+          // Header with deployment info and filters
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
@@ -2272,7 +2783,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'RUNTIME LOGS',
+                          'RECENT LOGS',
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                       ],
@@ -2303,7 +2814,10 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              liveDeployment.name,
+                              _logsDeploymentScope ==
+                                      _LogsDeploymentScope.current
+                                  ? liveDeployment.name
+                                  : 'All deployments',
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: AppTheme.success,
@@ -2339,9 +2853,55 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
                         _logsFilter == 'errors',
                         () => setState(() => _logsFilter = 'errors'),
                       ),
+                      const SizedBox(width: 12),
+                      _buildLogsTimeRangeMenu(),
+                      const SizedBox(width: 8),
+                      _buildLogsScopeMenu(),
+                      const SizedBox(width: 8),
+                      _buildLogFilterChip(
+                        _logsDeploymentScope == _LogsDeploymentScope.current
+                            ? (_logsAutoRefresh ? 'Follow on' : 'Follow off')
+                            : (_logsAutoRefresh
+                                  ? 'Auto-refresh on'
+                                  : 'Auto-refresh off'),
+                        _logsAutoRefresh,
+                        () {
+                          setState(() {
+                            _logsAutoRefresh = !_logsAutoRefresh;
+                          });
+                          _updateLogsRefreshTimer();
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.refresh,
+                          size: 16,
+                          color: AppTheme.onSurfaceVariant,
+                        ),
+                        onPressed: _isLoadingLiveLogs || _isRefreshingLiveLogs
+                            ? null
+                            : () => unawaited(_fetchLiveDeploymentLogs()),
+                        tooltip: 'Refresh logs',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      ),
                     ],
                   ),
                 ),
+                if (_lastLiveLogsRefreshAt != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Updated ${timeago.format(_lastLiveLogsRefreshAt!, allowFromNow: true)}',
+                    style: const TextStyle(
+                      color: AppTheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -2353,8 +2913,129 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     );
   }
 
+  Widget _buildLogsTimeRangeMenu() {
+    return PopupMenuButton<_LogsTimeRange>(
+      tooltip: 'Select log timeframe',
+      color: AppTheme.surfaceContainerLow,
+      onSelected: (range) {
+        if (range == _LogsTimeRange.custom) {
+          _pickCustomLogsRange();
+          return;
+        }
+        setState(() {
+          _logsTimeRange = range;
+          _liveLogs = null;
+          _liveLogsHasMoreRows = false;
+          _liveLogsCurrentPage = 0;
+        });
+        unawaited(_fetchLiveDeploymentLogs());
+      },
+      itemBuilder: (context) => _LogsTimeRange.values.map((range) {
+        return PopupMenuItem<_LogsTimeRange>(
+          value: range,
+          child: Row(
+            children: [
+              if (_logsTimeRange == range)
+                const Icon(Icons.check, size: 16, color: AppTheme.primary)
+              else
+                const SizedBox(width: 16),
+              const SizedBox(width: 8),
+              Text(range.label),
+            ],
+          ),
+        );
+      }).toList(),
+      child: _buildLogMenuChip(_logsTimeRangeLabel),
+    );
+  }
+
+  Widget _buildLogsScopeMenu() {
+    return PopupMenuButton<_LogsDeploymentScope>(
+      tooltip: 'Select deployment scope',
+      color: AppTheme.surfaceContainerLow,
+      onSelected: (scope) {
+        setState(() {
+          _logsDeploymentScope = scope;
+          _liveLogs = null;
+          _liveLogsHasMoreRows = false;
+          _liveLogsCurrentPage = 0;
+        });
+        _cancelLiveLogStream();
+        _updateLogsRefreshTimer();
+        unawaited(_fetchLiveDeploymentLogs());
+      },
+      itemBuilder: (context) => _LogsDeploymentScope.values.map((scope) {
+        return PopupMenuItem<_LogsDeploymentScope>(
+          value: scope,
+          child: Row(
+            children: [
+              if (_logsDeploymentScope == scope)
+                const Icon(Icons.check, size: 16, color: AppTheme.primary)
+              else
+                const SizedBox(width: 16),
+              const SizedBox(width: 8),
+              Text(scope.label),
+            ],
+          ),
+        );
+      }).toList(),
+      child: _buildLogMenuChip(
+        _logsDeploymentScope == _LogsDeploymentScope.current
+            ? 'Current deployment'
+            : 'All deployments',
+      ),
+    );
+  }
+
+  String get _logsTimeRangeLabel {
+    if (_logsTimeRange != _LogsTimeRange.custom) {
+      return _logsTimeRange.shortLabel;
+    }
+    if (_customLogsStart == null || _customLogsEnd == null) {
+      return _LogsTimeRange.custom.shortLabel;
+    }
+    final formatter = DateFormat.MMMd();
+    return '${formatter.format(_customLogsStart!)} - ${formatter.format(_customLogsEnd!)}';
+  }
+
+  Future<void> _pickCustomLogsRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: now.subtract(const Duration(days: 30)),
+      lastDate: now,
+      initialDateRange: DateTimeRange(
+        start: _customLogsStart ?? now.subtract(const Duration(hours: 1)),
+        end: _customLogsEnd ?? now,
+      ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppTheme.primary,
+              surface: AppTheme.surface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      _logsTimeRange = _LogsTimeRange.custom;
+      _customLogsStart = picked.start;
+      _customLogsEnd = picked.end;
+      _liveLogs = null;
+      _liveLogsHasMoreRows = false;
+      _liveLogsCurrentPage = 0;
+    });
+    await _fetchLiveDeploymentLogs();
+  }
+
   Widget _buildLiveLogsContent(Deployment? liveDeployment) {
-    if (liveDeployment == null) {
+    if (_logsDeploymentScope == _LogsDeploymentScope.current &&
+        liveDeployment == null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -2366,7 +3047,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             ),
             const SizedBox(height: 16),
             const Text(
-              'No live deployment found',
+              'No ready deployment found',
               style: TextStyle(
                 color: AppTheme.onSurface,
                 fontWeight: FontWeight.bold,
@@ -2374,7 +3055,7 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Deploy your project to see live logs here.',
+              'Deploy your project to see recent logs here.',
               style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
@@ -2388,35 +3069,109 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       );
     }
 
-    if (_liveLogsError != null) {
+    final hasLogs = _liveLogs != null && _liveLogs!.isNotEmpty;
+    if (_liveLogsError != null && !hasLogs) {
+      final isPermissionIssue = _isLimitedLogsError(_liveLogsError!);
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
-            const SizedBox(height: 16),
-            const Text(
-              'Failed to load logs',
-              style: TextStyle(
-                color: AppTheme.onSurface,
-                fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: (isPermissionIssue ? Colors.amber : AppTheme.error)
+                      .withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPermissionIssue
+                      ? Icons.lock_outline_rounded
+                      : Icons.error_outline_rounded,
+                  color: isPermissionIssue ? Colors.amber : AppTheme.error,
+                  size: 32,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _liveLogsError!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppTheme.onSurfaceVariant,
-                fontSize: 12,
+              const SizedBox(height: 20),
+              Text(
+                isPermissionIssue
+                    ? 'Permission Denied'
+                    : 'Unable to load logs',
+                style: const TextStyle(
+                  color: AppTheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _fetchLiveDeploymentLogs,
-              child: const Text('Retry'),
-            ),
-          ],
+              const SizedBox(height: 10),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Text(
+                  isPermissionIssue
+                      ? "Your current Vercel token does not have permission to access real-time logs for this project.\n\nConnect a full-access Personal Access Token to access real-time request and runtime logs."
+                      : _liveLogsError!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppTheme.onSurfaceVariant,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => unawaited(_fetchLiveDeploymentLogs()),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                  if (isPermissionIssue)
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final accountId = context
+                            .read<AppState>()
+                            .activeAccount
+                            ?.id;
+                        if (accountId == null) return;
+                        final result = await ConnectAccountDialog.show(
+                          context,
+                          replaceAccountId: accountId,
+                          customTitle: 'Update Vercel Token',
+                          customSubtitle:
+                              'Replace the current limited token with a full-access token to access logs',
+                          customButtonText: 'Update Token',
+                        );
+                        if (result == true && mounted) {
+                          unawaited(_fetchLiveDeploymentLogs());
+                        }
+                      },
+                      icon: const Icon(Icons.vpn_key_outlined, size: 16),
+                      label: const Text('Connect Full Token'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: AppTheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -2433,9 +3188,25 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No logs available for ${liveDeployment.name}',
+              _logsDeploymentScope == _LogsDeploymentScope.current
+                  ? 'No logs available for ${liveDeployment?.name ?? 'this deployment'}'
+                  : 'No logs available for this project',
               style: const TextStyle(color: AppTheme.onSurfaceVariant),
             ),
+            if (_logsTimeRange != _LogsTimeRange.hour) ...[
+              const SizedBox(height: 8),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'The selected range may exceed the available runtime-log retention window.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -2444,15 +3215,9 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
     // Apply filter to request logs
     List<Log> filteredLogs = _liveLogs!;
     if (_logsFilter == 'errors') {
-      filteredLogs = _liveLogs!.where((log) {
-        return log.logs.any((l) => l.level.toLowerCase() == 'error') ||
-            log.statusCode >= 500;
-      }).toList();
+      filteredLogs = _liveLogs!.where(_isErrorLog).toList();
     } else if (_logsFilter == 'info') {
-      filteredLogs = _liveLogs!.where((log) {
-        return log.logs.every((l) => l.level.toLowerCase() != 'error') &&
-            log.statusCode < 500;
-      }).toList();
+      filteredLogs = _liveLogs!.where((log) => !_isErrorLog(log)).toList();
     }
 
     if (filteredLogs.isEmpty) {
@@ -2475,9 +3240,149 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
       );
     }
 
+    final isShowingEventFallback = _liveLogs!.any(
+      (l) => l.requestMethod == 'EVENT' || l.requestMethod == 'BUILD',
+    );
+
     // Competitor-style request logs list
     return Column(
       children: [
+        if (_liveLogsError != null)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.08),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.warning_amber_outlined,
+                  color: Colors.amber,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _liveLogsError!,
+                    style: const TextStyle(
+                      color: AppTheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+                if (_isLimitedLogsError(_liveLogsError!)) ...[
+                  TextButton(
+                    onPressed: () async {
+                      final accountId = context
+                          .read<AppState>()
+                          .activeAccount
+                          ?.id;
+                      if (accountId == null) return;
+                      final result = await ConnectAccountDialog.show(
+                        context,
+                        replaceAccountId: accountId,
+                        customTitle: 'Update Vercel Token',
+                        customSubtitle:
+                            'Replace the current limited token with a full-access token to access logs',
+                        customButtonText: 'Update Token',
+                      );
+                      if (result == true && mounted) {
+                        unawaited(_fetchLiveDeploymentLogs());
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      'Connect',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                TextButton(
+                  onPressed: () => unawaited(_fetchLiveDeploymentLogs()),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        if (isShowingEventFallback)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceContainerHigh,
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.amber, size: 18),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Showing build & deployment events. Connect a full token for live HTTP visitor logs.',
+                    style: TextStyle(
+                      color: AppTheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () async {
+                    final accountId = context
+                        .read<AppState>()
+                        .activeAccount
+                        ?.id;
+                    if (accountId == null) return;
+                    final result = await ConnectAccountDialog.show(
+                      context,
+                      replaceAccountId: accountId,
+                      customTitle: 'Update Vercel Token',
+                      customSubtitle:
+                          'Replace the current limited token with a full-access token',
+                      customButtonText: 'Update Token',
+                    );
+                    if (result == true && mounted) {
+                      unawaited(_fetchLiveDeploymentLogs());
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text(
+                    'Connect',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
         // Minimal header
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -2527,8 +3432,30 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             },
           ),
         ),
+        if (_liveLogsHasMoreRows)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: ElevatedButton(
+              onPressed: _isLoadingMoreLiveLogs
+                  ? null
+                  : () => _fetchLiveDeploymentLogs(loadMore: true),
+              child: _isLoadingMoreLiveLogs
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Load more'),
+            ),
+          ),
       ],
     );
+  }
+
+  bool _isErrorLog(Log log) {
+    const errorLevels = {'error', 'fatal', 'warning', 'warn'};
+    return log.statusCode >= 400 ||
+        log.logs.any((line) => errorLevels.contains(line.level.toLowerCase()));
   }
 
   /// Build request log row matching competitor design
@@ -3116,6 +4043,32 @@ class _ProjectWorkspaceScreenState extends State<ProjectWorkspaceScreen>
             color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLogMenuChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withOpacity(0.1),
+        border: Border.all(color: AppTheme.primary.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primary,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.expand_more, size: 14, color: AppTheme.primary),
+        ],
       ),
     );
   }

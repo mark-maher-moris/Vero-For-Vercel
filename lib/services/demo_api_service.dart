@@ -12,11 +12,12 @@ import 'demo_data.dart';
 /// mode. Screens can catch this to show a friendly "connect your account" CTA.
 class DemoModeException extends VercelApiException {
   DemoModeException([String? message])
-      : super(
-          message ?? 'This action is not available in demo mode. Connect your Vercel account to continue.',
-          statusCode: 403,
-          code: 'demo_mode',
-        );
+    : super(
+        message ??
+            'This action is not available in demo mode. Connect your Vercel account to continue.',
+        statusCode: 403,
+        code: 'demo_mode',
+      );
 }
 
 /// A [VercelApi] subclass that returns hard-coded, realistic demo data
@@ -24,6 +25,9 @@ class DemoModeException extends VercelApiException {
 /// "Try with demo data" on the login screen.
 class DemoVercelApi extends VercelApi {
   DemoVercelApi() : super(teamId: DemoData.demoTeamId);
+
+  @override
+  bool get supportsLiveRuntimeLogStreaming => false;
 
   // ---------------------------------------------------------------------------
   // READ – overridden with demo data
@@ -63,9 +67,7 @@ class DemoVercelApi extends VercelApi {
     String? buildMachineTypes,
     String? buildQueueConfiguration,
   }) async {
-    return {
-      'projects': DemoData.buildProjects().map(_projectToJson).toList(),
-    };
+    return {'projects': DemoData.buildProjects().map(_projectToJson).toList()};
   }
 
   @override
@@ -89,7 +91,9 @@ class DemoVercelApi extends VercelApi {
     var projects = DemoData.buildProjects();
     if (search != null && search.isNotEmpty) {
       final q = search.toLowerCase();
-      projects = projects.where((p) => p.name.toLowerCase().contains(q)).toList();
+      projects = projects
+          .where((p) => p.name.toLowerCase().contains(q))
+          .toList();
     }
     return projects;
   }
@@ -115,7 +119,9 @@ class DemoVercelApi extends VercelApi {
 
   @override
   Future<List<dynamic>> getProjectEnvVars(String projectId) async {
-    return DemoData.buildEnvVars(projectId).map((e) => e.toJson()..['id'] = e.id).toList();
+    return DemoData.buildEnvVars(
+      projectId,
+    ).map((e) => e.toJson()..['id'] = e.id).toList();
   }
 
   @override
@@ -223,7 +229,10 @@ class DemoVercelApi extends VercelApi {
   }
 
   @override
-  Future<String> getDeploymentFileContents(String deploymentId, String fileId) async {
+  Future<String> getDeploymentFileContents(
+    String deploymentId,
+    String fileId,
+  ) async {
     // Extract file name from fileId (format: file_page, file_layout, etc.)
     final fileName = fileId.replaceAll('file_', '').replaceAll('dir_', '');
     return DemoData.getDemoFileContent(fileName);
@@ -325,7 +334,9 @@ class DemoVercelApi extends VercelApi {
       (p) => p.id == projectId,
       orElse: () => DemoData.buildProjects().first,
     );
-    final host = project.allUrls.isNotEmpty ? project.allUrls.first : '${project.name}.vercel.app';
+    final host = project.allUrls.isNotEmpty
+        ? project.allUrls.first
+        : '${project.name}.vercel.app';
     return 'https://$host/favicon.ico';
   }
 
@@ -334,23 +345,34 @@ class DemoVercelApi extends VercelApi {
   // ---------------------------------------------------------------------------
 
   @override
-  Future<Map<String, dynamic>> addDomain(String projectId, String domainName) async {
+  Future<Map<String, dynamic>> addDomain(
+    String projectId,
+    String domainName,
+  ) async {
     throw DemoModeException();
   }
 
   @override
-  Future<Map<String, dynamic>> removeDomain(String projectId, String domain) async {
+  Future<Map<String, dynamic>> removeDomain(
+    String projectId,
+    String domain,
+  ) async {
     throw DemoModeException();
   }
 
   @override
-  Future<Map<String, dynamic>> verifyDomain(String projectId, String domain) async {
+  Future<Map<String, dynamic>> verifyDomain(
+    String projectId,
+    String domain,
+  ) async {
     throw DemoModeException();
   }
 
   @override
   Future<Map<String, dynamic>> createDnsRecord(
-      String domain, Map<String, dynamic> record) async {
+    String domain,
+    Map<String, dynamic> record,
+  ) async {
     throw DemoModeException();
   }
 
@@ -361,18 +383,27 @@ class DemoVercelApi extends VercelApi {
 
   @override
   Future<List<dynamic>> createEnvVars(
-      String projectId, List<Map<String, dynamic>> envVars) async {
+    String projectId,
+    List<Map<String, dynamic>> envVars,
+  ) async {
     throw DemoModeException();
   }
 
   @override
   Future<List<dynamic>> updateEnvVar(
-      String projectId, String envVarId, Map<String, dynamic> envVar) async {
+    String projectId,
+    String envVarId,
+    Map<String, dynamic> envVar,
+  ) async {
     throw DemoModeException();
   }
 
   @override
-  Future<void> deleteEnvVar(String projectId, String envVarId, {String? target}) async {
+  Future<void> deleteEnvVar(
+    String projectId,
+    String envVarId, {
+    String? target,
+  }) async {
     throw DemoModeException();
   }
 
@@ -383,7 +414,10 @@ class DemoVercelApi extends VercelApi {
 
   @override
   Future<Map<String, dynamic>> inviteTeamMember(
-      String teamId, String email, {String role = 'MEMBER'}) async {
+    String teamId,
+    String email, {
+    String role = 'MEMBER',
+  }) async {
     throw DemoModeException();
   }
 

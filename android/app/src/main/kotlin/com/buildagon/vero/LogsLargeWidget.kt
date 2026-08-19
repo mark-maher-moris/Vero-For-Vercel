@@ -43,6 +43,12 @@ class LogsLargeWidget : AppWidgetProvider() {
             Pair(R.id.log_row_6, R.id.log_msg_6),
             Pair(R.id.log_row_7, R.id.log_msg_7),
             Pair(R.id.log_row_8, R.id.log_msg_8),
+            Pair(R.id.log_row_9, R.id.log_msg_9),
+            Pair(R.id.log_row_10, R.id.log_msg_10),
+            Pair(R.id.log_row_11, R.id.log_msg_11),
+            Pair(R.id.log_row_12, R.id.log_msg_12),
+            Pair(R.id.log_row_13, R.id.log_msg_13),
+            Pair(R.id.log_row_14, R.id.log_msg_14),
         )
 
         fun updateWidget(
@@ -66,6 +72,13 @@ class LogsLargeWidget : AppWidgetProvider() {
 
             views.setTextViewText(R.id.widget_project_name, projectName)
             views.setTextViewText(R.id.widget_status_badge, deployStatus)
+            val statusColor = VeroWidgetUtils.statusColor(deployStatus)
+            views.setTextColor(R.id.widget_status_badge, statusColor)
+            views.setInt(
+                R.id.widget_status_badge,
+                "setBackgroundColor",
+                VeroWidgetUtils.statusBackgroundColor(deployStatus),
+            )
             views.setTextViewText(R.id.widget_last_updated, VeroWidgetUtils.relativeTime(lastUpdated))
 
             val noProject = VeroWidgetUtils.getString(context, "vero_project_logs_id").isEmpty()

@@ -13,12 +13,19 @@ import 'screens/main_screen.dart';
 import 'screens/demo_entry_screen.dart';
 import 'screens/widget_config_screen.dart';
 import 'services/widget_service.dart';
+import 'services/local_notification_service.dart';
+import 'services/whats_new_service.dart';
 import 'widgets/auth_error_handler.dart';
 import 'widgets/app_level_demo_banner.dart';
+import 'widgets/account_switcher_bottom_sheet.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
+
+  final localNotificationService = LocalNotificationService.instance;
+  await localNotificationService.initialize();
+  await localNotificationService.requestPermissions();
 
   // Initialize Superwall SDK
   await SuperwallService().initialize();
@@ -51,20 +58,36 @@ class VeroApp extends StatefulWidget {
 class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final WidgetService _widgetService = WidgetService();
-  Uri? _pendingWidgetConfigUri;
-  bool _isFlushingWidgetConfigRoute = false;
+  final WhatsNewService _whatsNewService = WhatsNewService();
+  Uri? _pendingDeepLinkUri;
+  bool _isFlushingDeepLink = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _widgetService.widgetClicked.listen((uri) {
-      if (uri != null) {
-        _handleWidgetDeepLink(uri);
+
+    // Listen for notification taps (foreground / background)
+    LocalNotificationService.instance.setOnNotificationTap((response) {
+      final payload = response.payload;
+      if (payload != null && payload.isNotEmpty) {
+        final uri = Uri.tryParse(payload);
+        if (uri != null) {
+          _handleDeepLink(uri);
+        }
       }
     });
+
+    _widgetService.widgetClicked.listen((uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialWidgetLaunch();
+      _checkInitialNotificationLaunch();
+      _checkWhatsNewNotifications();
     });
   }
 
@@ -80,62 +103,91 @@ class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
     final context = _navigatorKey.currentContext;
     if (context == null) return;
     final appState = context.read<AppState>();
-    if (appState.isAuthenticated || appState.isDemoMode) {
+    if ((appState.isAuthenticated || appState.isDemoMode) &&
+        !appState.isLoading) {
       appState.refreshWidgets();
+    }
+    _checkWhatsNewNotifications();
+  }
+
+  Future<void> _checkWhatsNewNotifications() async {
+    try {
+      final isPro = await SuperwallService().getCurrentSubscriptionStatus();
+      await _whatsNewService.checkAndDeliverWhatsNew(isProUser: isPro);
+    } catch (e) {
+      if (kDebugMode) {
+        print('[VeroApp] Error checking What\'s New notifications: $e');
+      }
     }
   }
 
   Future<void> _checkInitialWidgetLaunch() async {
     final uri = await HomeWidget.initiallyLaunchedFromHomeWidget();
     if (uri != null) {
-      _handleWidgetDeepLink(uri);
+      _handleDeepLink(uri);
     }
   }
 
-  void _handleWidgetDeepLink(Uri uri) {
+  Future<void> _checkInitialNotificationLaunch() async {
+    final response = await LocalNotificationService.instance.getNotificationAppLaunchDetails();
+    if (response != null && response.payload != null && response.payload!.isNotEmpty) {
+      final uri = Uri.tryParse(response.payload!);
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    }
+  }
+
+  void _handleDeepLink(Uri uri) {
     if (kDebugMode) {
-      print('[WidgetDeepLink] $uri');
+      print('[DeepLink] $uri');
     }
-    if (uri.scheme == 'vero' &&
-        uri.host == 'widget' &&
-        uri.path == '/configure') {
-      _pendingWidgetConfigUri = uri;
-      _flushPendingWidgetConfigRoute();
+    if (uri.scheme == 'vero') {
+      _pendingDeepLinkUri = uri;
+      _flushPendingDeepLink();
     }
   }
 
-  void _flushPendingWidgetConfigRoute() {
-    if (_pendingWidgetConfigUri == null || _isFlushingWidgetConfigRoute) {
+  void _flushPendingDeepLink() {
+    if (_pendingDeepLinkUri == null || _isFlushingDeepLink) {
       return;
     }
 
-    _isFlushingWidgetConfigRoute = true;
+    _isFlushingDeepLink = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _isFlushingWidgetConfigRoute = false;
-      final pendingUri = _pendingWidgetConfigUri;
+      _isFlushingDeepLink = false;
+      final pendingUri = _pendingDeepLinkUri;
       if (pendingUri == null) return;
 
       final navigator = _navigatorKey.currentState;
       final context = _navigatorKey.currentContext;
       if (navigator == null || context == null) {
-        _flushPendingWidgetConfigRoute();
+        _flushPendingDeepLink();
         return;
       }
 
       final appState = context.read<AppState>();
       if (appState.isLoading) {
-        _flushPendingWidgetConfigRoute();
+        _flushPendingDeepLink();
         return;
       }
 
-      _pendingWidgetConfigUri = null;
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => WidgetConfigScreen(
-            initialWidgetType: pendingUri.queryParameters['type'],
+      _pendingDeepLinkUri = null;
+
+      if (pendingUri.host == 'widget' && pendingUri.path == '/configure') {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => WidgetConfigScreen(
+              initialWidgetType: pendingUri.queryParameters['type'],
+            ),
           ),
-        ),
-      );
+        );
+      } else if (pendingUri.host == 'account' &&
+          (pendingUri.path == '/switcher' || pendingUri.path.isEmpty)) {
+        if (appState.isAuthenticated || appState.isDemoMode) {
+          AccountSwitcherBottomSheet.show(context);
+        }
+      }
     });
   }
 
@@ -157,7 +209,7 @@ class _VeroAppState extends State<VeroApp> with WidgetsBindingObserver {
       home: AuthErrorHandler(
         child: Consumer2<AppState, SubscriptionProvider>(
           builder: (context, appState, subscription, child) {
-            _flushPendingWidgetConfigRoute();
+            _flushPendingDeepLink();
             if (appState.isLoading) {
               return const Scaffold(
                 body: Center(
