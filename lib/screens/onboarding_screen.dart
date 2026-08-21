@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -6,6 +7,17 @@ import 'package:in_app_review/in_app_review.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../services/superwall_service.dart';
+
+enum OnboardingSlideType {
+  privacy('privacy'),
+  openSource('opensource'),
+  homeWidgets('home_widgets'),
+  rating('github_support'),
+  features('features');
+
+  final String name;
+  const OnboardingSlideType(this.name);
+}
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -18,16 +30,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _isCompleting = false;
+  bool _isRequestingReview = false;
+
+  late final List<OnboardingSlideType> _slides;
+  int get _totalPages => _slides.length;
 
   late final List<AnimationController> _animationControllers;
   late final List<Animation<double>> _fadeAnimations;
   late final List<Animation<double>> _slideAnimations;
 
-  final int _totalPages = 5;
-
   @override
   void initState() {
     super.initState();
+
+    final isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    _slides = [
+      OnboardingSlideType.privacy,
+      OnboardingSlideType.openSource,
+      OnboardingSlideType.homeWidgets,
+      if (!isIOS) OnboardingSlideType.rating,
+      OnboardingSlideType.features,
+    ];
 
     _animationControllers = List.generate(
       _totalPages,
@@ -80,30 +104,29 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _onPageChanged(int page) {
+    if (!mounted) return;
     setState(() => _currentPage = page);
-    _animationControllers[page].forward(from: 0);
+    if (page < _animationControllers.length) {
+      _animationControllers[page].forward(from: 0);
+    }
 
     // Track onboarding page view
-    final pageNames = [
-      'privacy',
-      'opensource',
-      'home_widgets',
-      'github_support',
-      'features',
-    ];
     SuperwallService().trackUserAction(
       'onboarding_page_view',
       context: 'onboarding',
       properties: {
         'page_index': page,
-        'page_name': pageNames[page],
+        'page_name': _slides[page].name,
         'total_pages': _totalPages,
       },
     );
   }
 
   void _nextPage() async {
-    if (_currentPage == 3) {
+    if (_isCompleting) return;
+
+    final currentSlide = _slides[_currentPage];
+    if (currentSlide == OnboardingSlideType.rating) {
       // On Support slide, request review then go to Features
       await _requestReviewThenContinue();
     } else if (_currentPage < _totalPages - 1) {
@@ -113,11 +136,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       );
     } else {
       // On last page, complete onboarding
+      _isCompleting = true;
       await _showPaywallThenLogin();
     }
   }
 
   Future<void> _requestReviewThenContinue() async {
+    if (_isRequestingReview) return;
+    _isRequestingReview = true;
     try {
       final inAppReview = InAppReview.instance;
       final isAvailable = await inAppReview.isAvailable();
@@ -132,9 +158,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       }
     } catch (e) {
       debugPrint('Review request error: $e');
+    } finally {
+      _isRequestingReview = false;
     }
-    // Continue to Features slide after review
-    if (mounted) {
+    // Continue to next slide after review
+    if (mounted && _currentPage < _totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
@@ -178,34 +206,33 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _totalPages,
                 itemBuilder: (context, index) {
-                  switch (index) {
-                    case 0:
+                  final slideType = _slides[index];
+                  switch (slideType) {
+                    case OnboardingSlideType.privacy:
                       return _PrivacySlide(
-                        fadeAnimation: _fadeAnimations[0],
-                        slideAnimation: _slideAnimations[0],
+                        fadeAnimation: _fadeAnimations[index],
+                        slideAnimation: _slideAnimations[index],
                       );
-                    case 1:
+                    case OnboardingSlideType.openSource:
                       return _OpenSourceSlide(
-                        fadeAnimation: _fadeAnimations[1],
-                        slideAnimation: _slideAnimations[1],
+                        fadeAnimation: _fadeAnimations[index],
+                        slideAnimation: _slideAnimations[index],
                       );
-                    case 2:
+                    case OnboardingSlideType.homeWidgets:
                       return _HomeWidgetsSlide(
-                        fadeAnimation: _fadeAnimations[2],
-                        slideAnimation: _slideAnimations[2],
+                        fadeAnimation: _fadeAnimations[index],
+                        slideAnimation: _slideAnimations[index],
                       );
-                    case 3:
+                    case OnboardingSlideType.rating:
                       return _GitHubSlide(
-                        fadeAnimation: _fadeAnimations[3],
-                        slideAnimation: _slideAnimations[3],
+                        fadeAnimation: _fadeAnimations[index],
+                        slideAnimation: _slideAnimations[index],
                       );
-                    case 4:
+                    case OnboardingSlideType.features:
                       return _FeaturesSlide(
-                        fadeAnimation: _fadeAnimations[4],
-                        slideAnimation: _slideAnimations[4],
+                        fadeAnimation: _fadeAnimations[index],
+                        slideAnimation: _slideAnimations[index],
                       );
-                    default:
-                      return const SizedBox.shrink();
                   }
                 },
               ),
